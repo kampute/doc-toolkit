@@ -18,11 +18,11 @@ namespace Kampute.DocToolkit.Support
     public static class PathHelper
     {
         /// <summary>
-        /// Validates and normalizes the specified path to ensure it is a relative path and does not contain invalid characters.
+        /// Validates the specified path to ensure it is a relative path and does not contain invalid characters.
         /// </summary>
         /// <param name="path">The path to validate.</param>
         /// <param name="caller">The name of the caller member.</param>
-        /// <returns>The validated and normalized relative path.</returns>
+        /// <returns>The validated path where backslashes are replaced with forward slashes and trailing slashes are removed.</returns>
         /// <exception cref="ArgumentException">Thrown when the path is not relative.</exception>
         /// <exception cref="ArgumentException">Thrown when the path contains invalid characters.</exception>
         public static string EnsureValidRelativePath(string? path, [CallerMemberName] string caller = "")
@@ -30,13 +30,15 @@ namespace Kampute.DocToolkit.Support
             if (string.IsNullOrEmpty(path))
                 return string.Empty;
 
+            path = path.Replace('\\', '/').TrimEnd('/');
+
             if (Path.IsPathRooted(path))
                 throw new ArgumentException($"{caller} must be a relative path.", caller);
 
             if (Path.GetInvalidPathChars().Any(path.Contains))
                 throw new ArgumentException($"{caller} contains invalid characters.", caller);
 
-            return path.Replace('\\', '/').TrimEnd('/');
+            return path;
         }
 
         /// <summary>
