@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Title>Kampute.DocDotLib</Title>
+    <Description>Provides extensible pipeline for generating .NET API documentation by transforming assembly metadata and XML documentation into structured models, with automatic cross-reference resolution, support for multiple output formats (HTML, Markdown), and integration of conceptual topics.</Description>
+    <Version>1.0.0</Version>
+    <Company>Kampute</Company>
+    <Authors>Kambiz Khojasteh</Authors>
+    <Copyright>Copyright (c) 2025 Kampute</Copyright>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <AnalysisLevel>latest-minimum</AnalysisLevel>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <PackageId>Kampute.DocToolkit</PackageId>
+    <PackageTags>reflection xmldoc</PackageTags>
+    <PackageIcon>ICON.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>For detailed release notes, please visit https://github.com/kampute/doc-toolkit/releases</PackageReleaseNotes>
+    <PackageProjectUrl>https://kampute.github.io/doc-toolkit/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kampute/doc-toolkit.git</RepositoryUrl>
+    <NoWarn>IDE0079;CA1510;CA1512</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Xslt\Resources\html.xslt" />
+    <EmbeddedResource Include="Xslt\Resources\md.xslt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+    <None Include="../ICON.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="Authors" Value="$(Authors)" />
+    <AssemblyMetadata Include="PackageLicenseExpression" Value="$(PackageLicenseExpression)" />
+    <AssemblyMetadata Include="PackageProjectUrl" Value="$(PackageProjectUrl)" />
+    <AssemblyMetadata Include="RepositoryUrl" Value="$(RepositoryUrl)" />
+    <AssemblyMetadata Include="PackageReleaseNotes" Value="$(PackageReleaseNotes)" />
+    <AssemblyMetadata Include="PackageTags" Value="$(PackageTags)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="9.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="Exists('../SigningKey.snk')">
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+</Project>

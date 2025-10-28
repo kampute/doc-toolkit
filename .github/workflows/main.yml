@@ -1,0 +1,48 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-document:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore -c Release
+
+    - name: Test
+      run: dotnet test --no-restore --verbosity minimal
+
+    # - name: Setup DotDoc
+    #   run: |
+    #     wget https://example.com/dotdoc-linux-x64-latest.zip -O dotdoc.zip
+    #     unzip dotdoc.zip -d dot-doc
+
+    # - name: Generate Documentation
+    #   run: |
+    #     dotnet tool run dot-doc/dotdoc
+
+    # - name: Deploy to GitHub Pages
+    #   uses: peaceiris/actions-gh-pages@v3
+    #   if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     publish_dir: ./.site
