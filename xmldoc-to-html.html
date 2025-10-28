@@ -1,0 +1,145 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DocToolkit</title><link rel="icon" href="ICON.png"/><link rel="stylesheet" href="style.css"/><script src="script.js"></script><script src="prism.min.js"></script><meta name="generator" content="DotDoc [Version 0.1.0.0]"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="description" content=""/></head><body class="has-left-sidebar has-right-sidebar has-breadcrumb"><a href="#article" class="skip-link" aria-label="Skip to main content" tabindex="0">Skip to main content</a><header class="header" role="banner"><div class="header-main"><div class="brand" aria-label="Project title and logo"><img src="logo-light.png" alt="DocToolkit logo" class="logo dark-mode"/> <img src="logo-dark.png" alt="DocToolkit logo" class="logo light-mode"/><div class="project-info"><span class="project-name">DocToolkit</span> <span class="project-slogan">A library for generating API documentation</span></div></div><nav id="menubar" class="menu-bar" role="navigation" aria-label="Main Menu" data-base-url="" tabindex="-1"><ul class="menu" role="menubar" aria-labelledby="menubar"><li id="color-mode" class="menu-item has-submenu" role="menuitem" aria-hidden="true" tabindex="-1"><a><span class="icon selected-icon" aria-hidden="true"></span></a><ul class="menu" role="menu" aria-labelledby="color-mode" tabindex="-1"><li class="menu-item" data-mode="light" role="menuitemradio" aria-label="Light Color Mode" tabindex="-1"><a><span class="icon icon-light-color" aria-hidden="true"></span> <span>Light</span></a></li><li class="menu-item" data-mode="dark" role="menuitemradio" aria-label="Dark Color Mode" tabindex="-1"><a><span class="icon icon-dark-color" aria-hidden="true"></span> <span>Dark</span></a></li><li class="menu-item" data-mode="system" role="menuitemradio" aria-label="System Color Mode" tabindex="-1"><a><span class="icon icon-system-color" aria-hidden="true"></span> <span>System</span></a></li></ul></li></ul></nav></div><nav class="breadcrumb" role="navigation" aria-label="Breadcrumb" tabindex="-1"><ol><li class="is-topic"><a href="index.html"><span class="name">DocToolkit</span></a></li><li class="is-topic current-page" aria-current="page"><a href="xmldoc-to-html.html"><span class="name">HTML Representation of XML Documentation Elements</span></a></li></ol></nav></header><div class="content"><aside class="sidebar sidebar-left" role="complementary" aria-label="Site navigation" tabindex="-1"><div class="sidebar-header"><div class="search-container" role="search"><input type="text" id="nav-search" class="nav-search" placeholder="Search..." aria-label="Search documentation" title="Type to filter content (Press / to focus)" autocomplete="off" spellcheck="false"><button id="clear-search" type="button" class="clear-search hidden" aria-label="Clear search" title="Clear" tabindex="-1"><span class="icon icon-delete" aria-hidden="true"></span></button> <span class="search-icon" aria-hidden="true"><span class="icon icon-search"></span></span></div></div><nav id="site-navigation" class="sidebar-nav" data-base-url=""><div class="no-search-results hidden" aria-live="polite" role="status">No results found</div></nav></aside><main id="article" role="main" class=""><h1 id="html-representation-of-xml-documentation-elements">HTML Representation of XML Documentation Elements</h1><h2 id="overview">Overview</h2><p>This reference describes how DocToolkit transforms XML documentation elements to their corresponding HTML representations.</p><p><strong>Note:</strong> New lines and indentation in the output examples are provided solely for readability and are not present in the generated HTML.</p><h2 id="text-and-paragraphs">Text and Paragraphs</h2><h3 id="whitespace-and-special-characters">Whitespace and Special Characters</h3><p>Whitespace in text is normalized and any special HTML characters are encoded to prevent unintended formatting.</p><h3 id="paragraphs">Paragraphs</h3><p>Paragraphs (<code>para</code> elements) are wrapped in <code>&lt;p&gt;</code> elements.</p><h6 id="xml-input">XML Input:</h6><pre><code class="language-xml">&lt;para&gt;This is the first paragraph.&lt;/para&gt;
+&lt;para&gt;This is the second paragraph.&lt;/para&gt;
+</code></pre><h6 id="html-output">HTML Output:</h6><pre><code class="language-html">&lt;p&gt;This is the first paragraph.&lt;/p&gt;
+&lt;p&gt;This is the second paragraph.&lt;/p&gt;
+</code></pre><h2 id="code-elements">Code Elements</h2><h3 id="inline-code">Inline Code</h3><p>Inline code (<code>c</code> elements) is wrapped in <code>&lt;code&gt;</code> tags to visually distinguish it from regular text.</p><h6 id="xml-input-1">XML Input:</h6><pre><code class="language-xml">Use &lt;c&gt;Console.WriteLine()&lt;/c&gt; to print to the console.
+</code></pre><h6 id="html-output-1">HTML Output:</h6><pre><code class="language-html">Use &lt;code&gt;Console.WriteLine()&lt;/code&gt; to print to the console.
+</code></pre><h3 id="code-blocks">Code Blocks</h3><p>Code blocks (<code>code</code> elements) are wrapped in <code>&lt;pre&gt;&lt;code&gt;</code> elements. When a language is specified via the <code>language</code> attribute, it is applied as a class to facilitate syntax highlighting.</p><h6 id="xml-input-2">XML Input:</h6><pre><code class="language-xml">&lt;code language=&quot;javascript&quot;&gt;
+function sayHello() {
+    console.log(&quot;Hello&quot;);
+}
+&lt;/code&gt;
+</code></pre><h6 id="html-output-2">HTML Output:</h6><pre><code class="language-html">&lt;pre dir=&quot;ltr&quot; aria-label=&quot;Code snippet&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;function sayHello() {
+    console.log(&quot;Hello&quot;);
+}
+&lt;/code&gt;&lt;/pre&gt;
+</code></pre><p>When no language is specified, the language specified by the documentation context will be used.</p><h6 id="xml-input-3">XML Input:</h6><pre><code class="language-xml">&lt;code&gt;
+public void HelloWorld()
+{
+    Console.WriteLine(&quot;Hello, World!&quot;);
+}
+&lt;/code&gt;
+</code></pre><h6 id="html-output-3">HTML Output:</h6><pre><code class="language-html">&lt;pre dir=&quot;ltr&quot; aria-label=&quot;Code snippet&quot;&gt;&lt;code class=&quot;language-csharp&quot;&gt;public void HelloWorld()
+{
+    Console.WriteLine(&quot;Hello, World!&quot;);
+}
+&lt;/code&gt;&lt;/pre&gt;
+</code></pre><p>The content of a code block is normalized by performing the following operations:</p><ul><li>Leading and trailing empty lines are removed.</li><li>Consecutive empty lines are collapsed into a single empty line.</li><li>Tabs are converted to four spaces, and trailing whitespace is removed from each line.</li><li>The minimum indentation across all non-empty lines is determined and removed from each line.</li></ul><h2 id="parameters-and-type-references">Parameters and Type References</h2><h3 id="type-parameter-reference">Type Parameter Reference</h3><p>Generic type parameters (<code>typeparamref</code> elements) are enclosed within a <code>&lt;code&gt;</code> element with the class <code>type-param-name</code>.</p><h6 id="xml-input-4">XML Input:</h6><pre><code class="language-xml">The &lt;typeparamref name=&quot;T&quot;/&gt; parameter defines the element type.
+</code></pre><h6 id="html-output-4">HTML Output:</h6><pre><code class="language-html">The &lt;code class=&quot;type-param-name&quot;&gt;T&lt;/code&gt; parameter defines the element type.
+</code></pre><h3 id="parameter-reference">Parameter Reference</h3><p>References to parameters (<code>paramref</code> elements) are enclosed in a <code>&lt;code&gt;</code> element with the class <code>param-name</code>.</p><h6 id="xml-input-5">XML Input:</h6><pre><code class="language-xml">The &lt;paramref name=&quot;input&quot;/&gt; parameter must not be null.
+</code></pre><h6 id="html-output-5">HTML Output:</h6><pre><code class="language-html">The &lt;code class=&quot;param-name&quot;&gt;input&lt;/code&gt; parameter must not be null.
+</code></pre><h2 id="links-and-references">Links and References</h2><h3 id="language-keyword-reference">Language Keyword Reference</h3><p>Language keywords (<code>see</code> elements with <code>langword</code> attribute) are transformed into hyperlinks with the class <code>see-link</code> and the <code>rel</code> attribute set to <code>language-keyword</code>, containing a specially styled code element.</p><h6 id="xml-input-6">XML Input:</h6><pre><code class="language-xml">Use &lt;see langword=&quot;null&quot;/&gt; to represent a null reference.
+</code></pre><h6 id="html-output-6">HTML Output:</h6><pre><code class="language-html">Use &lt;a href=&quot;https://docs.example.com/keywords/null&quot; rel=&quot;language-keyword&quot; class=&quot;see-link&quot;&gt;&lt;code class=&quot;langword&quot;&gt;null&lt;/code&gt;&lt;/a&gt; to represent a null reference.
+</code></pre><h3 id="code-reference">Code Reference</h3><p>Code references (<code>see</code> elements with <code>cref</code> attribute) are transformed into hyperlinks with the class <code>see-link</code> and the <code>rel</code> attribute set to <code>code-reference</code> that point to the corresponding documentation. If no explicit link text is provided, the title is automatically generated based on the referenced type or member.</p><h6 id="xml-input-7">XML Input:</h6><pre><code class="language-xml">See &lt;see cref=&quot;T:System.DateTime&quot;/&gt; type for date and time operations.
+</code></pre><h6 id="html-output-7">HTML Output:</h6><pre><code class="language-html">See &lt;a href=&quot;/docs/System.DateTime&quot; rel=&quot;code-reference&quot; class=&quot;see-link&quot;&gt;DateTime&lt;/a&gt; type for date and time operations.
+</code></pre><p>When explicit text is provided within a code reference, it is used as the link text.</p><h6 id="xml-input-8">XML Input:</h6><pre><code class="language-xml">&lt;see cref=&quot;M:System.IO.File.ReadAllText&quot;&gt;Read text from a file&lt;/see&gt;
+</code></pre><h6 id="html-output-8">HTML Output:</h6><pre><code class="language-html">&lt;a href=&quot;/docs/System.IO.File.ReadAllText&quot; rel=&quot;code-reference&quot; class=&quot;see-link&quot;&gt;Read text from a file&lt;/a&gt;
+</code></pre><h3 id="external-url-reference">External URL Reference</h3><p>External URL references (<code>see</code> elements with <code>href</code> attribute) are transformed into standard anchor elements with the class <code>see-link</code>.</p><h6 id="xml-input-9">XML Input:</h6><pre><code class="language-xml">Visit &lt;see href=&quot;https://docs.example.com&quot;&gt;our documentation&lt;/see&gt; for more details.
+</code></pre><h6 id="html-output-9">HTML Output:</h6><pre><code class="language-html">Visit &lt;a class=&quot;see-link&quot; href=&quot;https://docs.example.com&quot;&gt;our documentation&lt;/a&gt; for more details.
+</code></pre><p>If no explicit text is provided for an external URL, the URL itself is used as the link text.</p><h6 id="xml-input-10">XML Input:</h6><pre><code class="language-xml">&lt;see href=&quot;https://docs.example.com&quot; /&gt;
+</code></pre><h6 id="html-output-10">HTML Output:</h6><pre><code class="language-html">&lt;a class=&quot;see-link&quot; href=&quot;https://docs.example.com&quot;&gt;https://docs.example.com&lt;/a&gt;
+</code></pre><h2 id="lists">Lists</h2><h3 id="bullet-list">Bullet List</h3><p>Standard lists (<code>list</code> elements without a type or with <code>type=&quot;bullet&quot;</code>) are transformed into unordered lists with the class <code>list-items</code>.</p><h6 id="xml-input-11">XML Input:</h6><pre><code class="language-xml">&lt;list&gt;
+  &lt;item&gt;First item&lt;/item&gt;
+  &lt;item&gt;Second item&lt;/item&gt;
+  &lt;item&gt;Third item&lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="html-output-11">HTML Output:</h6><pre><code class="language-html">&lt;ul class=&quot;list-items&quot;&gt;
+  &lt;li&gt;First item&lt;/li&gt;
+  &lt;li&gt;Second item&lt;/li&gt;
+  &lt;li&gt;Third item&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre><h3 id="numbered-list">Numbered List</h3><p>Numbered lists (<code>list</code> elements with <code>type=&quot;number&quot;</code>) are transformed into ordered lists with the class <code>list-items</code>.</p><h6 id="xml-input-12">XML Input:</h6><pre><code class="language-xml">&lt;list type=&quot;number&quot;&gt;
+  &lt;item&gt;First item&lt;/item&gt;
+  &lt;item&gt;Second item&lt;/item&gt;
+  &lt;item&gt;Third item&lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="html-output-12">HTML Output:</h6><pre><code class="language-html">&lt;ol class=&quot;list-items&quot;&gt;
+  &lt;li&gt;First item&lt;/li&gt;
+  &lt;li&gt;Second item&lt;/li&gt;
+  &lt;li&gt;Third item&lt;/li&gt;
+&lt;/ol&gt;
+</code></pre><h3 id="list-with-termdescription-pairs">List with Term/Description Pairs</h3><p>When list items contain term-description pairs, the term is displayed with a special <code>term</code> class followed by an en dash separator and then the description.</p><h6 id="xml-input-13">XML Input:</h6><pre><code class="language-xml">&lt;list type=&quot;bullet&quot;&gt;
+  &lt;item&gt;
+    &lt;term&gt;Term 1&lt;/term&gt;
+    &lt;description&gt;Description for term 1&lt;/description&gt;
+  &lt;/item&gt;
+  &lt;item&gt;
+    &lt;term&gt;Term 2&lt;/term&gt;
+    &lt;description&gt;Description for term 2&lt;/description&gt;
+  &lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="html-output-13">HTML Output:</h6><pre><code class="language-html">&lt;ul class=&quot;list-items&quot;&gt;
+  &lt;li&gt;
+    &lt;span class=&quot;term&quot;&gt;Term 1&lt;/span&gt;
+    &lt;span class=&quot;term-separator&quot;&gt; – &lt;/span&gt;
+    Description for term 1
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;span class=&quot;term&quot;&gt;Term 2&lt;/span&gt;
+    &lt;span class=&quot;term-separator&quot;&gt; – &lt;/span&gt;
+    Description for term 2
+  &lt;/li&gt;
+&lt;/ul&gt;
+</code></pre><h3 id="table-structured-list">Table-structured List</h3><p>Table-structured lists (<code>list</code> elements with <code>type=&quot;table&quot;</code>) are transformed into HTML tables with headers and body rows.</p><h6 id="xml-input-14">XML Input:</h6><pre><code class="language-xml">&lt;list type=&quot;table&quot;&gt;
+  &lt;listheader&gt;
+    &lt;term&gt;Parameter&lt;/term&gt;
+    &lt;description&gt;Description&lt;/description&gt;
+  &lt;/listheader&gt;
+  &lt;item&gt;
+    &lt;term&gt;name&lt;/term&gt;
+    &lt;description&gt;The user's name&lt;/description&gt;
+  &lt;/item&gt;
+  &lt;item&gt;
+    &lt;term&gt;age&lt;/term&gt;
+    &lt;description&gt;The user's age&lt;/description&gt;
+  &lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="html-output-14">HTML Output:</h6><pre><code class="language-html">&lt;table class=&quot;table-list&quot;&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th class=&quot;term&quot;&gt;Parameter&lt;/th&gt;
+      &lt;th&gt;Description&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td class=&quot;term&quot;&gt;name&lt;/td&gt;
+      &lt;td&gt;The user's name&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td class=&quot;term&quot;&gt;age&lt;/td&gt;
+      &lt;td&gt;The user's age&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+</code></pre><h2 id="notes-and-admonitions">Notes and Admonitions</h2><h3 id="simple-note">Simple Note</h3><p>Notes (<code>note</code> elements) are wrapped in a <code>&lt;blockquote&gt;</code> element with the class <code>note</code>. The content is enclosed in a nested <code>&lt;div&gt;</code> element with the class <code>note-content</code>.</p><h6 id="xml-input-15">XML Input:</h6><pre><code class="language-xml">&lt;note&gt;This is an important detail to remember.&lt;/note&gt;
+</code></pre><h6 id="html-output-15">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot;&gt;
+  &lt;div class=&quot;note-content&quot;&gt;This is an important detail to remember.&lt;/div&gt;
+&lt;/div&gt;
+</code></pre><h3 id="note-with-type">Note with Type</h3><p>Notes can have different types (info, tip, security, etc.) specified via the <code>type</code> attribute. The type is added as a data attribute to the <code>&lt;div&gt;</code> element.</p><h6 id="xml-input-16">XML Input:</h6><pre><code class="language-xml">&lt;note type=&quot;important&quot;&gt;This operation cannot be undone.&lt;/note&gt;
+</code></pre><h6 id="html-output-16">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot; data-type=&quot;important&quot;&gt;
+  &lt;div class=&quot;note-content&quot;&gt;This operation cannot be undone.&lt;/div&gt;
+&lt;/blockquote&gt;
+</code></pre><h3 id="note-with-title">Note with Title</h3><p>Notes can have titles specified via the <code>title</code> attribute. The title is displayed in an <code>&lt;div&gt;</code> element with the class <code>note-title</code>.</p><h6 id="xml-input-17">XML Input:</h6><pre><code class="language-xml">&lt;note type=&quot;security&quot; title=&quot;Security Warning&quot;&gt;Do not share your password.&lt;/note&gt;
+</code></pre><h6 id="html-output-17">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot; data-type=&quot;security&quot; aria-label=&quot;Security Warning&quot;&gt;
+  &lt;div class=&quot;note-title&quot; aria-hidden=&quot;true&quot;&gt;Security Warning&lt;/div&gt;
+  &lt;div class=&quot;note-content&quot;&gt;Do not share your password.&lt;/div&gt;
+&lt;/blockquote&gt;
+</code></pre><h3 id="note-with-complex-content">Note with Complex Content</h3><p>Notes can contain complex content including paragraphs, lists, and other elements.</p><h6 id="xml-input-18">XML Input:</h6><pre><code class="language-xml">&lt;note type=&quot;tip&quot; title=&quot;Tip&quot;&gt;
+  &lt;para&gt;You can optimize performance by:&lt;/para&gt;
+  &lt;list&gt;
+    &lt;item&gt;Using indexes&lt;/item&gt;
+    &lt;item&gt;Caching results&lt;/item&gt;
+  &lt;/list&gt;
+&lt;/note&gt;
+</code></pre><h6 id="html-output-18">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot; data-type=&quot;tip&quot; aria-label=&quot;Tip&quot;&gt;
+  &lt;div class=&quot;note-title&quot; aria-hidden=&quot;true&quot;&gt;Tip&lt;/div&gt;
+  &lt;div class=&quot;note-content&quot;&gt;
+    You can optimize performance by:
+    &lt;ul class=&quot;list-items&quot;&gt;
+      &lt;li&gt;Using indexes&lt;/li&gt;
+      &lt;li&gt;Caching results&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/div&gt;
+&lt;/blockquote&gt;
+</code></pre><footer class="content-footer" role="contentinfo"><p>Copyright © 2025 <a href="http://kampute.com">Kampute</a></p></footer></main><aside class="sidebar sidebar-right" role="complementary" aria-label="In this article" tabindex="-1"><div class="sidebar-header" aria-hidden="true"><h3>In this article</h3></div><nav id="article-navigation" class="sidebar-nav" data-max-level="3"></nav></aside></div><div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true"><div class="modal-container"><div class="modal-header"><h3 id="modal-title"></h3><button id="modal-close" type="button" class="modal-close-btn" aria-label="Close dialog">&times;</button></div><div class="modal-content"><div id="modal-body" class="modal-body"><iframe id="modal-iframe" frameborder="0" title="Dialog content"></iframe></div></div></div></div></body></html>

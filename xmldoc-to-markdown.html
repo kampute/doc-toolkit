@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DocToolkit</title><link rel="icon" href="ICON.png"/><link rel="stylesheet" href="style.css"/><script src="script.js"></script><script src="prism.min.js"></script><meta name="generator" content="DotDoc [Version 0.1.0.0]"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="description" content=""/></head><body class="has-left-sidebar has-right-sidebar has-breadcrumb"><a href="#article" class="skip-link" aria-label="Skip to main content" tabindex="0">Skip to main content</a><header class="header" role="banner"><div class="header-main"><div class="brand" aria-label="Project title and logo"><img src="logo-light.png" alt="DocToolkit logo" class="logo dark-mode"/> <img src="logo-dark.png" alt="DocToolkit logo" class="logo light-mode"/><div class="project-info"><span class="project-name">DocToolkit</span> <span class="project-slogan">A library for generating API documentation</span></div></div><nav id="menubar" class="menu-bar" role="navigation" aria-label="Main Menu" data-base-url="" tabindex="-1"><ul class="menu" role="menubar" aria-labelledby="menubar"><li id="color-mode" class="menu-item has-submenu" role="menuitem" aria-hidden="true" tabindex="-1"><a><span class="icon selected-icon" aria-hidden="true"></span></a><ul class="menu" role="menu" aria-labelledby="color-mode" tabindex="-1"><li class="menu-item" data-mode="light" role="menuitemradio" aria-label="Light Color Mode" tabindex="-1"><a><span class="icon icon-light-color" aria-hidden="true"></span> <span>Light</span></a></li><li class="menu-item" data-mode="dark" role="menuitemradio" aria-label="Dark Color Mode" tabindex="-1"><a><span class="icon icon-dark-color" aria-hidden="true"></span> <span>Dark</span></a></li><li class="menu-item" data-mode="system" role="menuitemradio" aria-label="System Color Mode" tabindex="-1"><a><span class="icon icon-system-color" aria-hidden="true"></span> <span>System</span></a></li></ul></li></ul></nav></div><nav class="breadcrumb" role="navigation" aria-label="Breadcrumb" tabindex="-1"><ol><li class="is-topic"><a href="index.html"><span class="name">DocToolkit</span></a></li><li class="is-topic current-page" aria-current="page"><a href="xmldoc-to-markdown.html"><span class="name">Markdown Representation of XML Documentation Elements</span></a></li></ol></nav></header><div class="content"><aside class="sidebar sidebar-left" role="complementary" aria-label="Site navigation" tabindex="-1"><div class="sidebar-header"><div class="search-container" role="search"><input type="text" id="nav-search" class="nav-search" placeholder="Search..." aria-label="Search documentation" title="Type to filter content (Press / to focus)" autocomplete="off" spellcheck="false"><button id="clear-search" type="button" class="clear-search hidden" aria-label="Clear search" title="Clear" tabindex="-1"><span class="icon icon-delete" aria-hidden="true"></span></button> <span class="search-icon" aria-hidden="true"><span class="icon icon-search"></span></span></div></div><nav id="site-navigation" class="sidebar-nav" data-base-url=""><div class="no-search-results hidden" aria-live="polite" role="status">No results found</div></nav></aside><main id="article" role="main" class=""><h1 id="markdown-representation-of-xml-documentation-elements">Markdown Representation of XML Documentation Elements</h1><h2 id="overview">Overview</h2><p>This reference describes how DocToolkit transforms XML documentation elements to their corresponding Markdown representations.</p><h2 id="basic-text-handling">Basic Text Handling</h2><h3 id="whitespace-and-special-characters">Whitespace and Special Characters</h3><p>Whitespace in text is normalized and any special Markdown characters are escaped to prevent unintended formatting.</p><h3 id="paragraphs">Paragraphs</h3><p>Paragraphs (<code>para</code> elements) are converted into Markdown paragraphs by inserting an empty line before and after their content when appropriate. When paragraphs are interleaved with other text nodes, the stylesheet ensures proper separation by inserting empty lines around the <code>para</code> elements.</p><h6 id="xml-input">XML Input:</h6><pre><code class="language-xml">&lt;para&gt;This is the first paragraph.&lt;/para&gt;
+&lt;para&gt;This is the second paragraph.&lt;/para&gt;
+</code></pre><h6 id="markdown-output">Markdown Output:</h6><pre><code class="language-md">This is the first paragraph.
+
+This is the second paragraph.
+</code></pre><h6 id="xml-input-1">XML Input:</h6><pre><code class="language-xml">Some text before.
+&lt;para&gt;Paragraph content.&lt;/para&gt;
+Some text after.
+</code></pre><h6 id="markdown-output-1">Markdown Output:</h6><pre><code class="language-md">Some text before.
+
+Paragraph content.
+
+Some text after.
+</code></pre><h2 id="code-elements">Code Elements</h2><h3 id="inline-code">Inline Code</h3><p>Inline code segments wrapped in <code>c</code> elements are rendered as inline code in Markdown by surrounding the text with backticks.</p><h6 id="xml-input-2">XML Input:</h6><pre><code class="language-xml">Use &lt;c&gt;Console.WriteLine()&lt;/c&gt; to print to the console.
+</code></pre><h6 id="markdown-output-2">Markdown Output:</h6><pre><code class="language-md">Use `Console.WriteLine()` to print to the console.
+</code></pre><h3 id="code-blocks">Code Blocks</h3><p>Code blocks (<code>code</code> elements) are transformed into fenced code blocks. If a <code>language</code> attribute is provided, its value is appended after the opening backticks to enable syntax highlighting. Otherwise, the language specified by the documentation context will be used.</p><h6 id="xml-input-with-language">XML Input (With Language):</h6><pre><code class="language-xml">&lt;code language=&quot;javascript&quot;&gt;
+function sayHello() {
+    console.log(&quot;Hello&quot;);
+}
+&lt;/code&gt;
+</code></pre><h6 id="markdown-output-3">Markdown Output:</h6><pre><code class="language-md">```javascript
+function sayHello() {
+    console.log(&quot;Hello&quot;);
+}
+```
+</code></pre><h6 id="xml-input-without-language">XML Input (Without Language):</h6><pre><code class="language-xml">&lt;code&gt;
+public void HelloWorld()
+{
+    Console.WriteLine(&quot;Hello, World!&quot;);
+}
+&lt;/code&gt;
+</code></pre><h6 id="markdown-output-4">Markdown Output:</h6><pre><code class="language-md">```csharp
+public void HelloWorld()
+{
+    Console.WriteLine(&quot;Hello, World!&quot;);
+}
+```
+</code></pre><p>The content of a code block is normalized by removing leading and trailing empty lines, collapsing consecutive empty lines, converting tabs to spaces, removing trailing whitespace, and eliminating common indentation.</p><h2 id="parameter-and-type-parameter-references">Parameter and Type Parameter References</h2><p>Both parameter (<code>paramref</code>) and generic type parameter (<code>typeparamref</code>) references are rendered as inline code by enclosing the name in backticks.</p><h6 id="xml-input-3">XML Input:</h6><pre><code class="language-xml">The &lt;paramref name=&quot;input&quot;/&gt; parameter must not be null.
+The &lt;typeparamref name=&quot;T&quot;/&gt; parameter defines the element type.
+</code></pre><h6 id="markdown-output-5">Markdown Output:</h6><pre><code class="language-md">The `input` parameter must not be null.
+The `T` parameter defines the element type.
+</code></pre><h2 id="links-and-references">Links and References</h2><h3 id="language-keyword-reference">Language Keyword Reference</h3><p>When a <code>see</code> element has a <code>langword</code> attribute, the stylesheet attempts to generate a Markdown link. If a URL is available, the keyword is wrapped in backticks and linked; otherwise, it is output as inline code.</p><h6 id="xml-input-4">XML Input:</h6><pre><code class="language-xml">Use &lt;see langword=&quot;null&quot;/&gt; to represent a null reference.
+</code></pre><h6 id="markdown-output-6">Markdown Output:</h6><pre><code class="language-md">Use [`null`](https://docs.example.com/keywords/null) to represent a null reference.
+</code></pre><h3 id="code-references">Code References</h3><p>A <code>see</code> element with a <code>cref</code> attribute is transformed into a Markdown link that points to the corresponding documentation. If no explicit link text is provided, the title is automatically generated based on the referenced type or member.</p><h6 id="xml-input-auto-text">XML Input (Auto Text):</h6><pre><code class="language-xml">See &lt;see cref=&quot;T:System.DateTime&quot;/&gt; type for date and time operations.
+</code></pre><h6 id="markdown-output-7">Markdown Output:</h6><pre><code class="language-md">See [DateTime](/docs/System.DateTime) type for date and time operations.
+</code></pre><h6 id="xml-input-custom-text">XML Input (Custom Text):</h6><pre><code class="language-xml">&lt;see cref=&quot;M:System.IO.File.ReadAllText&quot;&gt;Read text from a file&lt;/see&gt;
+</code></pre><h6 id="markdown-output-8">Markdown Output:</h6><pre><code class="language-md">[Read text from a file](/docs/System.IO.File.ReadAllText)
+</code></pre><h3 id="external-url-references">External URL References</h3><p>For <code>see</code> elements with an <code>href</code> attribute, the stylesheet creates a standard Markdown link. If no explicit text is provided, the URL itself is used as the link text.</p><h6 id="xml-input-with-text">XML Input (With Text):</h6><pre><code class="language-xml">Visit &lt;see href=&quot;https://docs.example.com&quot;&gt;our documentation&lt;/see&gt; for more details.
+</code></pre><h6 id="markdown-output-9">Markdown Output:</h6><pre><code class="language-md">Visit [our documentation](https://docs.example.com) for more details.
+</code></pre><h6 id="xml-input-without-text">XML Input (Without Text):</h6><pre><code class="language-xml">&lt;see href=&quot;https://docs.example.com&quot; /&gt;
+</code></pre><h6 id="markdown-output-10">Markdown Output:</h6><pre><code class="language-md">[https://docs.example.com](https://docs.example.com)
+</code></pre><h2 id="lists">Lists</h2><h3 id="bullet-and-numbered-lists">Bullet and Numbered Lists</h3><p>Standard <code>list</code> elements (with no type or with <code>type=&quot;bullet&quot;</code>) are transformed into unordered lists in Markdown. Lists with <code>type=&quot;number&quot;</code> are converted into numbered lists.</p><h6 id="xml-input-bullet">XML Input (Bullet):</h6><pre><code class="language-xml">&lt;list&gt;
+  &lt;item&gt;First item&lt;/item&gt;
+  &lt;item&gt;Second item&lt;/item&gt;
+  &lt;item&gt;Third item&lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="markdown-output-11">Markdown Output:</h6><pre><code class="language-md">- First item
+- Second item
+- Third item
+</code></pre><h6 id="xml-input-numbered">XML Input (Numbered):</h6><pre><code class="language-xml">&lt;list type=&quot;number&quot;&gt;
+  &lt;item&gt;First item&lt;/item&gt;
+  &lt;item&gt;Second item&lt;/item&gt;
+  &lt;item&gt;Third item&lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="markdown-output-12">Markdown Output:</h6><pre><code class="language-md">1. First item
+2. Second item
+3. Third item
+</code></pre><p>When list items contain term-description pairs, the term is emphasized and separated from its description by an en-dash.</p><h6 id="xml-input-termdescription">XML Input (Term/Description):</h6><pre><code class="language-xml">&lt;list type=&quot;bullet&quot;&gt;
+  &lt;item&gt;
+    &lt;term&gt;Term 1&lt;/term&gt;
+    &lt;description&gt;Description for term 1&lt;/description&gt;
+  &lt;/item&gt;
+  &lt;item&gt;
+    &lt;term&gt;Term 2&lt;/term&gt;
+    &lt;description&gt;Description for term 2&lt;/description&gt;
+  &lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="markdown-output-13">Markdown Output:</h6><pre><code class="language-md">- **Term 1** – Description for term 1
+- **Term 2** – Description for term 2
+</code></pre><h3 id="tables">Tables</h3><p>For table-structured lists (<code>type=&quot;table&quot;</code>), the stylesheet outputs a Markdown table.</p><h6 id="xml-input-table">XML Input (Table):</h6><pre><code class="language-xml">&lt;list type=&quot;table&quot;&gt;
+  &lt;listheader&gt;
+    &lt;term&gt;Parameter&lt;/term&gt;
+    &lt;description&gt;Required&lt;/description&gt;
+    &lt;description&gt;Description&lt;/description&gt;
+  &lt;/listheader&gt;
+  &lt;item&gt;
+    &lt;term&gt;name&lt;/term&gt;
+    &lt;description&gt;Yes&lt;/description&gt;
+    &lt;description&gt;The user's name&lt;/description&gt;
+  &lt;/item&gt;
+  &lt;item&gt;
+    &lt;term&gt;age&lt;/term&gt;
+    &lt;description&gt;No&lt;/description&gt;
+    &lt;description&gt;The user's age&lt;/description&gt;
+  &lt;/item&gt;
+&lt;/list&gt;
+</code></pre><h6 id="markdown-output-14">Markdown Output:</h6><pre><code class="language-md">|Parameter|Required|Description|
+|---|---|---|
+|name|Yes|The user's name|
+|age|No|The user's age|
+</code></pre><p><strong>Important:</strong> For proper rendering, Markdown tables must have a header row and contain only single-paragraph text in each cell.</p><h2 id="notes-and-admonitions">Notes and Admonitions</h2><p>A <code>note</code> element is rendered as a Markdown blockquote. Notes can include titles, types, and complex content including paragraphs and lists.</p><h6 id="xml-input-simple">XML Input (Simple):</h6><pre><code class="language-xml">&lt;note&gt;This is an important detail to remember.&lt;/note&gt;
+</code></pre><h6 id="markdown-output-15">Markdown Output:</h6><pre><code class="language-md">&gt; This is an important detail to remember.
+</code></pre><h6 id="xml-input-with-title">XML Input (With Title):</h6><pre><code class="language-xml">&lt;note type=&quot;security&quot; title=&quot;Security Warning&quot;&gt;Do not share your password.&lt;/note&gt;
+</code></pre><h6 id="markdown-output-16">Markdown Output:</h6><pre><code class="language-md">&gt; **Security Warning**
+&gt; Do not share your password.
+</code></pre><h6 id="xml-input-complex">XML Input (Complex):</h6><pre><code class="language-xml">&lt;note type=&quot;tip&quot; title=&quot;Tip&quot;&gt;
+  &lt;para&gt;You can optimize performance by:&lt;/para&gt;
+  &lt;list&gt;
+    &lt;item&gt;Using indexes&lt;/item&gt;
+    &lt;item&gt;Caching results&lt;/item&gt;
+  &lt;/list&gt;
+&lt;/note&gt;
+</code></pre><h6 id="markdown-output-17">Markdown Output:</h6><pre><code class="language-md">&gt; **Tip**
+&gt; You can optimize performance by:
+&gt; - Using indexes
+&gt; - Caching results
+</code></pre><footer class="content-footer" role="contentinfo"><p>Copyright © 2025 <a href="http://kampute.com">Kampute</a></p></footer></main><aside class="sidebar sidebar-right" role="complementary" aria-label="In this article" tabindex="-1"><div class="sidebar-header" aria-hidden="true"><h3>In this article</h3></div><nav id="article-navigation" class="sidebar-nav" data-max-level="3"></nav></aside></div><div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true"><div class="modal-container"><div class="modal-header"><h3 id="modal-title"></h3><button id="modal-close" type="button" class="modal-close-btn" aria-label="Close dialog">&times;</button></div><div class="modal-content"><div id="modal-body" class="modal-body"><iframe id="modal-iframe" frameborder="0" title="Dialog content"></iframe></div></div></div></div></body></html>
