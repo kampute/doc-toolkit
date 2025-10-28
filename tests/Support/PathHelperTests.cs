@@ -23,7 +23,7 @@ namespace Kampute.DocToolkit.Test.Support
             return PathHelper.EnsureValidRelativePath(path);
         }
 
-        [TestCase(@"C:\folder\file.txt")]
+        [TestCase(@"\folder\file.txt")]
         [TestCase(@"/folder/file.txt")]
         public void EnsureValidRelativePath_WithAbsolutePath_ThrowsArgumentException(string path)
         {
@@ -50,7 +50,7 @@ namespace Kampute.DocToolkit.Test.Support
         [Test]
         public void EnsureValidRelativePath_WithCustomCallerName_UsesCallerNameInException()
         {
-            var path = @"C:\folder\file.txt";
+            var path = @"/folder/file.txt";
             var customCaller = "CustomMethod";
 
             Assert.That(() => PathHelper.EnsureValidRelativePath(path, customCaller), Throws.ArgumentException
