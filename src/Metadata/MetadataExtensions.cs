@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Metadata
     using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Runtime.CompilerServices;
 
     /// <summary>
@@ -181,6 +182,33 @@ namespace Kampute.DocToolkit.Metadata
                             yield return nestedMember;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Attempts to get the type parameters declared directly by the specified member if it is generic.
+        /// </summary>
+        /// <param name="member">The member to check for type parameters.</param>
+        /// <param name="typeParameters">When this method returns, contains the type parameters declared by the member if it is generic; otherwise, an empty collection.</param>
+        /// <returns><see langword="true"/> if the member is generic; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> is <see langword="null"/>.</exception>
+        public static bool TryGetOwnTypeParameters(this IMember member, out IEnumerable<ITypeParameter> typeParameters)
+        {
+            switch (member)
+            {
+                case null:
+                    throw new ArgumentNullException(nameof(member));
+                case IGenericCapableType { IsGenericType: true } genericType:
+                    var (start, count) = genericType.OwnGenericParameterRange;
+                    typeParameters = genericType.TypeParameters.Skip(start).Take(count);
+                    return true;
+                case IMethod { IsGenericMethod: true } genericMethod:
+                    typeParameters = genericMethod.TypeParameters;
+                    return true;
+                default:
+                    typeParameters = [];
+                    return false;
+
             }
         }
     }

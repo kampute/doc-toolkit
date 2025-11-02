@@ -86,9 +86,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts()
         {
-            var signature = $"op_{Name}({string.Join(',', Parameters.Select(p => p.Type.Signature))})";
+            var signature = $"op_{Name}({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
             if (IsConversionOperator)
-                signature = $"{signature}~{Return.Type.Signature}";
+                signature = $"{signature}~{Return.Type.ParametericSignature}";
 
             return ('M', signature);
         }

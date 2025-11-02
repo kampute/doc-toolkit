@@ -116,7 +116,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             var signature = Name.Replace('.', '#');
             if (Parameters.Count > 0)
-                signature += $"({string.Join(',', Parameters.Select(p => p.Type.Signature))})";
+                signature += $"({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
 
             return ('M', signature);
         }

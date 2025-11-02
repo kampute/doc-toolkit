@@ -6,7 +6,6 @@
 namespace Kampute.DocToolkit.Test.Support
 {
     using Kampute.DocToolkit.Metadata;
-    using Kampute.DocToolkit.Metadata.Capabilities;
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
     using System;
@@ -102,11 +101,12 @@ namespace Kampute.DocToolkit.Test.Support
         public void ResolveMember_ForGenericType_ReturnsTypeMetadata()
         {
             var result = CodeReference.ResolveMember("T:System.Collections.Generic.List`1");
-            if (result is not null)
+
+            Assert.That(result, Is.InstanceOf<IGenericCapableType>());
+            using (Assert.EnterMultipleScope())
             {
-                Assert.That(result, Is.InstanceOf<IType>());
-                Assert.That(result, Is.InstanceOf<IWithTypeParameters>());
                 Assert.That(result.Name, Is.EqualTo("List`1"));
+                Assert.That(((IGenericCapableType)result).TypeParameters, Has.Count.EqualTo(1));
             }
         }
 
@@ -152,8 +152,11 @@ namespace Kampute.DocToolkit.Test.Support
             var result = CodeReference.ResolveMember("M:System.Array.Empty``1");
 
             Assert.That(result, Is.InstanceOf<IMethod>());
-            Assert.That(result, Is.InstanceOf<IWithTypeParameters>());
-            Assert.That(result.Name, Is.EqualTo("Empty"));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Name, Is.EqualTo("Empty"));
+                Assert.That(((IMethod)result).TypeParameters, Has.Count.EqualTo(1));
+            }
         }
 
         [Test]

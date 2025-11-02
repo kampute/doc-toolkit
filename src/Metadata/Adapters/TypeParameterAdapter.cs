@@ -239,7 +239,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected override string ConstructFullName() => Name;
 
         /// <inheritdoc/>
-        protected override string ConstructSignature() => IsGenericMethodParameter ? $"``{Position}" : $"`{Position}";
+        protected override string ConstructSignature(bool useParameterNotation) => IsGenericMethodParameter ? $"``{Position}" : $"`{Position}";
 
         /// <summary>
         /// Retrieves the member (type or method) that declares the generic type parameter.

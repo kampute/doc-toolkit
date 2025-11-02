@@ -116,7 +116,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             .OrderBy(t => t.Name, StringComparer.Ordinal);
 
         /// <summary>
-        /// Retrieves the constructors declared by the type.
+        /// Retrieves the visible constructors declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IConstructor"/> objects representing the constructors declared by the type.</returns>
         protected virtual IEnumerable<IConstructor> GetConstructors() => Reflection
@@ -126,7 +126,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             .OrderBy(c => c.Parameters.Count);
 
         /// <summary>
-        /// Retrieves the fields declared by the type.
+        /// Retrieves the visible fields declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IField"/> objects representing the fields declared by the type.</returns>
         protected virtual IEnumerable<IField> GetFields() => Reflection
@@ -136,7 +136,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             .OrderBy(f => f.Name, StringComparer.Ordinal);
 
         /// <summary>
-        /// Retrieves the methods declared by the type.
+        /// Retrieves the visible methods declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IMethod"/> objects representing the methods declared by the type.</returns>
         protected virtual IEnumerable<IMethod> GetMethods() => Reflection
@@ -147,7 +147,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             .ThenBy(m => m.Parameters.Count);
 
         /// <summary>
-        /// Retrieves the properties declared by the type.
+        /// Retrieves the visible properties declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IProperty"/> objects representing the properties declared by the type.</returns>
         protected virtual IEnumerable<IProperty> GetProperties() => Reflection
@@ -158,7 +158,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             .ThenBy(p => p.Parameters.Count);
 
         /// <summary>
-        /// Retrieves the events declared by the type.
+        /// Retrieves the visible events declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IEvent"/> objects representing the events declared by the type.</returns>
         protected virtual IEnumerable<IEvent> GetEvents() => Reflection

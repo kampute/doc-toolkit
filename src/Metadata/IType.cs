@@ -59,12 +59,25 @@ namespace Kampute.DocToolkit.Metadata
         bool IsGenericType { get; }
 
         /// <summary>
-        /// Gets the signature of the type.
+        /// Gets the general signature of the type.
         /// </summary>
         /// <value>
-        /// A string representation of the type used for constructing parameter and return type signatures.
+        /// A string representation of the type used for constructing type's code references.
         /// </value>
         string Signature { get; }
+
+        /// <summary>
+        /// Gets the signature of the type when used as a parameter or return type.
+        /// </summary>
+        /// <value>
+        /// A string representation of the type used for constructing parameter and return type signatures in code references.
+        /// </value>
+        /// <remarks>
+        /// In most cases, the <see cref="ParametericSignature"/> is identical to the <see cref="Signature"/> property. However, 
+        /// for certain types such as generic types, this signature may differ to accurately represent how the type is used in 
+        /// parameter and return type contexts.
+        /// </remarks>
+        string ParametericSignature { get; }
 
         /// <summary>
         /// Gets the hierarchy of declaring types, starting from the outermost declaring type down to the immediate declaring type.

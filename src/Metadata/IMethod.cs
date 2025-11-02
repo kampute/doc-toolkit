@@ -5,14 +5,22 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
-    using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Defines a contract for accessing method metadata.
     /// </summary>
-    public interface IMethod : IVirtualTypeMember, IMethodBase, IWithTypeParameters
+    public interface IMethod : IVirtualTypeMember, IMethodBase
     {
+        /// <summary>
+        /// Gets the type parameters declared by the method if it is generic.
+        /// </summary>
+        /// <value>
+        /// A read-only list of <see cref="ITypeParameter"/> instances representing the type parameters declared by the method.
+        /// </value>
+        IReadOnlyList<ITypeParameter> TypeParameters { get; }
+
         /// <summary>
         /// Gets a value indicating whether the method is generic.
         /// </summary>

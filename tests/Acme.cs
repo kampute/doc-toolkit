@@ -178,7 +178,23 @@ namespace Acme
 
         protected internal void Test([Custom] T t = default) { }
 
-        public class Helper<U, V> { }
+        public Scope BeginScope() => new(Items);
+        public void EndScope(Scope scope) { }
+
+        public class Scope
+        {
+            public Scope(IEnumerable<T> items) => Items = [.. items];
+
+            public List<T> Items { get; }
+
+            public static implicit operator List<T>(Scope scope) => scope.Items;
+        }
+
+        public class Helper<U, V>
+        {
+            public U First { get; set; }
+            public V Second { get; set; }
+        }
     }
 
     public class MyExtendedList<T> : MyList<T>
