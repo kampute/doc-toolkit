@@ -40,13 +40,13 @@ namespace Kampute.DocToolkit.Models
         protected CompositeTypeModel(object declaringEntity, ICompositeType type)
             : base(declaringEntity, type)
         {
-            nestedTypes = new(() => new(type.HasNestedTypes ? type.NestedTypes.Select(Assembly.FindMember).OfType<TypeModel>() : TypeCollection.Empty));
             fields = new(() => [.. type.Fields.Select(f => new FieldModel(this, f))]);
             constructors = new(() => [.. type.Constructors.Select(c => new ConstructorModel(this, c))]);
             properties = new(() => [.. type.Properties.Select(p => new PropertyModel(this, p))]);
             methods = new(() => [.. type.Methods.Select(m => new MethodModel(this, m))]);
             events = new(() => [.. type.Events.Select(e => new EventModel(this, e))]);
             operators = new(() => [.. type.Operators.Select(o => new OperatorModel(this, o))]);
+
             explicitInterfaceMembers = new(() => [.. type.ExplicitInterfaceMembers.Select(member => member switch
             {
                 IProperty p => new PropertyModel(this, p),
@@ -54,6 +54,10 @@ namespace Kampute.DocToolkit.Models
                 IEvent e => new EventModel(this, e),
                 _ => default(TypeMemberModel)!
             }).Where(m => m is not null)]);
+
+            nestedTypes = new(() => type.HasNestedTypes
+                ? new(type.NestedTypes.Select(Assembly.FindMember).OfType<TypeModel>())
+                : TypeCollection.Empty);
         }
 
         /// <summary>
@@ -81,6 +85,10 @@ namespace Kampute.DocToolkit.Models
         /// A read-only collection of <see cref="ConstructorModel"/> representing the constructors declared by the type.
         /// The constructors in the collection are ordered by their number of parameters.
         /// </value>
+        /// <remarks>
+        /// If the type only has a default public constructor without any documentation, the constructor is considered implicit
+        /// and the collection will be empty.
+        /// </remarks>
         public IReadOnlyList<ConstructorModel> Constructors => constructors.Value;
 
         /// <summary>
@@ -129,11 +137,11 @@ namespace Kampute.DocToolkit.Models
 
         /// <inheritdoc/>
         public override IEnumerable<TypeMemberModel> Members => base.Members
-            .Concat(Fields)
             .Concat(Constructors)
             .Concat(Methods)
             .Concat(Properties)
             .Concat(Events)
+            .Concat(Fields)
             .Concat(Operators)
             .Concat(ExplicitInterfaceMembers);
 

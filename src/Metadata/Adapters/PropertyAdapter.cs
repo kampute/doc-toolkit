@@ -156,7 +156,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (signature.Contains('.'))
                 signature = signature.Replace('.', '#').Replace('<', '{').Replace('>', '}');
             if (IsIndexer)
-                signature += $"({string.Join(',', Parameters.Select(p => p.Type.Signature))})";
+                signature += $"({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
 
             return ('P', signature);
         }

@@ -24,7 +24,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class AssemblyAdapter : AttributeAwareMetadataAdapter<Assembly>, IAssembly
     {
-        private readonly Lazy<ILookup<string, IType>> namespaces;
+        private readonly Lazy<SortedDictionary<string, IReadOnlyList<IType>>> namespaces;
         private readonly Lazy<SortedDictionary<string, IType>> exportedTypes;
         private readonly Lazy<IReadOnlyDictionary<string, object?>> attributes;
 
@@ -43,15 +43,25 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             {
                 var factory = Repository.GetTypeMetadata;
                 var types = new SortedDictionary<string, IType>(StringComparer.Ordinal);
+
                 foreach (var type in GetExportedTypes())
                 {
                     var metadata = factory(type);
                     types[NormalizeTypeName(metadata.FullName)] = metadata;
                 }
+
                 return types;
             });
 
-            namespaces = new(() => ExportedTypes.ToLookup(type => type.Namespace, StringComparer.Ordinal));
+            namespaces = new(() =>
+            {
+                var result = new SortedDictionary<string, IReadOnlyList<IType>>(StringComparer.Ordinal);
+
+                foreach (var group in ExportedTypes.GroupBy(type => type.Namespace, StringComparer.Ordinal))
+                    result[group.Key] = [.. group.OrderBy(t => t.FullName, StringComparer.Ordinal)];
+
+                return result;
+            });
 
             attributes = new(GetMetadataAttributes);
         }
@@ -66,7 +76,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual IReadOnlyCollection<Module> Modules => Reflection.GetModules();
 
         /// <inheritdoc/>
-        public ILookup<string, IType> Namespaces => namespaces.Value;
+        public IReadOnlyDictionary<string, IReadOnlyList<IType>> Namespaces => namespaces.Value;
 
         /// <inheritdoc/>
         public IReadOnlyCollection<IType> ExportedTypes => exportedTypes.Value.Values;

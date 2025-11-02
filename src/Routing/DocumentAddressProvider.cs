@@ -6,16 +6,18 @@
 namespace Kampute.DocToolkit.Routing
 {
     using Kampute.DocToolkit;
+    using Kampute.DocToolkit.Collections;
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Support;
     using Kampute.DocToolkit.Topics;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
     using System.Runtime.CompilerServices;
 
     /// <summary>
-    /// Provides URLs and file paths to the documentation of code references, types, and type members.
+    /// Provides URLs and file paths to the documentation of namespaces, types, and type members.
     /// </summary>
     /// <remarks>
     /// This class is responsible for providing the documentation URLs and file paths for code references, types,
@@ -25,24 +27,29 @@ namespace Kampute.DocToolkit.Routing
     /// </remarks>
     public class DocumentAddressProvider : IDocumentAddressProvider
     {
+        private readonly HashSet<IAssembly> documentAssemblies;
         private readonly IDocumentUrlContextProvider urlContext;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentAddressProvider"/> class with the specified addressing strategy.
         /// </summary>
         /// <param name="strategy">The strategy that determines how generated documentation pages should be addressed.</param>
+        /// <param name="assemblies">The assemblies being documented.</param>
         /// <param name="baseUrl">The base URL of the documentation site, or <see langword="null"/> for relative URLs.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strategy"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strategy"/> or <paramref name="assemblies"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="baseUrl"/> is not <see langword="null"/> and is not an absolute URL.</exception>
-        public DocumentAddressProvider(IDocumentAddressingStrategy strategy, Uri? baseUrl = null)
+        public DocumentAddressProvider(IDocumentAddressingStrategy strategy, IEnumerable<IAssembly> assemblies, Uri? baseUrl = null)
         {
             if (strategy is null)
                 throw new ArgumentNullException(nameof(strategy));
+            if (assemblies is null)
+                throw new ArgumentNullException(nameof(assemblies));
+            if (baseUrl is not null && !baseUrl.IsAbsoluteUri)
+                throw new ArgumentException("The base URL must be an absolute URL.", nameof(baseUrl));
 
             Strategy = strategy;
-            urlContext = baseUrl is null
-                ? new ContextAwareUrlNormalizer()
-                : new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            documentAssemblies = new(assemblies, ReferenceEqualityComparer<IAssembly>.Instance);
+            urlContext = baseUrl is null ? new ContextAwareUrlNormalizer() : new RelativeToAbsoluteUrlNormalizer(baseUrl);
         }
 
         /// <summary>
@@ -54,13 +61,29 @@ namespace Kampute.DocToolkit.Routing
         protected IDocumentAddressingStrategy Strategy { get; }
 
         /// <summary>
+        /// Gets the assemblies being documented.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of <see cref="IAssembly"/> instances representing the assemblies being documented.
+        /// </value>
+        /// <remarks>
+        /// The code elements (namespaces, types, and members) that belong to these assemblies are considered internal and will
+        /// have their documentation URLs resolved using the configured addressing strategy.
+        /// <para>
+        /// Code elements that do not belong to these assemblies are considered external and will have their documentation
+        /// URLs resolved using the external documentation URL resolvers configured in the <see cref="ExternalReferences"/>
+        /// collection.
+        /// </para>
+        /// </remarks>
+        public IReadOnlyCollection<IAssembly> Assemblies => documentAssemblies;
+
+        /// <summary>
         /// Gets the page granularity used for organizing documentation content.
         /// </summary>
         /// <value>
-        /// The granularity that specifies which code elements (namespaces, types, members) receive their own dedicated pages
+        /// The granularity that specifies which code elements (namespaces, types, and members) receive their own dedicated pages
         /// in the documentation system.
         /// </value>
-
         public PageGranularity Granularity => Strategy.Granularity;
 
         /// <summary>
@@ -70,6 +93,10 @@ namespace Kampute.DocToolkit.Routing
         /// A list of <see cref="IRemoteApiDocUrlResolver"/> instances that provide documentation URLs for code elements that are not
         /// part of the assemblies being documented.
         /// </value>
+        /// <remarks>
+        /// When a code element (namespace, type, or member) is not found within the documented assemblies, the provider
+        /// will iterate through this collection to find a resolver that can provide the appropriate documentation URL.
+        /// </remarks>
         /// <seealso cref="MicrosoftDocs"/>
         /// <seealso cref="SearchBasedApiDocUrlResolver"/>
         /// <seealso cref="StrategyBasedApiDocUrlResolver"/>
@@ -84,17 +111,16 @@ namespace Kampute.DocToolkit.Routing
         /// <inheritdoc/>
         public virtual bool TryGetNamespaceUrl(string ns, [NotNullWhen(true)] out Uri? url)
         {
-            if (!string.IsNullOrWhiteSpace(ns))
+            if (!IsInternalNamespace(ns))
             {
                 var externalProvider = FindExternalProviderForNamespace(ns);
                 if (externalProvider is not null)
                     return externalProvider.TryGetNamespaceUrl(ns, out url);
-
-                if (Strategy.TryResolveNamespaceAddress(ns, out var address))
-                {
-                    url = ToDocumentUrl(address.RelativeUrl);
-                    return true;
-                }
+            }
+            else if (Strategy.TryResolveNamespaceAddress(ns, out var address))
+            {
+                url = ToDocumentUrl(address.RelativeUrl);
+                return true;
             }
 
             url = null;
@@ -104,17 +130,16 @@ namespace Kampute.DocToolkit.Routing
         /// <inheritdoc/>
         public virtual bool TryGetMemberUrl(IMember member, [NotNullWhen(true)] out Uri? url)
         {
-            if (member is not null)
+            if (!IsInternalMember(member))
             {
                 var externalProvider = FindExternalProviderForMember(member);
                 if (externalProvider is not null)
                     return externalProvider.TryGetMemberUrl(member, out url);
-
-                if (Strategy.TryResolveMemberAddress(member, out var address))
-                {
-                    url = ToDocumentUrl(address.RelativeUrl);
-                    return true;
-                }
+            }
+            else if (Strategy.TryResolveMemberAddress(member, out var address))
+            {
+                url = ToDocumentUrl(address.RelativeUrl);
+                return true;
             }
 
             url = null;
@@ -137,12 +162,7 @@ namespace Kampute.DocToolkit.Routing
         /// <inheritdoc/>
         public virtual bool TryGetNamespaceFile(string ns, [NotNullWhen(true)] out string? relativePath)
         {
-            if
-            (
-                !string.IsNullOrWhiteSpace(ns) &&
-                FindExternalProviderForNamespace(ns) is null &&
-                Strategy.TryResolveNamespaceAddress(ns, out var address)
-            )
+            if (IsInternalNamespace(ns) && Strategy.TryResolveNamespaceAddress(ns, out var address))
             {
                 relativePath = address.RelativeFilePath;
                 return !string.IsNullOrEmpty(relativePath);
@@ -155,12 +175,7 @@ namespace Kampute.DocToolkit.Routing
         /// <inheritdoc/>
         public virtual bool TryGetMemberFile(IMember member, [NotNullWhen(true)] out string? relativePath)
         {
-            if
-            (
-                member is not null &&
-                FindExternalProviderForMember(member) is null &&
-                Strategy.TryResolveMemberAddress(member, out var address)
-            )
+            if (IsInternalMember(member) && Strategy.TryResolveMemberAddress(member, out var address))
             {
                 relativePath = address.RelativeFilePath;
                 return !string.IsNullOrEmpty(relativePath);
@@ -182,6 +197,22 @@ namespace Kampute.DocToolkit.Routing
             relativePath = null;
             return false;
         }
+
+        /// <summary>
+        /// Determines whether the specified namespace belongs to the assemblies being documented.
+        /// </summary>
+        /// <param name="ns">The namespace to check.</param>
+        /// <returns><see langword="true"/> if the namespace belongs to the assemblies being documented; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected bool IsInternalNamespace(string ns) => !string.IsNullOrWhiteSpace(ns) && documentAssemblies.Any(asm => asm.Namespaces.ContainsKey(ns));
+
+        /// <summary>
+        /// Determines whether the specified member belongs to the assemblies being documented.
+        /// </summary>
+        /// <param name="member">The member to check.</param>
+        /// <returns><see langword="true"/> if the member belongs to the assemblies being documented; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected bool IsInternalMember(IMember member) => member is not null && documentAssemblies.Contains(member.Assembly);
 
         /// <summary>
         /// Finds an external documentation URL resolver that supports the specified namespace.
@@ -228,11 +259,13 @@ namespace Kampute.DocToolkit.Routing
         /// Creates a new instance of the <see cref="DocumentAddressProvider"/> class with the specified addressing strategy.
         /// </summary>
         /// <typeparam name="TStrategy">The type of the addressing strategy to use.</typeparam>
+        /// <param name="assemblies">The assemblies being documented.</param>
         /// <param name="baseUrl">The base URL of the documentation site, or <see langword="null"/> for relative URLs.</param>
         /// <returns>A new instance of the <see cref="DocumentAddressProvider"/> class.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="assemblies"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="baseUrl"/> is not <see langword="null"/> and is not an absolute URL.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DocumentAddressProvider Create<TStrategy>(Uri? baseUrl = null)
-            where TStrategy : IDocumentAddressingStrategy, new() => new(new TStrategy(), baseUrl);
+        public static DocumentAddressProvider Create<TStrategy>(IEnumerable<IAssembly> assemblies, Uri? baseUrl = null)
+            where TStrategy : IDocumentAddressingStrategy, new() => new(new TStrategy(), assemblies, baseUrl);
     }
 }

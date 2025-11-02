@@ -69,19 +69,22 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public override bool IsDirectDeclaration => !IsGenericType || IsGenericTypeDefinition;
 
         /// <inheritdoc/>
-        protected override string ConstructSignature()
+        protected override string ConstructSignature(bool useParameterNotation)
         {
-            if (!IsGenericType || IsGenericTypeDefinition)
-                return base.ConstructSignature();
+            if (!IsGenericType || (!useParameterNotation && IsGenericTypeDefinition))
+                return base.ConstructSignature(useParameterNotation);
 
             using var reusable = StringBuilderPool.Shared.GetBuilder();
             var sb = reusable.Builder;
 
             var chain = new Stack<IType>();
+
+            // Build the chain of declaring types
             chain.Push(this);
             for (var declaringType = DeclaringType; declaringType is not null; declaringType = declaringType.DeclaringType)
                 chain.Push(declaringType);
 
+            // Ignore non-generic declaring types at the top of the chain
             var nonGenericDeclaringType = default(IType);
             while (chain.TryPeek(out var type))
             {
@@ -92,40 +95,50 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 nonGenericDeclaringType = type;
             }
 
+            // Append namespace or non-generic declaring type
             if (nonGenericDeclaringType is not null)
                 sb.Append(nonGenericDeclaringType.Signature).Append('.');
             else if (!string.IsNullOrEmpty(Namespace))
                 sb.Append(Namespace).Append('.');
 
-            var typeArgs = TypeArguments;
+            // Append generic types with their type arguments or parameters
+            var typeArgs = IsGenericTypeDefinition ? TypeParameters : TypeArguments;
             var typeArgIndex = 0;
             while (chain.TryPop(out var type))
             {
-                if (type.IsGenericType)
+                var appendName = true;
+                if (type is IGenericCapableType { IsGenericType: true } genericType)
                 {
-                    var genericType = (IGenericCapableType)type;
-                    var arity = genericType.OwnGenericParameterRange.Count;
-                    sb.Append(genericType.UnqualifiedName);
-                    sb.Append('{');
-                    for (var i = 0; i < arity; ++i)
+                    var count = genericType.OwnGenericParameterRange.Count;
+                    if (count > 0)
                     {
-                        if (i > 0)
-                            sb.Append(',');
-
-                        sb.Append(typeArgs[typeArgIndex++].Signature);
+                        sb.Append(genericType.UnqualifiedName);
+                        AppendGenericParameters(count);
+                        appendName = false;
                     }
-                    sb.Append('}');
-                }
-                else
-                {
-                    sb.Append(type.Name);
                 }
 
+                if (appendName)
+                    sb.Append(type.Name);
                 if (chain.Count > 0)
                     sb.Append('.');
             }
 
             return sb.ToString();
+
+            void AppendGenericParameters(int arity)
+            {
+                sb.Append('{');
+                for (var i = 0; i < arity; ++i)
+                {
+                    if (i > 0)
+                        sb.Append(',');
+
+                    var typeArg = typeArgs[typeArgIndex++];
+                    sb.Append(useParameterNotation ? typeArg.ParametericSignature : typeArg.Signature);
+                }
+                sb.Append('}');
+            }
         }
 
         /// <summary>

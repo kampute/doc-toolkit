@@ -17,12 +17,12 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetMemberUrl_ForNonExternalReference_ReturnsUrl()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
-
             var member = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([member.Assembly]);
+
             var expectedUrl = new Uri("api/system.console.writeline.html#system-console-writeline(system-string)", UriKind.Relative);
 
-            var result = addressProvider.TryGetMemberUrl(member!, out var url);
+            var result = addressProvider.TryGetMemberUrl(member, out var url);
 
             using (Assert.EnterMultipleScope())
             {
@@ -34,13 +34,13 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetMemberUrl_ForExternalReferences_ReturnsUrl()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             addressProvider.ExternalReferences.Add(new MicrosoftDocs());
 
             var member = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!.GetMetadata();
             var expectedUrl = new Uri("https://learn.microsoft.com/dotnet/api/system.console.writeline#system-console-writeline(system-string)");
 
-            var result = addressProvider.TryGetMemberUrl(member!, out var url);
+            var result = addressProvider.TryGetMemberUrl(member, out var url);
 
             using (Assert.EnterMultipleScope())
             {
@@ -53,12 +53,12 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryGetMemberUrl_WithBaseUrl_ReturnsAbsoluteUrl()
         {
             var baseUrl = new Uri("https://docs.example.com/");
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>(baseUrl);
-
             var member = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([member.Assembly], baseUrl);
+
             var expectedUrl = new Uri(baseUrl, "api/system.console.writeline.html#system-console-writeline(system-string)");
 
-            var result = addressProvider.TryGetMemberUrl(member!, out var url);
+            var result = addressProvider.TryGetMemberUrl(member, out var url);
 
             using (Assert.EnterMultipleScope())
             {
@@ -70,7 +70,8 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetNamespaceUrl_ForNonExternalReference_ReturnsUrl()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var assembly = typeof(System.IO.Stream).Assembly.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([assembly]);
 
             var namespaceName = "System.IO";
             var expectedUrl = new Uri("api/system.io.html", UriKind.Relative);
@@ -87,7 +88,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetNamespaceUrl_ForExternalReferences_ReturnsUrl()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             addressProvider.ExternalReferences.Add(new MicrosoftDocs());
 
             var namespaceName = "System.IO";
@@ -106,7 +107,8 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryGetNamespaceUrl_WithBaseUrl_ReturnsAbsoluteUrl()
         {
             var baseUrl = new Uri("https://docs.example.com/");
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>(baseUrl);
+            var assembly = typeof(System.IO.Stream).Assembly.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([assembly], baseUrl);
 
             var namespaceName = "System.IO";
             var expectedUrl = new Uri(baseUrl, "api/system.io.html");
@@ -123,7 +125,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetUrl_Topic_ReturnsUrl()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
 
             var topic = MockTopicBuilder.Topic("sample-topic", "Sample Topic").Build();
             var expectedUrl = new Uri("sample-topic.html", UriKind.Relative);
@@ -141,7 +143,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryGetUrl_Topic_WithBaseUrl_ReturnsAbsoluteUrl()
         {
             var baseUrl = new Uri("https://docs.example.com/");
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>(baseUrl);
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([], baseUrl);
 
             var topic = MockTopicBuilder.Topic("sample-topic", "Sample Topic").Build();
             var expectedUrl = new Uri(baseUrl, "sample-topic.html");
@@ -158,12 +160,12 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetMemberFile_ForNonExternalReference_ReturnsFilePath()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
-
             var member = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([member.Assembly]);
+
             var expectedPath = "api/system.console.writeline.html";
 
-            var result = addressProvider.TryGetMemberFile(member!, out var path);
+            var result = addressProvider.TryGetMemberFile(member, out var path);
 
             using (Assert.EnterMultipleScope())
             {
@@ -175,12 +177,12 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetMemberFile_ForExternalReferences_DoesNotReturnFilePath()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             addressProvider.ExternalReferences.Add(new MicrosoftDocs());
 
             var member = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!.GetMetadata();
 
-            var result = addressProvider.TryGetMemberFile(member!, out var path);
+            var result = addressProvider.TryGetMemberFile(member, out var path);
 
             using (Assert.EnterMultipleScope())
             {
@@ -192,7 +194,8 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetNamespaceFile_ForNonExternalReference_ReturnsFilePath()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var assembly = typeof(System.IO.Stream).Assembly.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([assembly]);
 
             var namespaceName = "System.IO";
             var expectedPath = "api/system.io.html";
@@ -209,7 +212,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetNamespaceFile_ForExternalReferences_DoesNotReturnFilePath()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             addressProvider.ExternalReferences.Add(new MicrosoftDocs());
 
             var namespaceName = "System.IO";
@@ -225,7 +228,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void TryGetFilePath_Topic_ReturnsFilePath()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
 
             var topic = MockTopicBuilder.Topic("sample-topic", "Sample Topic").Build();
             var expectedPath = "sample-topic.html";
@@ -242,7 +245,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void BeginScope_SetsActiveScope()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             using var scope = addressProvider.BeginScope("system", null);
 
             Assert.That(addressProvider.ActiveScope, Is.EqualTo(scope));
@@ -251,7 +254,8 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void BeginScope_AffectsRelativeUrls()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var assembly = typeof(object).Assembly.GetMetadata();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([assembly]);
             var cref = "T:System.Object";
 
             using (addressProvider.BeginScope("api/system", null))
@@ -267,7 +271,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void ActiveScope_Default_IsRoot()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
 
             Assert.That(addressProvider.ActiveScope, Is.Not.Null);
             Assert.That(addressProvider.ActiveScope.IsRoot, Is.True);
@@ -276,7 +280,7 @@ namespace Kampute.DocToolkit.Test.Routing
         [Test]
         public void ActiveScope_DisposingScope_ReturnsToPrevious()
         {
-            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>();
+            var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
             var initialScope = addressProvider.ActiveScope;
 
             using (var scope = addressProvider.BeginScope("subfolder", null))

@@ -90,14 +90,6 @@ namespace Kampute.DocToolkit.Test
             public sealed override int GetValueOrDefault() => 42;
         }
 
-        //public class DrivedFromConstructedGeneric : ConstructedGenericDerivedClass
-        //{
-        //    public DrivedFromConstructedGeneric() { }
-
-        //    public sealed override int? Value { get; } = 84;
-        //    public sealed override int GetValueOrDefault() => 84;
-        //}
-
         public interface IGenericTestInterface<T> { }
 
         public interface IExtendedGenericTestInterface<T> : IGenericTestInterface<T> { }

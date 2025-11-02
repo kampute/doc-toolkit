@@ -103,14 +103,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        protected override string ConstructSignature() => Modifier switch
+        protected override string ConstructSignature(bool useParameterNotation) => Modifier switch
         {
             TypeModifier.Nullable => $"System.Nullable{{{ElementType.Signature}}}",
             TypeModifier.Array when ArrayRank > 1 => $"{ElementType.Signature}[{string.Join(',', Enumerable.Repeat("0:", ArrayRank))}]",
             TypeModifier.Array => $"{ElementType.Signature}[]",
             TypeModifier.ByRef => $"{ElementType.Signature}@",
             TypeModifier.Pointer => $"{ElementType.Signature}*",
-            _ => base.ConstructSignature()
+            _ => base.ConstructSignature(useParameterNotation)
         };
     }
 }

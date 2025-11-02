@@ -23,6 +23,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     {
         private readonly Lazy<IClassType?> baseType;
         private string? signature;
+        private string? parametericSignature;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeAdapter"/> class.
@@ -101,7 +102,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsGenericType => Reflection.IsGenericType;
 
         /// <inheritdoc/>
-        public string Signature => signature ??= ConstructSignature();
+        public string Signature => signature ??= ConstructSignature(useParameterNotation: false);
+
+        /// <inheritdoc/>
+        public string ParametericSignature => parametericSignature ??= ConstructSignature(useParameterNotation: true);
 
         /// <inheritdoc/>
         public sealed override string CodeReference => $"T:{Signature}";
@@ -191,9 +195,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <summary>
         /// Constructs the signature of the type.
         /// </summary>
+        /// <param name="useParameterNotation">Indicates whether the signature is used in parameter notation.</param>
         /// <returns>A string representing the type's signature used in code references.</returns>
-        protected virtual string ConstructSignature()
+        protected virtual string ConstructSignature(bool useParameterNotation)
         {
+            if (signature is not null)
+                return signature;
+
             if (DeclaringType is not null)
                 return $"{DeclaringType.Signature}.{Name}";
 

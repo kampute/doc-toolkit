@@ -18,6 +18,14 @@ namespace Kampute.DocToolkit.XmlDoc
     public static class XmlDocExtensions
     {
         /// <summary>
+        /// Determines whether any inspection checks are enabled.
+        /// </summary>
+        /// <param name="options">The inspection options to check.</param>
+        /// <returns><see langword="true"/> if any inspection checks are enabled; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool HasAnyChecks(this XmlDocInspectionOptions options) => (options & XmlDocInspectionOptions.All) != XmlDocInspectionOptions.None;
+
+        /// <summary>
         /// Wraps the specified <see cref="IXmlDocProvider"/> instance in a caching layer if it is not already cached.
         /// </summary>
         /// <param name="xmlDocProvider">The XML documentation provider to wrap.</param>
@@ -100,7 +108,7 @@ namespace Kampute.DocToolkit.XmlDoc
             if (member is null)
                 throw new ArgumentNullException(nameof(member));
 
-            return options != XmlDocInspectionOptions.None ? GetMemberDoc(member).Inspect(member, options, GetMemberDoc) : [];
+            return options.HasAnyChecks() ? GetMemberDoc(member).Inspect(member, options, GetMemberDoc) : [];
 
             XmlDocEntry GetMemberDoc(IMember member) => xmlDocProvider.TryGetMemberDoc(member, out var memberDoc) ? memberDoc : XmlDocEntry.Empty;
         }
@@ -199,19 +207,24 @@ namespace Kampute.DocToolkit.XmlDoc
             if (member is null)
                 throw new ArgumentNullException(nameof(member));
 
-            return options != XmlDocInspectionOptions.None ? EnumerateInspectionIssues() : [];
+            return options.HasAnyChecks() ? EnumerateInspectionIssues() : [];
 
             IEnumerable<XmlDocInspectionIssue> EnumerateInspectionIssues()
             {
                 if (options.HasFlag(XmlDocInspectionOptions.Summary) && doc.Summary.IsEmpty)
+                {
+                    if (options.HasFlag(XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors) && member is IConstructor { IsDefaultConstructor: true, HasOverloads: false })
+                        yield break;
+
                     yield return XmlDocInspectionIssue.MissingRequiredTag(member, XmlDocTag.Summary);
+                }
 
                 if (member is IField { IsEnumValue: true })
                     yield break;
 
-                if (options.HasFlag(XmlDocInspectionOptions.TypeParam) && member is IWithTypeParameters { HasTypeParameters: true } genericMember)
+                if (options.HasFlag(XmlDocInspectionOptions.TypeParam) && member.TryGetOwnTypeParameters(out var typeParameters))
                 {
-                    foreach (var typeParameter in genericMember.TypeParameters)
+                    foreach (var typeParameter in typeParameters)
                     {
                         if (doc.TypeParameters.TryGetValue(typeParameter.Name, out var typeParamDoc) && !typeParamDoc.IsEmpty)
                             continue;

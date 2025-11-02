@@ -61,7 +61,7 @@ namespace Kampute.DocToolkit
             if (context is null)
                 throw new ArgumentNullException(nameof(context));
 
-            return options != XmlDocInspectionOptions.None ? EnumerateDocumentationIssues() : [];
+            return options.HasAnyChecks() ? EnumerateDocumentationIssues() : [];
 
             IEnumerable<XmlDocInspectionIssue> EnumerateDocumentationIssues()
             {

@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Metadata
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -56,6 +57,38 @@ namespace Kampute.DocToolkit.Metadata
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="MetadataUniverse"/> class with probe folders.
+        /// </summary>
+        /// <param name="assemblyPaths">The assembly file paths to be used by the resolver.</param>
+        /// <param name="probeFolders">Additional folders to search for assemblies on-demand.</param>
+        /// <param name="includeTrustedPlatformAssemblies">Indicates whether to include trusted platform assemblies.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="assemblyPaths"/> or <paramref name="probeFolders"/> is <see langword="null"/>.</exception>
+        private MetadataUniverse(IEnumerable<string> assemblyPaths, IEnumerable<string> probeFolders, bool includeTrustedPlatformAssemblies)
+        {
+            if (assemblyPaths is null)
+                throw new ArgumentNullException(nameof(assemblyPaths));
+            if (probeFolders is null)
+                throw new ArgumentNullException(nameof(probeFolders));
+
+            var coreAssembly = typeof(object).Assembly;
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                coreAssembly.Location,
+            };
+
+            if (includeTrustedPlatformAssemblies && AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") is string tpa)
+            {
+                var trusted = tpa.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+                candidates.UnionWith(trusted.Where(File.Exists));
+            }
+
+            candidates.UnionWith(assemblyPaths.Select(Path.GetFullPath).Where(File.Exists));
+
+            var resolver = new FolderAssemblyResolver(candidates, probeFolders);
+            mlc = new MetadataLoadContext(resolver, coreAssembly.GetName().Name);
+        }
+
+        /// <summary>
         /// Creates a <see cref="MetadataUniverse"/> by scanning folders for assemblies.
         /// </summary>
         /// <param name="probeFolders">Folders to scan for <c>*.dll</c> recursively.</param>
@@ -67,11 +100,25 @@ namespace Kampute.DocToolkit.Metadata
             if (probeFolders is null)
                 throw new ArgumentNullException(nameof(probeFolders));
 
+            var searchFolders = new HashSet<string>(probeFolders.Where(Directory.Exists), StringComparer.OrdinalIgnoreCase);
+
+            var nugetPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+            if (!string.IsNullOrEmpty(nugetPackages) && Directory.Exists(nugetPackages))
+                searchFolders.Add(nugetPackages);
+
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(userProfile))
+            {
+                var defaultCache = Path.Combine(userProfile, ".nuget", "packages");
+                if (Directory.Exists(defaultCache))
+                    searchFolders.Add(defaultCache);
+            }
+
             var files = probeFolders
                 .Where(Directory.Exists)
-                .SelectMany(static f => Directory.EnumerateFiles(f, "*.dll", SearchOption.AllDirectories));
+                .SelectMany(dir => Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories));
 
-            return new MetadataUniverse(files, includeTrustedPlatformAssemblies);
+            return new MetadataUniverse(files, searchFolders, includeTrustedPlatformAssemblies);
         }
 
         /// <summary>
@@ -86,29 +133,93 @@ namespace Kampute.DocToolkit.Metadata
                 throw new ArgumentException($"'{nameof(assemblyPath)}' cannot be null or empty.", nameof(assemblyPath));
 
             var fullPath = Path.GetFullPath(assemblyPath);
-            var fullName = AssemblyName.GetAssemblyName(fullPath).FullName!;
-
-            try
-            {
-                return mlc.LoadFromAssemblyName(fullName);
-            }
-            catch (FileNotFoundException)
-            {
-                return mlc.LoadFromAssemblyPath(fullPath);
-            }
-            catch (FileLoadException)
-            {
-                var assembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName == fullName);
-                if (assembly is not null)
-                    return assembly;
-
-                throw;
-            }
+            return mlc.LoadFromAssemblyPath(fullPath);
         }
 
         /// <summary>
         /// Releases resources used by the <see cref="MetadataUniverse"/>.
         /// </summary>
         public void Dispose() => mlc.Dispose();
+
+        /// <summary>
+        /// A custom assembly resolver that searches in specified directories.
+        /// </summary>
+        private sealed class FolderAssemblyResolver : MetadataAssemblyResolver
+        {
+            private readonly PathAssemblyResolver pathResolver;
+            private readonly List<string> probeFolders;
+            private readonly ConcurrentDictionary<string, Assembly?> cache = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FolderAssemblyResolver"/> class.
+            /// </summary>
+            /// <param name="assemblyPaths">The assembly file paths to be used by the resolver.</param>
+            /// <param name="searchFolders">Additional folders to search for assemblies on-demand.</param>
+            public FolderAssemblyResolver(IEnumerable<string> assemblyPaths, IEnumerable<string> searchFolders)
+            {
+                pathResolver = new PathAssemblyResolver(assemblyPaths);
+                probeFolders = [.. searchFolders];
+            }
+
+            /// <summary>
+            /// Resolves an assembly by its name.
+            /// </summary>
+            /// <param name="context">The metadata load context.</param>
+            /// <param name="assemblyName">The assembly name to resolve.</param>
+            /// <returns>The resolved assembly, or <see langword="null"/> if not found.</returns>
+            public override Assembly? Resolve(MetadataLoadContext context, AssemblyName assemblyName)
+            {
+                var name = assemblyName.Name;
+                if (name is null)
+                    return null;
+
+                return cache.GetOrAdd(name, _ => pathResolver.Resolve(context, assemblyName)
+                                              ?? FindInAppDomain(assemblyName)
+                                              ?? FindAssemblyInProbeFolders(context, assemblyName));
+            }
+
+            /// <summary>
+            /// Searches for an assembly in the current AppDomain.
+            /// </summary>
+            /// <param name="assemblyName">The assembly name to find.</param>
+            /// <returns>The found assembly, or <see langword="null"/> if not found.</returns>
+            private static Assembly? FindInAppDomain(AssemblyName assemblyName)
+            {
+                return AppDomain.CurrentDomain
+                    .GetAssemblies()
+                    .FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
+            }
+
+            /// <summary>
+            /// Searches for an assembly in the probe folders.
+            /// </summary>
+            /// <param name="context">The metadata load context.</param>
+            /// <param name="assemblyName">The assembly name to find.</param>
+            /// <returns>The found assembly, or <see langword="null"/> if not found.</returns>
+            private Assembly? FindAssemblyInProbeFolders(MetadataLoadContext context, AssemblyName assemblyName)
+            {
+                var fileName = assemblyName.Name! + ".dll";
+
+                foreach (var folder in probeFolders)
+                {
+                    var candidatePaths = Directory.EnumerateFiles(folder, fileName, SearchOption.AllDirectories);
+                    foreach (var path in candidatePaths)
+                    {
+                        try
+                        {
+                            var foundName = AssemblyName.GetAssemblyName(path);
+                            if (AssemblyName.ReferenceMatchesDefinition(assemblyName, foundName))
+                                return context.LoadFromAssemblyPath(path);
+                        }
+                        catch
+                        {
+                            // Skip invalid assemblies
+                        }
+                    }
+                }
+
+                return null;
+            }
+        }
     }
 }

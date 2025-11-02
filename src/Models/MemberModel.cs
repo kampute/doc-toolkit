@@ -188,5 +188,13 @@ namespace Kampute.DocToolkit.Models
         /// The reflection metadata object that provides detailed information about the member.
         /// </value>
         public new T Metadata => (T)base.Metadata;
+
+        /// <summary>
+        /// Defines an implicit conversion from <see cref="MemberModel{T}"/> to <typeparamref name="T"/>, which is the underlying metadata type.
+        /// </summary>
+        /// <param name="model">The <see cref="MemberModel{T}"/> instance to convert.</param>
+        /// <returns>The underlying metadata of type <typeparamref name="T"/>, or <see langword="null"/> if the model is <see langword="null"/>.</returns>
+        [return: NotNullIfNotNull(nameof(model))]
+        public static implicit operator T?(MemberModel<T>? model) => model?.Metadata;
     }
 }

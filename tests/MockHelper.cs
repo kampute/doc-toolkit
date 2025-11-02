@@ -186,10 +186,14 @@ namespace Kampute.DocToolkit.Test
                 .. namespaces.Select(ns => CreateType(assemblyMock.Object, ns, "PublicDummy", true))
             ];
 
+            SortedDictionary<string, IReadOnlyList<IType>> exportedNamespaces = [];
+            foreach (var group in exportedTypes.GroupBy(static t => t.Namespace))
+                exportedNamespaces[group.Key] = [.. group.OrderBy(static t => t.Name)];
+
             assemblyMock.SetupGet(static a => a.Name).Returns(name);
             assemblyMock.SetupGet(static a => a.Identity).Returns(new AssemblyName(name));
             assemblyMock.SetupGet(static a => a.Modules).Returns([]);
-            assemblyMock.SetupGet(static a => a.Namespaces).Returns(exportedTypes.ToLookup(t => t.Namespace));
+            assemblyMock.SetupGet(static a => a.Namespaces).Returns(exportedNamespaces);
             assemblyMock.SetupGet(static a => a.ExportedTypes).Returns(exportedTypes);
 
             return assemblyMock.Object;

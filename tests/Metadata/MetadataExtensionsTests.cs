@@ -451,5 +451,114 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(membersDeep, Has.Count.EqualTo(1));
             Assert.That(membersDeep[0], Is.InstanceOf<IConstructor>());
         }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithNullMember_ThrowsArgumentNullException()
+        {
+            Assert.That(() => default(IMember)!.TryGetOwnTypeParameters(out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithNonGenericType_ReturnsFalse()
+        {
+            var type = typeof(TestTypes.TestBaseClass).GetMetadata();
+
+            var result = type.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(parameters, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithGenericTypeDefinition_ReturnsTrueAndParameters()
+        {
+            var type = typeof(TestTypes.GenericBaseClass<>).GetMetadata();
+
+            var result = type.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(parameters.Count(), Is.EqualTo(1));
+                Assert.That(parameters.First().Name, Is.EqualTo("T"));
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithConstructedGenericType_ReturnsTrueAndEmpty()
+        {
+            var type = typeof(TestTypes.GenericBaseClass<int>).GetMetadata();
+
+            var result = type.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(parameters, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithDerivedGenericTypeDefinition_ReturnsTrueAndParameters()
+        {
+            var type = typeof(TestTypes.GenericDerivedClass<>).GetMetadata();
+            var result = type.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(parameters.Count(), Is.EqualTo(1));
+                Assert.That(parameters.First().Name, Is.EqualTo("T"));
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithGenericMethod_ReturnsTrueAndParameters()
+        {
+            var type = typeof(TestTypes.GenericMethodHost).GetMetadata<IClassType>();
+            var method = type.Methods.First(m => m.Name == "FirstMethod");
+
+            var result = method.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(parameters.Count(), Is.EqualTo(1));
+                Assert.That(parameters.First().Name, Is.EqualTo("T"));
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithNonGenericMethod_ReturnsFalse()
+        {
+            var type = typeof(TestTypes.TestBaseClass).GetMetadata<IClassType>();
+            var method = type.Methods.First(m => m.Name == "VirtualTestMethod");
+
+            var result = method.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(parameters, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void TryGetOwnTypeParameters_WithGenericInterface_ReturnsTrueAndParameters()
+        {
+            var type = typeof(TestTypes.IGenericTestInterface<>).GetMetadata();
+
+            var result = type.TryGetOwnTypeParameters(out var parameters);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(parameters.Count(), Is.EqualTo(1));
+                Assert.That(parameters.First().Name, Is.EqualTo("T"));
+            }
+        }
     }
 }

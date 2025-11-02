@@ -310,6 +310,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M6), ExpectedResult = "M:Acme.Widget.M6(System.Int32,System.Object[])")]
         [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M7), ExpectedResult = "M:Acme.Widget.M7``1")]
         [TestCase(typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Test), ExpectedResult = "M:Acme.MyList`1.Test(`0)")]
+        [TestCase(typeof(Acme.MyList<>), nameof(Acme.MyList<int>.EndScope), ExpectedResult = "M:Acme.MyList`1.EndScope(Acme.MyList{`0}.Scope)")]
+        [TestCase(typeof(Acme.MyList<>.Scope), "op_Implicit", ExpectedResult = "M:Acme.MyList`1.Scope.op_Implicit(Acme.MyList{`0}.Scope)~System.Collections.Generic.List{`0}")]
         [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.ProcessAsync), ExpectedResult = "M:Acme.UseList.ProcessAsync(Acme.MyList{System.Int32})")]
         [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "M:Acme.UseList.GetValues``1(``0)")]
         [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "M:Acme.UseList.Intercept``1(Acme.MyList{``0}.Helper{System.Char,System.String}[]@)")]
@@ -319,7 +321,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var methodInfo = declaringType.GetMethod(methodName, bindingFlags);
             Assert.That(methodInfo, Is.Not.Null);
 
-            var metadata = methodInfo.GetMetadata() as IMethod;
+            var metadata = methodInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
             return metadata.CodeReference;

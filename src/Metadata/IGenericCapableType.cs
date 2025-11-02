@@ -5,7 +5,6 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
-    using Kampute.DocToolkit.Metadata.Capabilities;
     using System.Collections.Generic;
 
     /// <summary>
@@ -14,7 +13,7 @@ namespace Kampute.DocToolkit.Metadata
     /// <remarks>
     /// This interface provides access to metadata specific to types that can be generic (classes, structs, interfaces, delegates).
     /// </remarks>
-    public interface IGenericCapableType : IType, IWithTypeParameters
+    public interface IGenericCapableType : IType
     {
         /// <summary>
         /// Gets the unqualified name of the type without any generic arity suffix.
@@ -41,10 +40,18 @@ namespace Kampute.DocToolkit.Metadata
         bool IsConstructedGenericType { get; }
 
         /// <summary>
+        /// Gets the type parameters declared by the type and its declaring types if the type is a generic type definition.
+        /// </summary>
+        /// <value>
+        /// A read-only list of <see cref="ITypeParameter"/> instances representing the type parameters declared by the type or its declaring types.
+        /// </value>
+        IReadOnlyList<ITypeParameter> TypeParameters { get; }
+
+        /// <summary>
         /// Gets the type arguments provided to the type if the type is a constructed generic type.
         /// </summary>
         /// <value>
-        /// A read-only list of <see cref="IType"/> objects representing the type arguments provided to the type if the type is a constructed generic type.
+        /// A read-only list of <see cref="IType"/> instances representing the type arguments provided to the type if the type is a constructed generic type.
         /// </value>
         IReadOnlyList<IType> TypeArguments { get; }
 

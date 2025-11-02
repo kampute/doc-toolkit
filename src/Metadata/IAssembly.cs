@@ -9,7 +9,6 @@ namespace Kampute.DocToolkit.Metadata
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using System.Linq;
     using System.Reflection;
 
     /// <summary>
@@ -52,7 +51,7 @@ namespace Kampute.DocToolkit.Metadata
         /// A lookup mapping namespace names to their corresponding types. The namespaces are ordered by their names,
         /// and the types within each namespace are ordered by their full names.
         /// </value>
-        ILookup<string, IType> Namespaces { get; }
+        IReadOnlyDictionary<string, IReadOnlyList<IType>> Namespaces { get; }
 
         /// <summary>
         /// Gets the types exported by the assembly.
