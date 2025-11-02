@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit
 {
+    using Kampute.DocToolkit.Collections;
     using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.Languages;
     using Kampute.DocToolkit.Metadata;
@@ -322,7 +323,9 @@ namespace Kampute.DocToolkit
         /// <summary>
         /// Creates the document address provider based on the configured settings.
         /// </summary>
+        /// <param name="assemblies">The assemblies to be documented.</param>
         /// <returns>An instance of <see cref="IDocumentAddressProvider"/> representing the document address provider.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="assemblies"/> is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the addressing strategy is not configured.</exception>
         /// <remarks>
         /// This method initializes the document address provider with the specified addressing strategy and base URL. It also
@@ -333,12 +336,14 @@ namespace Kampute.DocToolkit
         /// links can be resolved.
         /// </para>
         /// </remarks>
-        protected virtual IDocumentAddressProvider CreateAddressProvider()
+        protected virtual IDocumentAddressProvider CreateAddressProvider(IEnumerable<IAssembly> assemblies)
         {
+            if (assemblies is null)
+                throw new ArgumentNullException(nameof(assemblies));
             if (Strategy is null)
                 throw new InvalidOperationException("Addressing strategy must be configured.");
 
-            var addressProvider = new DocumentAddressProvider(Strategy, BaseUrl);
+            var addressProvider = new DocumentAddressProvider(Strategy, assemblies, BaseUrl);
 
             if (!ExternalReferences.OfType<MicrosoftDocs>().Any())
                 addressProvider.ExternalReferences.Add(new MicrosoftDocs());
@@ -378,7 +383,16 @@ namespace Kampute.DocToolkit
             if (universe is null)
                 throw new ArgumentNullException(nameof(universe));
 
-            return [.. AssemblyPaths.Select(path => MetadataProvider.GetMetadata(universe.LoadFromPath(path)))];
+            var assemblies = new HashSet<IAssembly>(ReferenceEqualityComparer<IAssembly>.Instance);
+
+            foreach (var assemblyPath in AssemblyPaths)
+            {
+                var assembly = universe.LoadFromPath(assemblyPath);
+                var assemblyMetadata = MetadataProvider.GetMetadata(assembly);
+                assemblies.Add(assemblyMetadata);
+            }
+
+            return assemblies;
         }
     }
 
@@ -418,7 +432,7 @@ namespace Kampute.DocToolkit
         {
             var universe = CreateMetadataUniverse();
             var assemblies = LoadAssembliesFromPaths(universe);
-            var addressProvider = CreateAddressProvider();
+            var addressProvider = CreateAddressProvider(assemblies);
             var xmlProvider = CreateXmlDocProvider();
             var formatter = CreateFormatter();
 
