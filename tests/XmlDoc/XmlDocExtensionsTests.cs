@@ -517,6 +517,51 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             }
         }
 
+        [Test]
+        public void InspectDocumentation_ImplicitConstructor_WithoutOmitFlag_ReportsMissingSummary()
+        {
+            var type = typeof(TestTypes.GenericMethodHost).GetMetadata<IClassType>();
+            var implicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+
+            var issues = xmlDocProvider.InspectDocumentation(implicitConstructor, XmlDocInspectionOptions.Summary).ToList();
+
+            Assert.That(issues, Has.Count.EqualTo(1));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(issues[0].IssueType, Is.EqualTo(XmlDocInspectionIssueType.MissingRequiredTag));
+                Assert.That(issues[0].XmlTag, Is.EqualTo(XmlDocTag.Summary));
+                Assert.That(issues[0].Member, Is.EqualTo(implicitConstructor));
+            }
+        }
+
+        [Test]
+        public void InspectDocumentation_ImplicitConstructor_WithOmitFlag_ReportsNoIssues()
+        {
+            var type = typeof(TestTypes.GenericMethodHost).GetMetadata<IClassType>();
+            var implicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+
+            var issues = xmlDocProvider.InspectDocumentation(implicitConstructor, XmlDocInspectionOptions.Summary | XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors).ToList();
+
+            Assert.That(issues, Is.Empty);
+        }
+
+        [Test]
+        public void InspectDocumentation_ExplicitConstructor_WithOmitFlag_ReportsMissingSummary()
+        {
+            var type = typeof(TestTypes.TestDerivedClass).GetMetadata<IClassType>();
+            var explicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+
+            var issues = xmlDocProvider.InspectDocumentation(explicitConstructor, XmlDocInspectionOptions.Summary | XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors).ToList();
+
+            Assert.That(issues, Has.Count.EqualTo(1));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(issues[0].IssueType, Is.EqualTo(XmlDocInspectionIssueType.MissingRequiredTag));
+                Assert.That(issues[0].XmlTag, Is.EqualTo(XmlDocTag.Summary));
+                Assert.That(issues[0].Member, Is.EqualTo(explicitConstructor));
+            }
+        }
+
         #endregion
     }
 }
