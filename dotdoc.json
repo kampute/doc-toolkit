@@ -5,6 +5,7 @@
         "options": [
             "recommended"
         ],
+        "includeImplicitConstructors": true,
         "stopOnIssues": true
     },
     "assemblies": [
@@ -24,12 +25,12 @@
     ],
     "theme": "classic",
     "themeSettings": {
-        "projectName": "DocToolkit",
-        "projectSlogan": "A library for generating API documentation",
+        "projectName": "Kampute.DocToolkit",
+        "projectSlogan": "A toolkit for generating custom .NET API documentation",
         "projectLogoLightUri": "logo-dark.png",
         "projectLogoDarkUri": "logo-light.png",
         "faviconUri": "ICON.png",
-        "pageFooter": "Copyright © {{now 'yyyy'}} [Kampute](http://kampute.com)",
+        "pageFooter": "Copyright © {{now 'yyyy'}} [Kampute](https://kampute.com/)",
         "groupTypesByNamespace": true,
         "seeAlsoSubtopics": true
     }
