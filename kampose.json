@@ -1,5 +1,5 @@
 {
-    "convention": "docfx",
+    "convention": "dotnet",
     "outputDirectory": ".site",
     "audit": {
         "options": [
@@ -30,8 +30,9 @@
         "projectLogoLightUri": "logo-dark.png",
         "projectLogoDarkUri": "logo-light.png",
         "faviconUri": "ICON.png",
-        "pageFooter": "Copyright © {{now 'yyyy'}} [Kampute](https://kampute.com/)",
+        "pageFooter": "- Copyright © {{now 'yyyy'}} [Kampute](https://kampute.com)\n- Site built with [Kampose](https://kampute.github.io/kampose).",
         "groupTypesByNamespace": true,
+        "showTypeMembersSummary": true,
         "seeAlsoSubtopics": true
     }
 }
