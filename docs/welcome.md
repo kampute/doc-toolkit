@@ -1,4 +1,4 @@
-# DocToolkit
+# Welcome to DocToolkit
 
 DocToolkit is a .NET library that extracts metadata from .NET assemblies and transforms XML documentation comments into structured documentation models. Unlike traditional documentation generators that produce fixed output, DocToolkit provides the building blocks for creating custom documentation systems tailored to your specific needs.
 
@@ -101,6 +101,6 @@ composer.GenerateDocumentation(context, "/output/directory");
 
 The composer calls your renderer for each documentation page, passing the processed model data that your renderer converts to the final output format.
 
-## License
+## Support and Community
 
-Licensed under the [MIT License](LICENSE).
+DocToolkit is an open-source project released under the [MIT License](LICENSE). Contributions, bug reports, and feature requests are welcome.
