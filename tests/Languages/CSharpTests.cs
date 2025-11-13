@@ -74,6 +74,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.MyList<>), ExpectedResult = "MyList<T>")]
         [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "MyList<T>.Helper<U, V>")]
         [TestCase(NameQualifier.None, typeof(Acme.UseList), ExpectedResult = "UseList")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator")]
         public string FormatName_ForTypes_ReturnsExpectedString(NameQualifier qualifier, Type type)
         {
             return csharp.FormatName(type.GetMetadata(), qualifier);
@@ -110,6 +111,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "GetValues")]
         [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "Intercept")]
         [TestCase(NameQualifier.None, typeof(Acme.Extensions), nameof(Acme.Extensions.Hello), ExpectedResult = "Hello")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "MoveNext", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.MoveNext")]
         public string FormatName_ForMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
             var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
@@ -133,6 +135,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "Item[]")]
         [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "Item[]")]
         [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Items), ExpectedResult = "MyList<T>.Items")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "Current", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.Current")]
         public string FormatName_ForProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string propertyName, params Type[] paramTypes)
         {
             var propertyInfo = type.GetProperty(propertyName, bindingFlags, null, null, paramTypes, null);
