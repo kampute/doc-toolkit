@@ -23,6 +23,7 @@
             ]
         }
     ],
+    "topicHierarchy": "directory",
     "theme": "classic",
     "themeSettings": {
         "projectName": "Kampute.DocToolkit",
@@ -33,6 +34,9 @@
         "pageFooter": "- Copyright © {{now 'yyyy'}} [Kampute](https://kampute.com)\n- Site built with [Kampose](https://kampute.github.io/kampose/).",
         "groupTypesByNamespace": true,
         "showTypeMembersSummary": true,
-        "seeAlsoSubtopics": true
+        "seeAlsoSubtopics": true,
+        "menuItems": [
+          "*"
+        ]
     }
 }
