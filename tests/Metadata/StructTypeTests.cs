@@ -163,6 +163,39 @@ namespace Kampute.DocToolkit.Test.Metadata
             return [.. metadata.NestedTypes.Select(static t => t.Name).OrderBy(n => n)];
         }
 
+        [TestCase(typeof(TestTypes.TestValueType), new[] {
+            "Kampute.DocToolkit.Test.TestTypes.ITestInterface.InterfaceGenericTestMethod",
+            "Kampute.DocToolkit.Test.TestTypes.ITestInterface.InterfaceByRefParamTestMethod",
+        })]
+        public void ExplicitInterfaceMethods_HasExpectedValue(Type structType, params string[] expectedMethodNames)
+        {
+            var metadata = structType.GetMetadata<IStructType>();
+
+            var explicitMethods = metadata.ExplicitInterfaceMethods;
+
+            Assert.That(explicitMethods.Select(m => m.Name), Is.EquivalentTo(expectedMethodNames));
+        }
+
+        [TestCase(typeof(TestTypes.TestValueType))]
+        public void ExplicitInterfaceProperties_HasExpectedValue(Type structType, params string[] expectedPropertyNames)
+        {
+            var metadata = structType.GetMetadata<IStructType>();
+
+            var explicitProperties = metadata.ExplicitInterfaceProperties;
+
+            Assert.That(explicitProperties.Select(m => m.Name), Is.EquivalentTo(expectedPropertyNames));
+        }
+
+        [TestCase(typeof(TestTypes.TestValueType))]
+        public void ExplicitInterfaceEvents_HasExpectedValue(Type structType, params string[] expectedEventNames)
+        {
+            var metadata = structType.GetMetadata<IStructType>();
+
+            var explicitEvents = metadata.ExplicitInterfaceEvents;
+
+            Assert.That(explicitEvents.Select(m => m.Name), Is.EquivalentTo(expectedEventNames));
+        }
+
         [TestCase(typeof(DateTime), ExpectedResult = "T:System.DateTime")]
         [TestCase(typeof(Nullable<>), ExpectedResult = "T:System.Nullable`1")]
         [TestCase(typeof(TestTypes.TestValueType), ExpectedResult = "T:Kampute.DocToolkit.Test.TestTypes.TestValueType")]

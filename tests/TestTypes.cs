@@ -19,6 +19,7 @@ namespace Kampute.DocToolkit.Test
             void InterfaceTestMethod();
             int InterfaceTestDefaultMethod() => 42;
             T InterfaceGenericTestMethod<T>(T value);
+            void InterfaceByRefParamTestMethod(in int value) { }
 
             event EventHandler InterfaceTestEvent;
         }
@@ -36,6 +37,7 @@ namespace Kampute.DocToolkit.Test
 
             public void InterfaceTestMethod() { }
             public T InterfaceGenericTestMethod<T>(T value) => value;
+            public void InterfaceByRefParamTestMethod(in int value) => TestField += value;
             public virtual void VirtualTestMethod() { }
             public virtual T VirtualGenericMethod<T>(T value) => value;
             public virtual object Clone() => MemberwiseClone();
@@ -137,6 +139,7 @@ namespace Kampute.DocToolkit.Test
             public readonly object Clone() => MemberwiseClone();
 
             readonly T ITestInterface.InterfaceGenericTestMethod<T>(T value) => value;
+            void ITestInterface.InterfaceByRefParamTestMethod(in int value) => TestField += value;
 
             public event TestDelegate? RegularTestEvent;
             public event EventHandler? InterfaceTestEvent { add { } remove { } }
