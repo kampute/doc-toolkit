@@ -286,7 +286,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 name: method.Name.SubstringAfterLast('.'),
                 bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance,
                 binder: null,
-                types: parameters.Select(p => p.ParameterType).ToArray(),
+                types: [.. parameters.Select(p => p.ParameterType)],
                 modifiers: null
             );
 
