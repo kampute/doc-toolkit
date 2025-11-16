@@ -389,7 +389,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("M:Acme.Widget.M1(System.Char,System.Single@,Acme.ValueType@,System.Int32@)", ExpectedResult = "Widget.M1(char, out float, ref ValueType, in int)")]
         [TestCase("M:Acme.Widget.op_Addition(Acme.Widget,Acme.Widget)", ExpectedResult = "Widget.Addition(Widget, Widget)")]
         [TestCase("E:Acme.Widget.AnEvent", ExpectedResult = "Widget.AnEvent")]
-        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "IProcess<string>.Completed")]
+        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "UseList.Acme.IProcess<string>.Completed")]
         [TestCase("T:Unresolvable.Type", ExpectedResult = "T:Unresolvable.Type")]
         public string FormatCodeReference_WithoutQualifierSelector_ReturnsExpectedString(string cref)
         {
