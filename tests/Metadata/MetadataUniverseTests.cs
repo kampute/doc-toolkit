@@ -225,9 +225,8 @@ namespace Kampute.DocToolkit.Test.Metadata
             var universe = new MetadataUniverse([testAssemblyPath]);
 
             universe.Dispose();
-            universe.Dispose();
 
-            Assert.Pass("Dispose can be called multiple times without throwing.");
+            Assert.That(universe.Dispose, Throws.Nothing);
         }
 
         [Test]

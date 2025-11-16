@@ -255,7 +255,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected virtual bool IsExplicitMember(MemberInfo member)
         {
             return member is not null
-                && Represents(member.DeclaringType)
                 && member.Name.IndexOf('.') > 0
                 && !member.CustomAttributes.Any(attr => attr.AttributeType.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute");
         }
@@ -266,8 +265,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <param name="method">The reflection information of the method to check.</param>
         /// <returns><see langword="true"/> if the method is an explicit interface implementation; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// This method includes additional logic to differentiate between user-written explicit implementations
-        /// and compiler-generated bridge methods for implicit interface implementations with by-ref parameters.
+        /// This method excludes compiler-generated bridge methods for implicit interface implementations with by-ref parameters.
         /// </remarks>
         protected virtual bool IsExplicitMethod(MethodInfo method)
         {

@@ -21,25 +21,13 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="linker">A delegate for linking to the documentation of a type or type's member.</param>
         /// <param name="indexerName">The name to use for indexers if <paramref name="member"/> is an indexer property; otherwise, <see langword="null"/>.</param>
         /// <remarks>
-        /// This method writes the member name, optionally qualified with the declaring type based on the specified <paramref name="qualifier"/> level.
+        /// For explicit interface implementations, when <paramref name="qualifier"/> is <see cref="NameQualifier.None"/>, the interface 
+        /// member name is qualified according to <see cref="CodeStyleOptions.FullyQualifyExplicitInterfaceMemberNames"/>. When 
+        /// <paramref name="qualifier"/> is not <see cref="NameQualifier.None"/>, the implementing type is written first according to 
+        /// the specified <paramref name="qualifier"/>, followed by the fully qualified interface member name.
         /// <para>
-        /// For explicit interface implementations, the member is treated as the interface member itself, and the qualification of the interface member 
-        /// is determined based on the specified <paramref name="qualifier"/> and the global options.
-        /// <list type="bullet">
-        ///   <item><description>
-        ///     When the <paramref name="qualifier"/> is <see cref="NameQualifier.None"/>, the interface member name is qualified according to the 
-        ///     global option <see cref="CodeStyleOptions.FullyQualifyExplicitInterfaceMemberNames"/>.
-        ///   </description></item>
-        ///   <item><description>
-        ///     When the <paramref name="qualifier"/> is not <see cref="NameQualifier.None"/>, the interface member name is always fully qualified
-        ///   </description></item>
-        /// </list>
+        /// Constructors have no name written, and indexer properties use the provided <paramref name="indexerName"/> if specified.
         /// </para>
-        /// Special handling applies to constructors and indexers:
-        /// <list type="bullet">
-        ///   <item><description>Constructors have no name written, as they are identified by the declaring type.</description></item>
-        ///   <item><description>Indexer properties use the provided <paramref name="indexerName"/> if specified.</description></item>
-        /// </list>
         /// </remarks>
         private void WriteTypeMemberName(TextWriter writer, ITypeMember member, NameQualifier qualifier, MemberDocLinker linker, string? indexerName = null)
         {

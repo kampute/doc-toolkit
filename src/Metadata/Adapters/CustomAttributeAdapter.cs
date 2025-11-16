@@ -85,7 +85,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool Represents(CustomAttributeData reflection) => ReferenceEquals(Native, reflection);
 
         /// <summary>
-        /// Creates a <see cref="TypedValue"/> from the specified <see cref="CustomAttributeTypedArgument"/>.
+        /// Converts a custom attribute typed argument into a <see cref="TypedValue"/>, handling array arguments 
+        /// by wrapping element values in an array of <see cref="TypedValue"/> instances.
         /// </summary>
         /// <param name="typedArgument">The typed argument to convert.</param>
         /// <returns>A <see cref="TypedValue"/> representing the typed argument.</returns>
