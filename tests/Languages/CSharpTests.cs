@@ -284,7 +284,9 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(typeof(Acme.MyList<>), ExpectedResult = "public class MyList<T>\n\twhere T : struct")]
         [TestCase(typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "public class MyList<T>.Helper<U, V>\n\twhere T : struct")]
         [TestCase(typeof(Acme.UseList), ExpectedResult = "public sealed class UseList : IProcess<string>")]
+        [TestCase(typeof(Acme.TestClass), ExpectedResult = "[Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]\npublic class TestClass")]
         [TestCase(typeof(Predicate<>), ExpectedResult = "public delegate bool Predicate<in T>(T obj)")]
+        [TestCase(typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "public struct Dictionary<TKey, TValue>.KeyCollection.Enumerator : IEnumerator<TKey>")]
         public string FormatDefinition_ForTypes_ReturnsExpectedString(Type type)
         {
             return csharp.FormatDefinition(type.GetMetadata()).Replace("\r", string.Empty);

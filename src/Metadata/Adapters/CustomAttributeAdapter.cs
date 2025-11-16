@@ -54,13 +54,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             Target = target;
 
             attributeType = new(Native.AttributeType.GetMetadata<IClassType>);
-
-            constructorArguments = new(() => [.. Native.ConstructorArguments.Select(
-                arg => new TypedValue(arg.ArgumentType.GetMetadata(), GetArgumentValue(arg)))]);
-
-            namedArguments = new(() => Native.NamedArguments.ToDictionary(
-                arg => arg.MemberName,
-                arg => new TypedValue(arg.TypedValue.ArgumentType.GetMetadata(), GetArgumentValue(arg.TypedValue))));
+            constructorArguments = new(() => [.. Native.ConstructorArguments.Select(CreateTypedValue)]);
+            namedArguments = new(() => Native.NamedArguments.ToDictionary(arg => arg.MemberName, arg => CreateTypedValue(arg.TypedValue)));
         }
 
         /// <summary>
@@ -90,25 +85,24 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool Represents(CustomAttributeData reflection) => ReferenceEquals(Native, reflection);
 
         /// <summary>
-        /// Gets the value of the specified argument, handling array arguments appropriately.
+        /// Creates a <see cref="TypedValue"/> from the specified <see cref="CustomAttributeTypedArgument"/>.
         /// </summary>
-        /// <param name="typedArgument">The argument whose value is to be retrieved.</param>
-        /// <returns>The value of the argument.</returns>
-        protected virtual object? GetArgumentValue(CustomAttributeTypedArgument typedArgument)
+        /// <param name="typedArgument">The typed argument to convert.</param>
+        /// <returns>A <see cref="TypedValue"/> representing the typed argument.</returns>
+        protected virtual TypedValue CreateTypedValue(CustomAttributeTypedArgument typedArgument)
         {
             if (typedArgument.Value is IReadOnlyCollection<CustomAttributeTypedArgument> args)
             {
-                var elementType = typedArgument.ArgumentType.GetElementType() ?? typeof(object);
-                var array = Array.CreateInstance(elementType, args.Count);
+                var values = new TypedValue[args.Count];
 
-                var index = 0;
+                var i = 0;
                 foreach (var arg in args)
-                    array.SetValue(GetArgumentValue(arg), index++);
+                    values[i++] = CreateTypedValue(arg);
 
-                return array;
+                return new(typeof(TypedValue[]).GetMetadata(), values);
             }
 
-            return typedArgument.Value;
+            return new(typedArgument.ArgumentType.GetMetadata(), typedArgument.Value);
         }
     }
 }

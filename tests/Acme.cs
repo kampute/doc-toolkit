@@ -281,6 +281,7 @@ namespace Acme
         }
     }
 
+    [Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
     public class TestClass
     {
         public TestClass() { }
@@ -295,7 +296,7 @@ namespace Acme
         public ExampleAttribute(Type type) => Type = type;
 
         protected Type Type { get; }
-        public DayOfWeek Day { get; set; } = DayOfWeek.Monday;
+        public DayOfWeek[] Days { get; set; } = [];
     }
 
     public class UnmanagedConstraintClass<T> where T : unmanaged

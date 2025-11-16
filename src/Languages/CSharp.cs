@@ -351,7 +351,7 @@ namespace Kampute.DocToolkit.Languages
             foreach (var argument in attribute.ConstructorArguments)
             {
                 EnsureCommaBeforeNext();
-                WriteConstantValue(writer, argument.Value, argument.Type, linker);
+                WriteTypedValue(writer, argument, linker);
             }
 
             foreach (var (name, argument) in attribute.NamedArguments)
@@ -359,7 +359,7 @@ namespace Kampute.DocToolkit.Languages
                 EnsureCommaBeforeNext();
                 writer.Write(name);
                 writer.Write(" = ");
-                WriteConstantValue(writer, argument.Value, argument.Type, linker);
+                WriteTypedValue(writer, argument, linker);
             }
 
             if (anyParameterBefore)

@@ -78,7 +78,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
         }
 
         [Test]
-        [Acme.Example(typeof(DateTime), Day = DayOfWeek.Saturday)]
+        [Acme.Example(typeof(DateTime), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
         public void WriteDocLink_Attribute_WritesExpectedHtml()
         {
             using var writer = new HtmlWriter(new StringWriter());
@@ -89,7 +89,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
 
             writer.WriteDocLink(attributeData, context, NameQualifier.None);
 
-            var expected = "<a href=\"https://example.com/acme.exampleattribute\" rel=\"code-reference\">Example</a>(typeof(<a href=\"https://example.com/system.datetime\" rel=\"code-reference\">DateTime</a>), Day = <a href=\"https://example.com/system.dayofweek\" rel=\"code-reference\">DayOfWeek</a>.Saturday)";
+            var expected = "<a href=\"https://example.com/acme.exampleattribute\" rel=\"code-reference\">Example</a>(typeof(<a href=\"https://example.com/system.datetime\" rel=\"code-reference\">DateTime</a>), Days = [<a href=\"https://example.com/system.dayofweek\" rel=\"code-reference\">DayOfWeek</a>.Saturday, <a href=\"https://example.com/system.dayofweek\" rel=\"code-reference\">DayOfWeek</a>.Sunday])";
             Assert.That(writer.ToString(), Is.EqualTo(expected));
         }
 
