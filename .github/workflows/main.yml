@@ -22,9 +22,6 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Install Kampose
-      run: dotnet tool install --global kampose
-
     - name: Restore Dependencies
       run: dotnet restore
 
@@ -32,7 +29,10 @@ jobs:
       run: dotnet build --no-restore -c Release
 
     - name: Test Solution
-      run: dotnet test --no-restore --verbosity minimal
+      run: dotnet test --no-restore --no-build -c Release --verbosity minimal
+
+    - name: Install Kampose for Documentation Generation
+      run: dotnet tool install --global kampose
 
     - name: Generate Documentation
       run: kampose build

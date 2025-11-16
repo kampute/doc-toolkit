@@ -20,21 +20,34 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="qualifier">The level of qualification to apply to the member's name.</param>
         /// <param name="linker">A delegate for linking to the documentation of a type or type's member.</param>
         /// <param name="indexerName">The name to use for indexers if <paramref name="member"/> is an indexer property; otherwise, <see langword="null"/>.</param>
+        /// <remarks>
+        /// For explicit interface implementations, when <paramref name="qualifier"/> is <see cref="NameQualifier.None"/>, the interface 
+        /// member name is qualified according to <see cref="CodeStyleOptions.FullyQualifyExplicitInterfaceMemberNames"/>. When 
+        /// <paramref name="qualifier"/> is not <see cref="NameQualifier.None"/>, the implementing type is written first according to 
+        /// the specified <paramref name="qualifier"/>, followed by the fully qualified interface member name.
+        /// <para>
+        /// Constructors have no name written, and indexer properties use the provided <paramref name="indexerName"/> if specified.
+        /// </para>
+        /// </remarks>
         private void WriteTypeMemberName(TextWriter writer, ITypeMember member, NameQualifier qualifier, MemberDocLinker linker, string? indexerName = null)
         {
             if (member is IVirtualTypeMember { IsExplicitInterfaceImplementation: true, ImplementedMember: ITypeMember interfaceMember })
             {
-                member = interfaceMember;
-                if (qualifier is not NameQualifier.Full)
+                if (qualifier != NameQualifier.None)
+                {
+                    WriteTypeSignature(writer, member.DeclaringType, qualifier, linker);
+                    writer.Write(Type.Delimiter);
+                    qualifier = NameQualifier.Full;
+                }
+                else
                 {
                     qualifier = Options.FullyQualifyExplicitInterfaceMemberNames
                         ? NameQualifier.Full
                         : NameQualifier.DeclaringType;
                 }
-            }
 
-            if (qualifier != NameQualifier.None)
-                WriteTypeSignature(writer, member.DeclaringType, qualifier, linker);
+                member = interfaceMember;
+            }
 
             var name = member switch
             {
@@ -43,13 +56,16 @@ namespace Kampute.DocToolkit.Languages
                 _ => member.Name
             };
 
-            if (!string.IsNullOrEmpty(name))
+            if (qualifier != NameQualifier.None)
             {
-                if (qualifier != NameQualifier.None)
-                    writer.Write(Type.Delimiter);
+                WriteTypeSignature(writer, member.DeclaringType, qualifier, linker);
+                if (string.IsNullOrEmpty(name))
+                    return;
 
-                linker(writer, member, name);
+                writer.Write(Type.Delimiter);
             }
+
+            linker(writer, member, name);
         }
 
         #region Constructors

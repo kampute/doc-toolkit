@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -184,7 +185,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>An enumeration of <see cref="IMethod"/> objects representing the explicit interface methods implemented by the type.</returns>
         protected virtual IEnumerable<IMethod> GetExplicitInterfaceMethods() => Reflection
             .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(m => !m.IsSpecialName && IsExplicitMember(m))
+            .Where(m => !m.IsSpecialName && IsExplicitMethod(m))
             .Select(Assembly.Repository.GetMethodMetadata<IMethod>)
             .OrderBy(m => m.Name, StringComparer.Ordinal)
             .ThenBy(m => m.Parameters.Count);
@@ -249,13 +250,46 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <summary>
         /// Determines whether a member is an explicit interface implementation.
         /// </summary>
-        /// <param name="member">The member to check.</param>
+        /// <param name="member">The reflection information of the member to check.</param>
         /// <returns><see langword="true"/> if the member is an explicit interface implementation; otherwise, <see langword="false"/>.</returns>
         protected virtual bool IsExplicitMember(MemberInfo member)
         {
             return member is not null
                 && member.Name.IndexOf('.') > 0
                 && !member.CustomAttributes.Any(attr => attr.AttributeType.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute");
+        }
+
+        /// <summary>
+        /// Determines whether a method is an explicit interface implementation.
+        /// </summary>
+        /// <param name="method">The reflection information of the method to check.</param>
+        /// <returns><see langword="true"/> if the method is an explicit interface implementation; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// This method excludes compiler-generated bridge methods for implicit interface implementations with by-ref parameters.
+        /// </remarks>
+        protected virtual bool IsExplicitMethod(MethodInfo method)
+        {
+            if (!IsExplicitMember(method) || !(method.IsPrivate && method.IsFinal && method.IsVirtual))
+                return false;
+
+            // Compiler-generated bridge methods are created for implicit interface implementations
+            // that have by-ref parameters (in, ref, out). Check if any parameter is by-ref.
+            var parameters = method.GetParameters();
+            if (!parameters.Any(p => p.ParameterType.IsByRef))
+                return true; // No by-ref parameters, so it's a user-written explicit implementation
+
+            // Has by-ref parameters - check if there's a public method with the same signature
+            var publicMethod = Reflection.GetMethod
+            (
+                name: method.Name.SubstringAfterLast('.'),
+                bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance,
+                binder: null,
+                types: [.. parameters.Select(p => p.ParameterType)],
+                modifiers: null
+            );
+
+            // If a public method with the same signature exists, this is a compiler-generated bridge
+            return publicMethod is null;
         }
     }
 }

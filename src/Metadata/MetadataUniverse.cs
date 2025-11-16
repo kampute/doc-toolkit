@@ -146,6 +146,8 @@ namespace Kampute.DocToolkit.Metadata
         /// </summary>
         private sealed class FolderAssemblyResolver : MetadataAssemblyResolver
         {
+            private static readonly Version ZeroVersion = new(0, 0, 0, 0);
+
             private readonly PathAssemblyResolver pathResolver;
             private readonly List<string> probeFolders;
             private readonly ConcurrentDictionary<string, Assembly?> cache = new(StringComparer.OrdinalIgnoreCase);
@@ -199,6 +201,7 @@ namespace Kampute.DocToolkit.Metadata
             private Assembly? FindAssemblyInProbeFolders(MetadataLoadContext context, AssemblyName assemblyName)
             {
                 var fileName = assemblyName.Name! + ".dll";
+                var candidates = new SortedList<Version, string>(Comparer<Version>.Create((a, b) => b.CompareTo(a)));
 
                 foreach (var folder in probeFolders)
                 {
@@ -209,7 +212,10 @@ namespace Kampute.DocToolkit.Metadata
                         {
                             var foundName = AssemblyName.GetAssemblyName(path);
                             if (AssemblyName.ReferenceMatchesDefinition(assemblyName, foundName))
-                                return context.LoadFromAssemblyPath(path);
+                            {
+                                var version = foundName.Version ?? ZeroVersion;
+                                candidates.TryAdd(version, path);
+                            }
                         }
                         catch
                         {
@@ -218,7 +224,15 @@ namespace Kampute.DocToolkit.Metadata
                     }
                 }
 
-                return null;
+                if (candidates.Count == 0)
+                    return null;
+
+                // Prioritize exact version match
+                if (assemblyName.Version is not null && candidates.TryGetValue(assemblyName.Version, out var exactPath))
+                    return context.LoadFromAssemblyPath(exactPath);
+
+                // Fall back to highest compatible version
+                return context.LoadFromAssemblyPath(candidates.Values[0]);
             }
         }
     }

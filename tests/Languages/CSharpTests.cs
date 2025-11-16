@@ -74,6 +74,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.MyList<>), ExpectedResult = "MyList<T>")]
         [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "MyList<T>.Helper<U, V>")]
         [TestCase(NameQualifier.None, typeof(Acme.UseList), ExpectedResult = "UseList")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator")]
         public string FormatName_ForTypes_ReturnsExpectedString(NameQualifier qualifier, Type type)
         {
             return csharp.FormatName(type.GetMetadata(), qualifier);
@@ -110,6 +111,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "GetValues")]
         [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "Intercept")]
         [TestCase(NameQualifier.None, typeof(Acme.Extensions), nameof(Acme.Extensions.Hello), ExpectedResult = "Hello")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "MoveNext", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.MoveNext")]
         public string FormatName_ForMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
             var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
@@ -133,6 +135,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "Item[]")]
         [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "Item[]")]
         [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Items), ExpectedResult = "MyList<T>.Items")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "Current", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.Current")]
         public string FormatName_ForProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string propertyName, params Type[] paramTypes)
         {
             var propertyInfo = type.GetProperty(propertyName, bindingFlags, null, null, paramTypes, null);
@@ -281,7 +284,9 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(typeof(Acme.MyList<>), ExpectedResult = "public class MyList<T>\n\twhere T : struct")]
         [TestCase(typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "public class MyList<T>.Helper<U, V>\n\twhere T : struct")]
         [TestCase(typeof(Acme.UseList), ExpectedResult = "public sealed class UseList : IProcess<string>")]
+        [TestCase(typeof(Acme.TestClass), ExpectedResult = "[Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]\npublic class TestClass")]
         [TestCase(typeof(Predicate<>), ExpectedResult = "public delegate bool Predicate<in T>(T obj)")]
+        [TestCase(typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "public struct Dictionary<TKey, TValue>.KeyCollection.Enumerator : IEnumerator<TKey>")]
         public string FormatDefinition_ForTypes_ReturnsExpectedString(Type type)
         {
             return csharp.FormatDefinition(type.GetMetadata()).Replace("\r", string.Empty);
@@ -386,7 +391,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("M:Acme.Widget.M1(System.Char,System.Single@,Acme.ValueType@,System.Int32@)", ExpectedResult = "Widget.M1(char, out float, ref ValueType, in int)")]
         [TestCase("M:Acme.Widget.op_Addition(Acme.Widget,Acme.Widget)", ExpectedResult = "Widget.Addition(Widget, Widget)")]
         [TestCase("E:Acme.Widget.AnEvent", ExpectedResult = "Widget.AnEvent")]
-        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "IProcess<string>.Completed")]
+        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "UseList.Acme.IProcess<string>.Completed")]
         [TestCase("T:Unresolvable.Type", ExpectedResult = "T:Unresolvable.Type")]
         public string FormatCodeReference_WithoutQualifierSelector_ReturnsExpectedString(string cref)
         {

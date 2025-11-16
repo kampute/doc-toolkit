@@ -174,8 +174,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (DeclaringType is IGenericCapableType genericCapableDeclaringType)
             {
                 var (offset, count) = genericCapableDeclaringType.OwnGenericParameterRange;
-                ownedOffset += offset + count;
-                ownedCount -= count;
+                var inheritedCount = offset + count;
+                ownedOffset += inheritedCount;
+                ownedCount -= inheritedCount;
             }
 
             return (ownedOffset, ownedCount);

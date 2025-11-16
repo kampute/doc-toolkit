@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Languages
 {
     using Kampute.DocToolkit.Metadata;
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -232,6 +233,40 @@ namespace Kampute.DocToolkit.Languages
                     value >>= 1;
                 }
                 return count;
+            }
+        }
+
+        /// <summary>
+        /// Writes the specified typed value to the <see cref="TextWriter"/>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
+        /// <param name="typedValue">The <see cref="TypedValue"/> to write.</param>
+        /// <param name="linker">The <see cref="MemberDocLinker"/> to use for linking to documentation.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="writer"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="typedValue"/> does not represent a constant value.</exception>
+        private void WriteTypedValue(TextWriter writer, TypedValue typedValue, MemberDocLinker linker)
+        {
+            if (writer is null)
+                throw new ArgumentNullException(nameof(writer));
+
+            if (typedValue.Value is IEnumerable<TypedValue> values)
+            {
+                writer.Write('[');
+                var needsSeparator = false;
+                foreach (var value in values)
+                {
+                    if (needsSeparator)
+                        writer.Write(", ");
+                    else
+                        needsSeparator = true;
+
+                    WriteTypedValue(writer, value, linker);
+                }
+                writer.Write(']');
+            }
+            else
+            {
+                WriteConstantValue(writer, typedValue.Value, typedValue.Type, linker);
             }
         }
     }

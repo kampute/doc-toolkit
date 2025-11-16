@@ -35,9 +35,9 @@ namespace Kampute.DocToolkit.Test.Routing
         [TestCase("P:System.Collections.Generic.List`1.Enumerator.Current", ExpectedResult = "https://example.com/?q=C%23+System.Collections.Generic.List%3CT%3E.Enumerator.Current")]
         [TestCase("F:System.DateTime.MaxValue", ExpectedResult = "https://example.com/?q=C%23+System.DateTime.MaxValue")]
         [TestCase("E:System.AppDomain.AssemblyLoad", ExpectedResult = "https://example.com/?q=C%23+System.AppDomain.AssemblyLoad")]
-        [TestCase("M:Acme.UseList.Acme#IProcess{System#String}#GetStatus(System.Boolean)", ExpectedResult = "https://example.com/?q=C%23+Acme.IProcess%3Cstring%3E.GetStatus(bool)")]
-        [TestCase("P:Acme.UseList.Acme#IProcess{System#String}#IsCompleted", ExpectedResult = "https://example.com/?q=C%23+Acme.IProcess%3Cstring%3E.IsCompleted")]
-        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "https://example.com/?q=C%23+Acme.IProcess%3Cstring%3E.Completed")]
+        [TestCase("M:Acme.UseList.Acme#IProcess{System#String}#GetStatus(System.Boolean)", ExpectedResult = "https://example.com/?q=C%23+Acme.UseList.Acme.IProcess%3Cstring%3E.GetStatus(bool)")]
+        [TestCase("P:Acme.UseList.Acme#IProcess{System#String}#IsCompleted", ExpectedResult = "https://example.com/?q=C%23+Acme.UseList.Acme.IProcess%3Cstring%3E.IsCompleted")]
+        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "https://example.com/?q=C%23+Acme.UseList.Acme.IProcess%3Cstring%3E.Completed")]
         public string? TryGetUrl_CodeReference_CSharp_ReturnsExpectedUrl(string cref)
         {
             var onlineSearch = new SearchBasedApiDocUrlResolver(new Uri("https://example.com/"))

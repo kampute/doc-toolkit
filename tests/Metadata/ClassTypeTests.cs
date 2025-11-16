@@ -175,18 +175,51 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.Operators.Where(o => !o.IsVisible), Is.Empty);
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void NestedTypes_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.Widget), new[] {
+            nameof(Acme.Widget.NestedClass),
+            nameof(Acme.Widget.NestedDerivedClass),
+            nameof(Acme.Widget.Direction),
+            nameof(Acme.Widget.Del),
+            "IMenuItem`1"
+        })]
+        public void NestedTypes_HasExpectedValue(Type classType, params string[] expectedTypeNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.NestedTypes.Select(static x => x.Name), Is.EquivalentTo([
-                nameof(Acme.Widget.NestedClass),
-                nameof(Acme.Widget.NestedDerivedClass),
-                nameof(Acme.Widget.Direction),
-                nameof(Acme.Widget.Del),
-                "IMenuItem`1"
-            ]));
+            Assert.That(metadata.NestedTypes.Select(static x => x.Name), Is.EquivalentTo(expectedTypeNames));
+        }
+
+        [TestCase(typeof(TestTypes.TestBaseClass))]
+        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.GetStatus")]
+        public void ExplicitInterfaceMethods_HasExpectedValue(Type classType, params string[] expectedMethodNames)
+        {
+            var metadata = classType.GetMetadata<IClassType>();
+
+            var explicitMethods = metadata.ExplicitInterfaceMethods;
+
+            Assert.That(explicitMethods.Select(m => m.Name), Is.EquivalentTo(expectedMethodNames));
+        }
+
+        [TestCase(typeof(TestTypes.TestBaseClass))]
+        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.IsCompleted")]
+        public void ExplicitInterfaceProperties_HasExpectedValue(Type classType, params string[] expectedPropertyNames)
+        {
+            var metadata = classType.GetMetadata<IClassType>();
+
+            var explicitProperties = metadata.ExplicitInterfaceProperties;
+
+            Assert.That(explicitProperties.Select(m => m.Name), Is.EquivalentTo(expectedPropertyNames));
+        }
+
+        [TestCase(typeof(TestTypes.TestBaseClass))]
+        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.Completed")]
+        public void ExplicitInterfaceEvents_HasExpectedValue(Type classType, params string[] expectedEventNames)
+        {
+            var metadata = classType.GetMetadata<IClassType>();
+
+            var explicitEvents = metadata.ExplicitInterfaceEvents;
+
+            Assert.That(explicitEvents.Select(m => m.Name), Is.EquivalentTo(expectedEventNames));
         }
 
         [TestCase(typeof(string), ExpectedResult = "T:System.String")]
