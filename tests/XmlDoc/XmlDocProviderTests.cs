@@ -5,9 +5,12 @@
 
 namespace Kampute.DocToolkit.Test.XmlDoc
 {
+    using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.XmlDoc;
     using NUnit.Framework;
+    using System;
     using System.IO;
+    using System.Linq;
 
     [TestFixture]
     public class XmlDocProviderTests
@@ -60,6 +63,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
 
             xmlDocProvider = new XmlDocProvider();
             xmlDocProvider.ImportFile(mainXmlFilePath);
+            xmlDocProvider.ImportFile(Path.ChangeExtension(GetType().Assembly.Location, ".xml"));
         }
 
         [TearDown]
@@ -85,7 +89,42 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase("N:System", ExpectedResult = null)]
         public string? TryGetDoc_ReturnsCorrectMemberDoc(string cref)
         {
-            return xmlDocProvider.TryGetDoc(cref, out var memberDoc) ? memberDoc.Summary.ToString() : null;
+            return xmlDocProvider.TryGetDoc(cref, out var memberDoc) ? memberDoc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.NonExtensionMethod), ExpectedResult = "A non-extension method to verify correct classification.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethod), ExpectedResult = "A classic extension method.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethod), ExpectedResult = "An instance extension method.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethod), ExpectedResult = "A static extension method.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethod), ExpectedResult = "A generic extension method.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "A classic extension method for generic class.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "An instance extension method for generic class.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "A static extension method for generic class.")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "A generic extension method for generic class.")]
+        public string? TryGetMemberDoc_ForMethod_ReturnsCorrectMemberDoc(Type type, string methodName)
+        {
+            var container = type.GetMetadata<IClassType>();
+            Assert.That(container, Is.Not.Null);
+
+            var method = container.Methods.FirstOrDefault(m => m.Name == methodName);
+            Assert.That(method, Is.Not.Null);
+
+            return xmlDocProvider.TryGetMemberDoc(method, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleExtensions), "InstanceExtensionProperty", ExpectedResult = "An instance extension property.")]
+        [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionProperty", ExpectedResult = "A static extension property.")]
+        [TestCase(typeof(Acme.SampleExtensions), "InstanceExtensionPropertyForClass", ExpectedResult = "An instance extension property for generic class.")]
+        [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionPropertyForClass", ExpectedResult = "A static extension property for generic class.")]
+        public string? TryGetMemberDoc_ForProperty_ReturnsCorrectMemberDoc(Type type, string propertyName)
+        {
+            var container = type.GetMetadata<IClassType>();
+            Assert.That(container, Is.Not.Null);
+
+            var property = container.Properties.FirstOrDefault(m => m.Name == propertyName);
+            Assert.That(property, Is.Not.Null);
+
+            return xmlDocProvider.TryGetMemberDoc(property, out var doc) ? doc.Summary.ToString().Trim() : null;
         }
     }
 }

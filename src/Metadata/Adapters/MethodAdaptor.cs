@@ -120,6 +120,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             return ('M', sb.ToString());
         }
 
+        /// <inheritdoc/>
+        protected override string ConstructCodeReference()
+        {
+            return Reflection is IExtensionMethodInfo extension
+                ? Assembly.Repository.GetMethodMetadata(extension.DeclaredMethod, asDeclared: true).CodeReference
+                : base.ConstructCodeReference();
+        }
+
         /// <summary>
         /// Determines whether the given method can be considered a base declaration of this method.
         /// </summary>

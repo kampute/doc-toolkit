@@ -190,6 +190,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
+        protected override string ConstructCodeReference()
+        {
+            return Reflection is IExtensionPropertyInfo
+                ? AnyAccessor.CodeReference
+                : base.ConstructCodeReference();
+        }
+
+        /// <inheritdoc/>
         protected override IVirtualTypeMember? FindOverriddenMember()
         {
             if (Virtuality == MemberVirtuality.None)
