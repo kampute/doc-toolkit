@@ -327,27 +327,27 @@ namespace Acme
             where T : class
         {
             /// <summary>
-            /// An instance extension property.
+            /// An instance extension property for generic class.
             /// </summary>
             public int InstanceExtensionPropertyForClass => 42;
 
             /// <summary>
-            /// A static extension property.
+            /// A static extension property for generic class.
             /// </summary>
             public static bool StaticExtensionPropertyForClass => true;
 
             /// <summary>
-            /// An instance extension method.
+            /// An instance extension method for generic class.
             /// </summary>
             public void InstanceExtensionMethodForClass() { }
 
             /// <summary>
-            /// A static extension method.
+            /// A static extension method for generic class.
             /// </summary>
             public static void StaticExtensionMethodForClass() { }
 
             /// <summary>
-            /// A generic extension method.
+            /// A generic extension method for generic class.
             /// </summary>
             /// <typeparam name="U">The method type parameter.</typeparam>
             /// <param name="value">The parameter.</param>
@@ -370,27 +370,27 @@ namespace Acme
             where T : class, IDisposable
         {
             /// <summary>
-            /// An instance extension property.
+            /// An instance extension property for generic struct.
             /// </summary>
             public int InstanceExtensionPropertyForStruct => 42;
 
             /// <summary>
-            /// A static extension property.
+            /// A static extension property for generic struct.
             /// </summary>
             public static bool StaticExtensionPropertyForStruct => true;
 
             /// <summary>
-            /// An instance extension method.
+            /// An instance extension method for generic struct.
             /// </summary>
             public void InstanceExtensionMethodForStruct() { }
 
             /// <summary>
-            /// A static extension method.
+            /// A static extension method for generic struct.
             /// </summary>
             public static void StaticExtensionMethodForStruct() { }
 
             /// <summary>
-            /// A generic extension method.
+            /// A generic extension method for generic struct.
             /// </summary>
             /// <typeparam name="U">The method type parameter.</typeparam>
             /// <param name="value">The parameter.</param>
@@ -413,32 +413,38 @@ namespace Acme
             where T : class, new()
         {
             /// <summary>
-            /// An instance extension property.
+            /// An instance extension property for generic interface.
             /// </summary>
             public int InstanceExtensionPropertyForInterface => 42;
 
             /// <summary>
-            /// A static extension property.
+            /// A static extension property for generic interface.
             /// </summary>
             public static bool StaticExtensionPropertyForInterface => true;
 
             /// <summary>
-            /// An instance extension method.
+            /// An instance extension method for generic interface.
             /// </summary>
             public void InstanceExtensionMethodForInterface() { }
 
             /// <summary>
-            /// A static extension method.
+            /// A static extension method for generic interface.
             /// </summary>
             public static void StaticExtensionMethodForInterface() { }
 
             /// <summary>
-            /// A generic extension method.
+            /// A generic extension method for generic interface.
             /// </summary>
             /// <typeparam name="U">The method type parameter.</typeparam>
             /// <param name="value">The parameter.</param>
             public void GenericExtensionMethodForInterface<U>(U value) where U : struct { }
         }
+
+        /// <summary>
+        /// A classic extension method.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        public static void ClassicExtensionMethod(this ISampleInterface instance) { }
 
         /// <summary>
         /// Extension members for non-generic interface.

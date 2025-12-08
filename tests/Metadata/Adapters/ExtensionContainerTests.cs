@@ -53,7 +53,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             Assert.That(() => new ExtensionContainer(null!), Throws.ArgumentNullException);
         }
 
-        [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 15)]
+        [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 16)]
         public int DeclaredExtensionMethods_HasExpectedNumberOfMethods(Type containerType)
         {
             var container = new ExtensionContainer(containerType);

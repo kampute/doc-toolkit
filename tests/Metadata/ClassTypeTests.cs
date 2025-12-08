@@ -169,6 +169,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             nameof(Acme.SampleExtensions.InstanceExtensionMethodForInterface),
             nameof(Acme.SampleExtensions.StaticExtensionMethodForInterface),
             nameof(Acme.SampleExtensions.GenericExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethod),
             nameof(Acme.SampleExtensions.InstanceExtensionMethod),
             nameof(Acme.SampleExtensions.StaticExtensionMethod),
             nameof(Acme.SampleExtensions.GenericExtensionMethod),
