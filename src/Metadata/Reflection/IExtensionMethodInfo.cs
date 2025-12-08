@@ -16,16 +16,18 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// Gets the <see cref="MethodInfo"/> representing the declaration of the extension method.
         /// </summary>
         /// <value>
-        /// The <see cref="MethodInfo"/> instance representing the declaration of the extension method.
+        /// An instance of <see cref="MethodInfo"/> representing the declaration of the extension method.
         /// </value>
         MethodInfo DeclaredMethod { get; }
 
         /// <summary>
-        /// Gets the <see cref="MethodInfo"/> representing the extension method as it appears on the receiver (the extended type).
+        /// Gets the <see cref="MethodInfo"/> representing the extension method as it appears on the 
+        /// the extended type (extension receiver).
         /// </summary>
         /// <value>
-        /// The <see cref="MethodInfo"/> representing the extension method as it appears on the receiver (the extended type),
-        /// or <see langword="null"/> if the extension method is a classic (non-block) extension method.
+        /// An instance of <see cref="MethodInfo"/> representing the extension method as it appears on
+        /// the extended type, or <see langword="null"/> if the extension method is a classic (non-block) 
+        /// extension method.
         /// </value>
         MethodInfo? ReceiverMethod { get; }
     }

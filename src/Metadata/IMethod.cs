@@ -39,6 +39,14 @@ namespace Kampute.DocToolkit.Metadata
         bool IsGenericMethod { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the method is a classic extension method.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the method is a classic extension method; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsClassicExtensionMethod { get; }
+
+        /// <summary>
         /// Gets the base method that this method overrides, if any.
         /// </summary>
         /// <value>

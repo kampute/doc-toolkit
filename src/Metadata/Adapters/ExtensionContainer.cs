@@ -143,14 +143,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 {
                     case MethodInfo stubMethod:
                         var method = methodGroup.Method!;
-                        var extensionMethod = new ExtensionMethodInfo(method, stub.ReceiverParameter, stubMethod);
+                        var extensionMethod = new ExtensionMethodInfo(method, stub.Receiver, stubMethod);
                         extensionMethods.Add(extensionMethod);
                         AddMapping(method, extensionMethod, extensionMethod);
                         break;
                     case PropertyInfo stubProperty:
                         var getter = methodGroup.Getter;
                         var setter = methodGroup.Setter;
-                        var extensionProperty = new ExtensionPropertyInfo(getter, setter, stub.ReceiverParameter, stubProperty);
+                        var extensionProperty = new ExtensionPropertyInfo(getter, setter, stub.Receiver, stubProperty);
                         extensionProperties.Add(extensionProperty);
                         if (getter is not null)
                             AddMapping(getter, extensionProperty.GetMethod!, extensionProperty);
@@ -235,7 +235,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <param name="methods">The list of method groups to search.</param>
         /// <param name="stub">The stub to match.</param>
         /// <returns>The matching method group, or <see langword="null"/> if not found.</returns>
-        private static MethodGroup? FindAndMarkProcessed(List<MethodGroup> methods, ExtensionMemberStub stub)
+        private static MethodGroup? FindAndMarkProcessed(List<MethodGroup> methods, ExtensionStub stub)
         {
             for (var i = 0; i < methods.Count; i++)
             {
@@ -252,8 +252,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <summary>
         /// Collects all the extension member stubs defined within the container type.
         /// </summary>
-        /// <returns>An enumerable of <see cref="ExtensionMemberStub"/> instances.</returns>
-        private IEnumerable<ExtensionMemberStub> GetBlockExtensionStubs()
+        /// <returns>An enumerable of <see cref="ExtensionStub"/> instances.</returns>
+        private IEnumerable<ExtensionStub> GetBlockExtensionStubs()
         {
             if (!HasExtensionAttribute(containerType))
                 yield break;
@@ -277,45 +277,42 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <summary>
-        /// Collects the receiver parameters from the specified grouping type.
+        /// Retrieves the marker method that defines the receiver parameters for the specified grouping type. 
         /// </summary>
         /// <param name="grouping">The grouping type.</param>
-        /// <returns>A dictionary mapping marker names to receiver parameters.</returns>
-        private static Dictionary<string, ParameterInfo> GetGroupReceivers(Type grouping)
+        /// <returns>The marker method info if found; otherwise, <see langword="null"/>.</returns>
+        private static MethodInfo? GetGroupMarkerMethod(Type grouping)
         {
-            var markers = new Dictionary<string, ParameterInfo>();
             foreach (var markerType in grouping.GetNestedTypes())
             {
                 if (!markerType.IsSpecialName)
                     continue;
 
                 var markerMethod = markerType.GetMethod("<Extension>$", BindingFlags.Public | BindingFlags.Static);
-                if (markerMethod is null)
-                    continue;
-
-                markers[markerType.Name] = markerMethod.GetParameters()[0];
+                if (markerMethod is not null)
+                    return markerMethod;
             }
-            return markers;
+
+            return null;
         }
 
         /// <summary>
-        /// Collects the extension member stubs defined within the specified grouping type.
+        /// Retrieves the extension member stubs defined within the specified grouping type.
         /// </summary>
         /// <param name="grouping">The grouping type.</param>
-        /// <returns>Ab enumerable of <see cref="ExtensionMemberStub"/> instances.</returns>
-        private static IEnumerable<ExtensionMemberStub> GetGroupStubs(Type grouping)
+        /// <returns>Ab enumerable of <see cref="ExtensionStub"/> instances.</returns>
+        private static IEnumerable<ExtensionStub> GetGroupStubs(Type grouping)
         {
-            var receivers = GetGroupReceivers(grouping);
-            foreach (var stubMember in grouping.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            var markerMethod = GetGroupMarkerMethod(grouping);
+            if (markerMethod is null)
+                yield break;
+
+            var receiver = markerMethod.GetParameters()[0];
+            var markerName = markerMethod.DeclaringType.Name;
+            foreach (var member in grouping.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
             {
-                var markerName = GetExtensionMarkerName(stubMember);
-                if (string.IsNullOrEmpty(markerName))
-                    continue;
-
-                if (!receivers.TryGetValue(markerName!, out var receiverParameter))
-                    continue;
-
-                yield return new(stubMember, receiverParameter);
+                if (GetExtensionMarkerName(member) == markerName)
+                    yield return new(member, receiver);
             }
         }
 
@@ -406,7 +403,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <summary>
         /// Represents a stub for an extension member used in block extension definitions.
         /// </summary>
-        private readonly struct ExtensionMemberStub
+        private readonly struct ExtensionStub
         {
             /// <summary>
             /// The member info of the stub extension member.
@@ -416,23 +413,23 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             /// <summary>
             /// The receiver parameter info associated with the stub extension member.
             /// </summary>
-            public readonly ParameterInfo ReceiverParameter;
+            public readonly ParameterInfo Receiver;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="ExtensionMemberStub"/> struct.
+            /// Initializes a new instance of the <see cref="ExtensionStub"/> struct.
             /// </summary>
             /// <param name="member">The member info of the stub extension member.</param>
-            /// <param name="receiverParameter">The receiver parameter info associated with the stub extension member.</param>
-            public ExtensionMemberStub(MemberInfo member, ParameterInfo receiverParameter)
+            /// <param name="receiver">The receiver parameter info associated with the stub extension member.</param>
+            public ExtensionStub(MemberInfo member, ParameterInfo receiver)
             {
                 Member = member;
-                ReceiverParameter = receiverParameter;
+                Receiver = receiver;
             }
 
             public override string? ToString()
             {
                 var kind = Member is MethodInfo ? "Extension Method" : "Extension Property";
-                return $"{kind} {Member.Name} for {ReceiverParameter.ParameterType}";
+                return $"{kind} {Member.Name} for {Receiver.ParameterType}";
             }
 
             /// <summary>
@@ -445,11 +442,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 switch (Member)
                 {
                     case MethodInfo stubMethod when methodGroup.Method is MethodInfo method:
-                        return SignatureMatches(method, stubMethod, ReceiverParameter);
+                        return SignatureMatches(method, stubMethod, Receiver);
                     case PropertyInfo stubProperty when stubProperty.GetMethod is MethodInfo stubGetter && methodGroup.Getter is MethodInfo getter:
-                        return SignatureMatches(getter, stubGetter, ReceiverParameter);
+                        return SignatureMatches(getter, stubGetter, Receiver);
                     case PropertyInfo stubProperty when stubProperty.SetMethod is MethodInfo stubSetter && methodGroup.Setter is MethodInfo setter:
-                        return SignatureMatches(setter, stubSetter, ReceiverParameter);
+                        return SignatureMatches(setter, stubSetter, Receiver);
                     default:
                         return false;
                 }

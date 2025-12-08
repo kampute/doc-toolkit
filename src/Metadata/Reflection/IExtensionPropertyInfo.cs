@@ -13,10 +13,12 @@ namespace Kampute.DocToolkit.Metadata.Reflection
     public interface IExtensionPropertyInfo : IExtensionMemberInfo
     {
         /// <summary>
-        /// Gets the <see cref="PropertyInfo"/> representing the extension property as it appears on the receiver (the extended type).
+        /// Gets the <see cref="PropertyInfo"/> representing the extension property as it appears on the 
+        /// the extended type (extension receiver).
         /// </summary>
         /// <value>
-        /// The <see cref="PropertyInfo"/> representing the extension property as it appears on the receiver (the extended type).
+        /// An instance of <see cref="PropertyInfo"/> representing the extension property as it appears on 
+        /// the extended type.
         /// </value>
         PropertyInfo ReceiverProperty { get; }
     }

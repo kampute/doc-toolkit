@@ -18,24 +18,18 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         private readonly MethodInfo? getter;
         private readonly MethodInfo? setter;
 
-        public ExtensionPropertyInfo
-        (
-            MethodInfo? getter,
-            MethodInfo? setter,
-            ParameterInfo receiverParameter,
-            PropertyInfo stub
-        )
+        public ExtensionPropertyInfo(MethodInfo? getter, MethodInfo? setter, ParameterInfo receiver, PropertyInfo stub)
         {
             if (getter is null && setter is null)
                 throw new ArgumentException("At least one of getter or setter must be provided.", nameof(getter));
 
-            ReceiverParameter = receiverParameter ?? throw new ArgumentNullException(nameof(receiverParameter));
+            ReceiverParameter = receiver ?? throw new ArgumentNullException(nameof(receiver));
             ReceiverProperty = stub ?? throw new ArgumentNullException(nameof(stub));
 
             if (getter is not null)
-                this.getter = new ExtensionMethodInfo(getter, receiverParameter, stub.GetMethod);
+                this.getter = new ExtensionMethodInfo(getter, receiver, stub.GetMethod);
             if (setter is not null)
-                this.setter = new ExtensionMethodInfo(setter, receiverParameter, stub.SetMethod);
+                this.setter = new ExtensionMethodInfo(setter, receiver, stub.SetMethod);
         }
 
         public PropertyInfo ReceiverProperty { get; }

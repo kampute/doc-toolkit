@@ -54,6 +54,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsGenericMethod => Reflection.IsGenericMethod;
 
         /// <inheritdoc/>
+        public virtual bool IsClassicExtensionMethod => Reflection is IExtensionMethodInfo { ReceiverParameter: null };
+
+        /// <inheritdoc/>
         public IMethod? OverriddenMethod => (IMethod?)OverriddenMember;
 
         /// <inheritdoc/>

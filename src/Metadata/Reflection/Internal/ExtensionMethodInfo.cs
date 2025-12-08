@@ -18,20 +18,23 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         private readonly Lazy<Type[]> ownedGenericArguments;
 
         public ExtensionMethodInfo(MethodInfo classicMethod)
-            : this(classicMethod, classicMethod.GetParameters()[0], null)
         {
+            DeclaredMethod = classicMethod ?? throw new ArgumentNullException(nameof(classicMethod));
+            ReceiverParameter = classicMethod.GetParameters()[0];
+            ownedGenericArguments = new(GetOwnedGenericArguments);
         }
 
-        public ExtensionMethodInfo(MethodInfo method, ParameterInfo receiverParameter, MethodInfo? stub)
+        public ExtensionMethodInfo(MethodInfo method, ParameterInfo receiver, MethodInfo stub)
         {
             DeclaredMethod = method ?? throw new ArgumentNullException(nameof(method));
-            ReceiverParameter = receiverParameter ?? throw new ArgumentNullException(nameof(receiverParameter));
-            ReceiverMethod = stub;
-            ownedGenericArguments = new(GetOwnedGenericArguments);
+            ReceiverParameter = receiver ?? throw new ArgumentNullException(nameof(receiver));
+            ReceiverMethod = stub ?? throw new ArgumentNullException(nameof(stub));
+            ownedGenericArguments = new(ReceiverMethod.GetGenericArguments);
         }
 
         public MethodInfo DeclaredMethod { get; }
         public MethodInfo? ReceiverMethod { get; }
+        public MethodInfo? MarkerMethod { get; }
         public ParameterInfo ReceiverParameter { get; }
 
         #region MethodInfo Members

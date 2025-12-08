@@ -16,7 +16,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// Gets the parameter information for the receiver of the extension member.
         /// </summary>
         /// <value>
-        /// The <see cref="ParameterInfo"/> representing the receiver parameter.
+        /// An instance of <see cref="ParameterInfo"/> representing the receiver parameter of the extension member.
         /// </value>
         ParameterInfo ReceiverParameter { get; }
     }
