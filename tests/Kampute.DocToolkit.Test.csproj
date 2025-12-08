@@ -7,8 +7,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoWarn>CA1861;IDE0079;VSSpell001</NoWarn>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <NoWarn>CA1861;CS1591;IDE0079;VSSpell001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

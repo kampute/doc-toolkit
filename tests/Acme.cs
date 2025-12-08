@@ -310,57 +310,178 @@ namespace Acme
 
     public static class SampleExtensions
     {
+        /// <summary>
+        /// A classic extension method for generic class.
+        /// </summary>
+        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         public static void ClassicExtensionMethodForClass<T>(this SampleGenericClass<T> instance) where T : class { }
 
+        /// <summary>
+        /// Extension members for generic class.
+        /// </summary>
+        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         extension<T>(SampleGenericClass<T> instance)
             where T : class
         {
+            /// <summary>
+            /// An instance extension property.
+            /// </summary>
             public int InstanceExtensionPropertyForClass => 42;
+
+            /// <summary>
+            /// A static extension property.
+            /// </summary>
             public static bool StaticExtensionPropertyForClass => true;
 
+            /// <summary>
+            /// An instance extension method.
+            /// </summary>
             public void InstanceExtensionMethodForClass() { }
+
+            /// <summary>
+            /// A static extension method.
+            /// </summary>
             public static void StaticExtensionMethodForClass() { }
+
+            /// <summary>
+            /// A generic extension method.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
             public void GenericExtensionMethodForClass<U>(U value) where U : struct { }
         }
+
+        /// <summary>
+        /// A classic extension method for generic struct.
+        /// </summary>
+        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         public static void ClassicExtensionMethodForStruct<T>(this SampleGenericStruct<T> instance) where T : class, IDisposable { }
 
+        /// <summary>
+        /// Extension members for generic struct.
+        /// </summary>
+        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         extension<T>(SampleGenericStruct<T> instance)
             where T : class, IDisposable
         {
+            /// <summary>
+            /// An instance extension property.
+            /// </summary>
             public int InstanceExtensionPropertyForStruct => 42;
+
+            /// <summary>
+            /// A static extension property.
+            /// </summary>
             public static bool StaticExtensionPropertyForStruct => true;
 
+            /// <summary>
+            /// An instance extension method.
+            /// </summary>
             public void InstanceExtensionMethodForStruct() { }
+
+            /// <summary>
+            /// A static extension method.
+            /// </summary>
             public static void StaticExtensionMethodForStruct() { }
+
+            /// <summary>
+            /// A generic extension method.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
             public void GenericExtensionMethodForStruct<U>(U value) where U : struct { }
         }
 
+        /// <summary>
+        /// A classic extension method for generic interface.
+        /// </summary>
+        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         public static void ClassicExtensionMethodForInterface<T>(this ISampleGenericInterface<T> instance) where T : class, new() { }
 
+        /// <summary>
+        /// Extension members for generic interface.
+        /// </summary>
+        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
         extension<T>(ISampleGenericInterface<T> instance)
             where T : class, new()
         {
+            /// <summary>
+            /// An instance extension property.
+            /// </summary>
             public int InstanceExtensionPropertyForInterface => 42;
+
+            /// <summary>
+            /// A static extension property.
+            /// </summary>
             public static bool StaticExtensionPropertyForInterface => true;
 
+            /// <summary>
+            /// An instance extension method.
+            /// </summary>
             public void InstanceExtensionMethodForInterface() { }
+
+            /// <summary>
+            /// A static extension method.
+            /// </summary>
             public static void StaticExtensionMethodForInterface() { }
+
+            /// <summary>
+            /// A generic extension method.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
             public void GenericExtensionMethodForInterface<U>(U value) where U : struct { }
         }
 
+        /// <summary>
+        /// Extension members for non-generic interface.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
         extension(ISampleInterface instance)
         {
+            /// <summary>
+            /// An instance extension property.
+            /// </summary>
             public int InstanceExtensionProperty => 42;
+
+            /// <summary>
+            /// A static extension property.
+            /// </summary>
             public static bool StaticExtensionProperty => true;
+
+            /// <summary>
+            /// A full extension property with getter and setter.
+            /// </summary>
             public string FullExtensionProperty { get => string.Empty; set { } }
 
+            /// <summary>
+            /// An instance extension method.
+            /// </summary>
             public void InstanceExtensionMethod() { }
+
+            /// <summary>
+            /// A static extension method.
+            /// </summary>
             public static void StaticExtensionMethod() { }
+
+            /// <summary>
+            /// A generic extension method.
+            /// </summary>
+            /// <typeparam name="U">The type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
             public void GenericExtensionMethod<U>(U value) where U : struct { }
         }
 
+        /// <summary>
+        /// A non-extension method to verify correct classification.
+        /// </summary>
         public static void NonExtensionMethod() { }
-
     }
 }
 #pragma warning restore CS0067 // The event is never used
