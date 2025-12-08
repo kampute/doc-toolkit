@@ -17,6 +17,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter))]
         public void ImplementsMethod(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
@@ -33,6 +34,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithoutTypeConstraints), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = true)]
         public bool IsGeneric_HasExpectedValue(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
@@ -228,6 +230,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), ExpectedResult = 1)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithoutTypeConstraints), ExpectedResult = 2)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = 1)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = 0)]
         public int TypeParameters_HasExpectedCount(Type declaringType, string methodName)
         {
@@ -244,6 +247,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = 3)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), ExpectedResult = 1)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), ExpectedResult = 2)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = 1)]
         public int Parameters_HasExpectedCount(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
@@ -258,6 +262,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = "Void")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), ExpectedResult = "T")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = "Void")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = "S")]
         public string ReturnParameter_HasExpectedValue(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
@@ -272,6 +277,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod), ExpectedResult = "M:Acme.SampleDerivedGenericClass`3.GenericMethod``1(`0,`1,`2,``0)")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = "M:Acme.SampleMethods.RegularMethod")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), ExpectedResult = "M:Acme.SampleMethods.GenericMethodWithTypeConstraints``1(``0)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = "M:Acme.SampleMethods.GenericMethodWithGenericParameter``1(System.Collections.Generic.List{``0})")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = "M:Acme.SampleMethods.RefParamsMethod(System.Int32@,System.String@,System.Double@)")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceMethod")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceStaticMethod", ExpectedResult = "M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceStaticMethod")]

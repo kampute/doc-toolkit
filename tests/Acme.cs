@@ -98,6 +98,7 @@ namespace Acme
         public unsafe void UnsafeMethod(int** p) { }
         [return: NotNull] public T GenericMethodWithTypeConstraints<T>([NotNull] T value) where T : class, ICloneable, new() => value;
         public U GenericMethodWithoutTypeConstraints<T, U>(T t, U u) where T : class where U : struct => u;
+        public S GenericMethodWithGenericParameter<S>(List<S> list) => list[0];
         public void RefParamsMethod(in int i, ref string s, out double d) { d = 0.0; }
         public void ArrayParamsMethod(params IEnumerable<string> args) { }
         public void OptionalParamsMethod(int i = 42, string s = "default") { }
