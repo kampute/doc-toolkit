@@ -128,13 +128,15 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public virtual IMethodBase GetMethodMetadata(MethodInfo methodInfo)
+        public virtual IMethodBase GetMethodMetadata(MethodInfo methodInfo, bool asDeclared = false)
         {
             if (methodInfo is null)
                 throw new ArgumentNullException(nameof(methodInfo));
 
-            var normalizedMethodInfo = ExtensionReflection.GetNormalizedMethodInfo(methodInfo);
-            return (IMethodBase)cache.GetOrAdd(normalizedMethodInfo, _ => CreateMethodMetadata(normalizedMethodInfo));
+            if (!asDeclared)
+                methodInfo = ExtensionReflection.GetNormalizedMethodInfo(methodInfo);
+
+            return (IMethodBase)cache.GetOrAdd(methodInfo, _ => CreateMethodMetadata(methodInfo));
         }
 
         /// <inheritdoc/>

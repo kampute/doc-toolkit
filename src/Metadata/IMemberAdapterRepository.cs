@@ -87,13 +87,33 @@ namespace Kampute.DocToolkit.Metadata
         /// Gets the method metadata for the specified method within the assembly.
         /// </summary>
         /// <param name="methodInfo">The reflection method to get metadata for.</param>
+        /// <param name="asDeclared">Indicates whether to retrieve extension methods in their declared form rather than their usage form.</param>
         /// <returns>A metadata representation of the specified method.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="methodInfo"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="methodInfo"/> does not belong to the assembly.</exception>
-        IMethodBase GetMethodMetadata(MethodInfo methodInfo);
+        /// <remarks>
+        /// When <paramref name="asDeclared"/> is <see langword="false"/> (the default), extension methods are detected and resolved
+        /// to reflect their usage form rather than their declared form. Otherwise, the metadata is retrieved as declared, without
+        /// extension method detection and resolution.
+        /// <para>
+        /// Based on the nature of the provided <paramref name="methodInfo"/>, the returned metadata may represent different
+        /// method types:
+        /// <list type="bullet">
+        ///   <item>
+        ///     <term>Regular or Extension Method</term>
+        ///     <description>The returned metadata is an instance of <see cref="IMethod"/>.</description>
+        ///   </item>
+        ///   <item>
+        ///     <term>Operator Overload</term>
+        ///     <description>The returned metadata is an instance of <see cref="IOperator"/>.</description>
+        ///   </item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        IMethodBase GetMethodMetadata(MethodInfo methodInfo, bool asDeclared = false);
 
-        /// <summary>
-        /// Gets the method metadata for the specified method within the assembly.
+       /// <summary>
+        /// Gets the method metadata for the specified method within the assembly, with a specific return type.
         /// </summary>
         /// <typeparam name="T">The specific type of method metadata to retrieve.</typeparam>
         /// <param name="methodInfo">The reflection method to get metadata for.</param>
@@ -101,6 +121,10 @@ namespace Kampute.DocToolkit.Metadata
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="methodInfo"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="methodInfo"/> does not belong to the assembly.</exception>
         /// <exception cref="InvalidCastException">Thrown when the retrieved method metadata cannot be cast to <typeparamref name="T"/>.</exception>
+        /// <remarks>
+        /// Unlike <see cref="GetMethodMetadata(MethodInfo, bool)"/>, this method always retrieves the method metadata in its resolved form,
+        /// meaning that extension methods are detected and resolved to reflect their usage form rather than their declared form.
+        /// </remarks>
         T GetMethodMetadata<T>(MethodInfo methodInfo) where T : IMethodBase => (T)GetMethodMetadata(methodInfo);
 
         /// <summary>
@@ -150,9 +174,9 @@ namespace Kampute.DocToolkit.Metadata
             ConstructorInfo constructorInfo => GetConstructorMetadata(constructorInfo),
             MethodInfo methodInfo => ExtensionReflection.GetExtensionMemberInfo(methodInfo) switch
             {
-                MethodInfo extensionMethodInfo => GetMethodMetadata(extensionMethodInfo),
+                MethodInfo extensionMethodInfo => GetMethodMetadata(extensionMethodInfo, asDeclared: true),
                 PropertyInfo extensionPropertyInfo => GetPropertyMetadata(extensionPropertyInfo),
-                _ => GetMethodMetadata(methodInfo),
+                _ => GetMethodMetadata(methodInfo, asDeclared: true),
             },
             PropertyInfo propertyInfo => GetPropertyMetadata(propertyInfo),
             EventInfo eventInfo => GetEventMetadata(eventInfo),
