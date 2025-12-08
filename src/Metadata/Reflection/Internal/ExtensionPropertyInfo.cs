@@ -70,6 +70,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         public override bool IsDefined(Type attributeType, bool inherit) => throw new NotSupportedException();
         public override bool Equals(object obj) => obj is ExtensionPropertyInfo other && ReceiverProperty.Equals(other.ReceiverProperty);
         public override int GetHashCode() => HashCode.Combine(ReceiverProperty, ReceiverParameter);
+        public override string ToString() => $"Extension property for {ReceiverParameter.ParameterType}: {ReceiverProperty}";
 
         #endregion
     }

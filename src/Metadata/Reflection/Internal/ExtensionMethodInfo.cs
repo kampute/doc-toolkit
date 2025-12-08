@@ -120,6 +120,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         public override bool HasSameMetadataDefinitionAs(MemberInfo other) => throw new NotImplementedException();
         public override bool Equals(object obj) => obj is ExtensionMethodInfo other && DeclaredMethod.Equals(other.DeclaredMethod);
         public override int GetHashCode() => HashCode.Combine(DeclaredMethod, ReceiverParameter);
+        public override string ToString() => $"Extension method for {ReceiverParameter.ParameterType}: {ReceiverMethod ?? DeclaredMethod}";
 
         #endregion
     }
