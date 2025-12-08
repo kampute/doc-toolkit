@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Capabilities;
+    using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -57,8 +58,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IConstructor? BaseConstructor => baseConstructor.Value;
 
         /// <inheritdoc/>
-        public virtual IEnumerable<IMember> Overloads => ((IWithConstructors)DeclaringType)
-            .Constructors.WhereName(Name, preserveOrder: true).Where(c => !ReferenceEquals(c, this));
+        public virtual IEnumerable<IMember> Overloads => !IsStatic && DeclaringType is IWithConstructors withConstructors
+             ? withConstructors.Constructors.Where(c => !ReferenceEquals(c, this) && !c.IsStatic) : [];
 
         /// <inheritdoc/>
         protected override MemberVisibility GetMemberVisibility()
@@ -99,7 +100,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.Parameters.Count == Parameters.Count
-                && AdapterHelper.AreParameterSignaturesMatching(baseCandidate.Parameters, Parameters);
+                && AdapterHelper.EquivalentParameters(baseCandidate.Parameters, Parameters);
         }
 
         /// <summary>
@@ -114,11 +115,18 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts()
         {
-            var signature = Name.Replace('.', '#');
-            if (Parameters.Count > 0)
-                signature += $"({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
+            using var reusable = StringBuilderPool.Shared.GetBuilder();
+            var sb = reusable.Builder;
 
-            return ('M', signature);
+            sb.Append(Name).Replace('.', '#');
+            if (Parameters.Count > 0)
+            {
+                sb.Append('(');
+                sb.AppendJoin(',', Parameters.Select(p => p.Type.ParametricSignature));
+                sb.Append(')');
+            }
+
+            return ('M', sb.ToString());
         }
     }
 }

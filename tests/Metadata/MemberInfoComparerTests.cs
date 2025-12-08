@@ -7,8 +7,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
-    using System;
-    using System.Reflection;
+    using System.Linq;
 
     [TestFixture]
     public static class MemberInfoComparerTests
@@ -18,8 +17,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_GenericTypeParametersWithDifferentOwners_ReturnsFalse()
         {
-            var first = typeof(TestTypes.IndependentGenericClass<>).GetGenericArguments()[0];
-            var second = typeof(TestTypes.AnotherIndependentGenericClass<>).GetGenericArguments()[0];
+            var first = typeof(Acme.SampleGenericClass<>).GetGenericArguments()[0];
+            var second = typeof(Acme.SampleGenericStruct<>).GetGenericArguments()[0];
 
             using (Assert.EnterMultipleScope())
             {
@@ -31,9 +30,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_GenericMethodParametersWithDifferentOwners_ReturnsFalse()
         {
-            var host = typeof(TestTypes.GenericMethodHost);
-            var first = host.GetMethod(nameof(TestTypes.GenericMethodHost.FirstMethod), BindingFlags.Public | BindingFlags.Static)!.GetGenericArguments()[0];
-            var second = host.GetMethod(nameof(TestTypes.GenericMethodHost.SecondMethod), BindingFlags.Public | BindingFlags.Static, Type.EmptyTypes)!.GetGenericArguments()[0];
+            var host = typeof(Acme.SampleMethods);
+            var first = host.GetMethod(nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints))!.GetGenericArguments()[0];
+            var second = host.GetMethod(nameof(Acme.SampleMethods.GenericMethodWithoutTypeConstraints))!.GetGenericArguments()[0];
 
             using (Assert.EnterMultipleScope())
             {
@@ -45,23 +44,10 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_NestedTypesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.TestNestedClass.InnerClass.DeepestClass);
-            var viaReflection = typeof(TestTypes.TestNestedClass)
-                .GetNestedType("InnerClass", BindingFlags.Public | BindingFlags.NonPublic)!
-                .GetNestedType("DeepestClass", BindingFlags.Public | BindingFlags.NonPublic)!;
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(Comparer.Equals(direct, viaReflection), Is.True);
-                Assert.That(Comparer.GetHashCode(direct), Is.EqualTo(Comparer.GetHashCode(viaReflection)));
-            }
-        }
-
-        [Test]
-        public static void Equals_BaseTypesResolvedThroughDifferentPaths_ReturnsTrue()
-        {
-            var direct = typeof(TestTypes.TestBaseClass);
-            var viaReflection = typeof(TestTypes.TestDerivedClass).BaseType!;
+            var direct = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass);
+            var viaReflection = typeof(Acme.SampleGenericClass<>)
+                .GetNestedType("InnerGenericClass`2")!
+                .GetNestedType("DeepInnerGenericClass")!;
 
             using (Assert.EnterMultipleScope())
             {
@@ -73,8 +59,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_GenericBaseTypesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.GenericBaseClass<>);
-            var viaReflection = typeof(TestTypes.GenericDerivedClass<>).BaseType!;
+            var direct = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass);
+            var viaReflection = typeof(Acme.SampleDerivedGenericClass<,,>).BaseType!;
 
             using (Assert.EnterMultipleScope())
             {
@@ -86,8 +72,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_ConstructedGenericBaseTypesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.GenericBaseClass<int>);
-            var viaReflection = typeof(TestTypes.ConstructedGenericDerivedClass).BaseType!;
+            var direct = typeof(Acme.SampleDerivedGenericClass<object, int, string>);
+            var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).BaseType!;
 
             using (Assert.EnterMultipleScope())
             {
@@ -99,8 +85,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_ImplementedInterfacesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.ITestInterface);
-            var viaReflection = typeof(TestTypes.TestDerivedClass).GetInterfaces()[0];
+            var direct = typeof(Acme.ISampleInterface);
+            var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).GetInterfaces()
+                .First(i => i.Name == nameof(Acme.ISampleInterface));
 
             using (Assert.EnterMultipleScope())
             {
@@ -112,8 +99,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_GenericImplementedInterfacesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.IGenericTestInterface<>);
-            var viaReflection = typeof(TestTypes.GenericImplementedClass<>).GetInterfaces()[0];
+            var direct = typeof(System.Collections.Generic.IEnumerable<>);
+            var viaReflection = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetInterfaces()
+                .First(i => i.Name == "IEnumerable`1");
 
             using (Assert.EnterMultipleScope())
             {
@@ -125,8 +113,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_ConstructedGenericImplementedInterfacesResolvedThroughDifferentPaths_ReturnsTrue()
         {
-            var direct = typeof(TestTypes.IGenericTestInterface<string>);
-            var viaReflection = typeof(TestTypes.ConstructedGenericImplementedClass).GetInterfaces()[0];
+            var direct = typeof(System.Collections.Generic.IEnumerable<string>);
+            var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).GetInterfaces()
+                .First(i => i.Name == "IEnumerable`1");
 
             using (Assert.EnterMultipleScope())
             {
@@ -136,36 +125,10 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public static void Equals_ConstructedGenericTypeWithSameArguments_ReturnsTrue()
-        {
-            var first = typeof(TestTypes.GenericBaseClass<int>);
-            var second = typeof(TestTypes.GenericBaseClass<int>);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(Comparer.Equals(first, second), Is.True);
-                Assert.That(Comparer.GetHashCode(first), Is.EqualTo(Comparer.GetHashCode(second)));
-            }
-        }
-
-        [Test]
-        public static void Equals_ConstructedGenericTypesWithDifferentArguments_ReturnsFalse()
-        {
-            var first = typeof(TestTypes.GenericBaseClass<int>);
-            var second = typeof(TestTypes.GenericBaseClass<long>);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(Comparer.Equals(first, second), Is.False);
-                Assert.That(Comparer.GetHashCode(first), Is.Not.EqualTo(Comparer.GetHashCode(second)));
-            }
-        }
-
-        [Test]
         public static void Equals_GenericTypeDefinitionAndConstructedGenericType_ReturnsFalse()
         {
-            var first = typeof(TestTypes.GenericBaseClass<>);
-            var second = typeof(TestTypes.GenericBaseClass<int>);
+            var first = typeof(Acme.SampleGenericClass<>);
+            var second = typeof(Acme.SampleGenericClass<object>);
 
             using (Assert.EnterMultipleScope())
             {
@@ -177,8 +140,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_DifferentGenericTypeArgumentsFromSameGenericDefinition_ReturnsFalse()
         {
-            var first = typeof(TestTypes.GenericBaseClass<int>).GetGenericArguments()[0];
-            var second = typeof(TestTypes.GenericBaseClass<long>).GetGenericArguments()[0];
+            var first = typeof(Acme.SampleGenericClass<object>).GetGenericArguments()[0];
+            var second = typeof(Acme.SampleGenericClass<string>).GetGenericArguments()[0];
 
             using (Assert.EnterMultipleScope())
             {
@@ -190,8 +153,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public static void Equals_SameGenericTypeArgumentsFromSameGenericDefinition_ReturnsTrue()
         {
-            var first = typeof(TestTypes.GenericBaseClass<int>).GetGenericArguments()[0];
-            var second = typeof(TestTypes.GenericBaseClass<int>).GetGenericArguments()[0];
+            var first = typeof(Acme.SampleGenericClass<object>).GetGenericArguments()[0];
+            var second = typeof(Acme.SampleGenericClass<object>).GetGenericArguments()[0];
 
             using (Assert.EnterMultipleScope())
             {

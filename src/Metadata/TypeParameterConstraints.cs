@@ -26,21 +26,16 @@ namespace Kampute.DocToolkit.Metadata
         /// <summary>
         /// The type parameter must be a non-nullable value type.
         /// </summary>
-        ValueType = 2,
+        NotNullableValueType = 2,
 
         /// <summary>
-        /// The type parameter must have a public parameterless constructor.
+        /// The type parameter must have a public default constructor.
         /// </summary>
         DefaultConstructor = 4,
 
         /// <summary>
-        /// The type parameter must be an unmanaged type.
+        /// The type parameter can be a <c>ref struct</c> type.
         /// </summary>
-        UnmanagedType = 8,
-
-        /// <summary>
-        /// The type parameter must not be <see langword="null"/>.
-        /// </summary>
-        NotNull = 16
+        AllowByRefLike = 8,
     }
 }

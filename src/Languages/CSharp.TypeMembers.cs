@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Languages
 {
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.IO;
     using System.Linq;
@@ -21,9 +22,9 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="linker">A delegate for linking to the documentation of a type or type's member.</param>
         /// <param name="indexerName">The name to use for indexers if <paramref name="member"/> is an indexer property; otherwise, <see langword="null"/>.</param>
         /// <remarks>
-        /// For explicit interface implementations, when <paramref name="qualifier"/> is <see cref="NameQualifier.None"/>, the interface 
-        /// member name is qualified according to <see cref="CodeStyleOptions.FullyQualifyExplicitInterfaceMemberNames"/>. When 
-        /// <paramref name="qualifier"/> is not <see cref="NameQualifier.None"/>, the implementing type is written first according to 
+        /// For explicit interface implementations, when <paramref name="qualifier"/> is <see cref="NameQualifier.None"/>, the interface
+        /// member name is qualified according to <see cref="CodeStyleOptions.FullyQualifyExplicitInterfaceMemberNames"/>. When
+        /// <paramref name="qualifier"/> is not <see cref="NameQualifier.None"/>, the implementing type is written first according to
         /// the specified <paramref name="qualifier"/>, followed by the fully qualified interface member name.
         /// <para>
         /// Constructors have no name written, and indexer properties use the provided <paramref name="indexerName"/> if specified.
@@ -65,7 +66,30 @@ namespace Kampute.DocToolkit.Languages
                 writer.Write(Type.Delimiter);
             }
 
+            if (member is IWithExtensionBehavior { ReceiverParameter: IParameter receiverParameter })
+            {
+                WriteExtensionMemberReceiver(writer, receiverParameter, linker);
+                writer.Write(Type.Delimiter);
+            }
+
             linker(writer, member, name);
+        }
+
+        /// <summary>
+        /// Writes the extension receiver parameter to the <see cref="TextWriter"/>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
+        /// <param name="receiverParameter">The receiver parameter to write.</param>
+        /// <param name="linker">The delegate for linking to the documentation of a type or type's member.</param>
+        private void WriteExtensionMemberReceiver(TextWriter writer, IParameter receiverParameter, MemberDocLinker linker)
+        {
+            writer.Write("extension");
+            if (receiverParameter.Type is IGenericCapableType { IsGenericTypeDefinition: true } extendedGenericType)
+                WriteGenericParameters(writer, extendedGenericType.TypeParameters, linker, declarative: false);
+
+            writer.Write('(');
+            WriteParameter(writer, receiverParameter, linker, declarative: false);
+            writer.Write(')');
         }
 
         #region Constructors
@@ -110,7 +134,7 @@ namespace Kampute.DocToolkit.Languages
             if (constructor.IsStatic)
                 writer.Write("static ");
             else
-                WriteVisibilityModifiers(writer, constructor.Visibility);
+                WriteVisibilityModifiers(writer, constructor);
         }
 
         #endregion
@@ -174,7 +198,7 @@ namespace Kampute.DocToolkit.Languages
             if (field.DeclaringType is IEnumType)
                 return;
 
-            WriteVisibilityModifiers(writer, field.Visibility);
+            WriteVisibilityModifiers(writer, field);
 
             if (field.IsLiteral)
             {
@@ -218,14 +242,14 @@ namespace Kampute.DocToolkit.Languages
             if (property.GetMethod is IMethod getter)
             {
                 if (getter.Visibility != property.Visibility)
-                    WriteVisibilityModifiers(writer, getter.Visibility);
+                    WriteVisibilityModifiers(writer, getter);
 
                 writer.Write("get; ");
             }
             if (property.SetMethod is IMethod { IsVisible: true } setter)
             {
                 if (setter.Visibility != property.Visibility)
-                    WriteVisibilityModifiers(writer, setter.Visibility);
+                    WriteVisibilityModifiers(writer, setter);
 
                 writer.Write(property.IsInitOnly ? "init; " : "set; ");
             }
@@ -259,8 +283,7 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="property">The property whose modifiers are to be written.</param>
         private static void WritePropertyModifiers(TextWriter writer, IProperty property)
         {
-            if (!property.IsInterfaceMember && !property.IsExplicitInterfaceImplementation)
-                WriteVisibilityModifiers(writer, property.Visibility);
+            WriteVisibilityModifiers(writer, property);
 
             if (property.IsStatic)
                 writer.Write("static ");
@@ -271,8 +294,7 @@ namespace Kampute.DocToolkit.Languages
             if (property.IsReadOnly)
                 writer.Write("readonly ");
 
-            if (!property.IsInterfaceMember && !property.IsExplicitInterfaceImplementation)
-                WriteVirtualityModifiers(writer, property.Virtuality);
+            WriteVirtualityModifiers(writer, property);
         }
 
         #endregion
@@ -332,8 +354,7 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="method">The method whose modifiers are to be written.</param>
         private static void WriteMethodModifiers(TextWriter writer, IMethod method)
         {
-            if (!method.IsInterfaceMember && !method.IsExplicitInterfaceImplementation)
-                WriteVisibilityModifiers(writer, method.Visibility);
+            WriteVisibilityModifiers(writer, method);
 
             if (method.IsStatic)
                 writer.Write("static ");
@@ -342,8 +363,7 @@ namespace Kampute.DocToolkit.Languages
             if (method.IsReadOnly)
                 writer.Write("readonly ");
 
-            if (!method.IsInterfaceMember && !method.IsExplicitInterfaceImplementation)
-                WriteVirtualityModifiers(writer, method.Virtuality);
+            WriteVirtualityModifiers(writer, method);
         }
 
         #endregion
@@ -370,14 +390,14 @@ namespace Kampute.DocToolkit.Languages
                 if (evt.AddMethod is IMethod adder)
                 {
                     if (adder.Visibility != evt.Visibility)
-                        WriteVisibilityModifiers(writer, adder.Visibility);
+                        WriteVisibilityModifiers(writer, adder);
 
                     writer.Write("add; ");
                 }
                 if (evt.RemoveMethod is IMethod remover)
                 {
                     if (remover.Visibility != evt.Visibility)
-                        WriteVisibilityModifiers(writer, remover.Visibility);
+                        WriteVisibilityModifiers(writer, remover);
 
                     writer.Write("remove; ");
                 }
@@ -404,16 +424,14 @@ namespace Kampute.DocToolkit.Languages
         /// <param name="ev">The event whose modifiers are to be written.</param>
         private static void WriteEventModifiers(TextWriter writer, IEvent ev)
         {
-            if (!ev.IsInterfaceMember && !ev.IsExplicitInterfaceImplementation)
-                WriteVisibilityModifiers(writer, ev.Visibility);
+            WriteVisibilityModifiers(writer, ev);
 
             if (ev.IsStatic)
                 writer.Write("static ");
             if (ev.IsUnsafe)
                 writer.Write("unsafe ");
 
-            if (!ev.IsInterfaceMember && !ev.IsExplicitInterfaceImplementation)
-                WriteVirtualityModifiers(writer, ev.Virtuality);
+            WriteVirtualityModifiers(writer, ev);
         }
 
         #endregion
@@ -433,25 +451,40 @@ namespace Kampute.DocToolkit.Languages
 
             WriteOperatorModifiers(writer, op);
 
-            if (!TryGetOperatorSymbol(op.Name, out var symbol))
-                symbol = op.Name;
+            var interfaceOp = op.IsExplicitInterfaceImplementation ? op.ImplementedOperator : null;
+            var operatorName = interfaceOp is null ? op.Name : interfaceOp.Name;
+
+            if (!TryGetOperatorSymbol(operatorName, out var operatorSymbol))
+                operatorSymbol = operatorName;
 
             if (op.IsConversionOperator)
             {
-                writer.Write(symbol);
-                writer.Write(" operator ");
+                writer.Write(operatorSymbol);
+                WriteQualifiedOperatorKeyword();
                 WriteTypeSignature(writer, op.Return.Type, Options.GlobalNameQualifier, linker);
             }
             else
             {
                 WriteTypeSignature(writer, op.Return.Type, Options.GlobalNameQualifier, linker);
-                writer.Write(" operator ");
-                writer.Write(symbol);
+                WriteQualifiedOperatorKeyword();
+                writer.Write(operatorSymbol);
             }
 
             writer.Write('(');
             WriteParameters(writer, op.Parameters, linker, declarative: true);
             writer.Write(')');
+
+            void WriteQualifiedOperatorKeyword()
+            {
+                writer.Write(' ');
+                if (interfaceOp is not null)
+                {
+                    var qualifier = Options.FullyQualifyExplicitInterfaceMemberNames ? NameQualifier.Full : NameQualifier.DeclaringType;
+                    WriteTypeSignature(writer, interfaceOp.DeclaringType, qualifier, linker);
+                    writer.Write('.');
+                }
+                writer.Write("operator ");
+            }
         }
 
         /// <summary>
@@ -472,18 +505,22 @@ namespace Kampute.DocToolkit.Languages
         }
 
         /// <summary>
-        /// Writes the modifiers of the specified operator method to the <see cref="TextWriter"/>.
+        /// Writes the modifiers of the specified operator to the <see cref="TextWriter"/>.
         /// </summary>
-        /// <param name="writer">The <see cref="TextWriter"/> to which the method modifiers are written.</param>
-        /// <param name="op">The method whose modifiers are to be written.</param>
+        /// <param name="writer">The <see cref="TextWriter"/> to which the operator modifiers are written.</param>
+        /// <param name="op">The operator whose modifiers are to be written.</param>
         private static void WriteOperatorModifiers(TextWriter writer, IOperator op)
         {
-            WriteVisibilityModifiers(writer, op.Visibility);
+            WriteVisibilityModifiers(writer, op);
 
             if (op.IsStatic)
                 writer.Write("static ");
             if (op.IsUnsafe)
                 writer.Write("unsafe ");
+            if (op.IsReadOnly)
+                writer.Write("readonly ");
+
+            WriteVirtualityModifiers(writer, op);
         }
 
         #endregion

@@ -85,7 +85,7 @@ namespace Kampute.DocToolkit.Test
                 {
                     if (member.IsDirectDeclaration)
                     {
-                        var resourceName = member.CodeReference[2..].ReplaceMany(['`', '#'], '-').ToLowerInvariant();
+                        var resourceName = member.CodeReference[2..].ReplaceChars(['`', '#'], '-').ToLowerInvariant();
                         url = new RawUri($"https://example.com/{resourceName}", UriKind.Absolute);
                         return true;
                     }
@@ -110,7 +110,7 @@ namespace Kampute.DocToolkit.Test
                 {
                     if (member.IsDirectDeclaration)
                     {
-                        path = member.CodeReference[2..].ReplaceMany(['`', '#'], '-').ToLowerInvariant();
+                        path = member.CodeReference[2..].ReplaceChars(['`', '#'], '-').ToLowerInvariant();
                         return true;
                     }
 

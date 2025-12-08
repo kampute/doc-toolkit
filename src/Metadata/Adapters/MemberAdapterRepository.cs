@@ -68,10 +68,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
             Factory = factory ?? throw new ArgumentNullException(nameof(factory));
             cache = new(comparer ?? throw new ArgumentNullException(nameof(comparer)));
+            ExtensionReflection = new ExtensionReflectionRepository(assembly);
         }
 
         /// <inheritdoc/>
         public IAssembly Assembly { get; }
+
+        /// <inheritdoc/>
+        public IExtensionReflectionRepository ExtensionReflection { get; }
 
         /// <summary>
         /// Gets the factory used to create member adapters.
@@ -82,14 +86,36 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected IMemberAdapterFactory Factory { get; }
 
         /// <inheritdoc/>
+        public virtual Type ResolveCanonicalType(Type type)
+        {
+            if (!type.IsConstructedGenericType || type.FullName is not null)
+                return type;
+
+            var genericDefinition = type.GetGenericTypeDefinition();
+            var genericParameters = genericDefinition.GetGenericArguments();
+            var genericArguments = type.GetGenericArguments();
+
+            if (genericParameters.Length != genericArguments.Length)
+                return type;
+
+            for (var i = 0; i < genericArguments.Length; ++i)
+            {
+                var arg = genericArguments[i];
+                if (!arg.IsGenericParameter || arg.Name != genericParameters[i].Name)
+                    return type;
+            }
+
+            return genericDefinition;
+        }
+
+        /// <inheritdoc/>
         public virtual IType GetTypeMetadata(Type type)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
 
-            type = AdapterHelper.CanonicalizeType(type);
-
-            return (IType)cache.GetOrAdd(type, _ => CreateTypeMetadata(type));
+            var canonicalType = ResolveCanonicalType(type);
+            return (IType)cache.GetOrAdd(canonicalType, _ => CreateTypeMetadata(canonicalType));
         }
 
         /// <inheritdoc/>
@@ -107,7 +133,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (methodInfo is null)
                 throw new ArgumentNullException(nameof(methodInfo));
 
-            return (IMethodBase)cache.GetOrAdd(methodInfo, _ => CreateMethodMetadata(methodInfo));
+            var normalizedMethodInfo = ExtensionReflection.GetNormalizedMethodInfo(methodInfo);
+            return (IMethodBase)cache.GetOrAdd(normalizedMethodInfo, _ => CreateMethodMetadata(normalizedMethodInfo));
         }
 
         /// <inheritdoc/>

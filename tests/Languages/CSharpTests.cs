@@ -16,8 +16,7 @@ namespace Kampute.DocToolkit.Test.Languages
     [TestFixture]
     public class CSharpTests
     {
-        private readonly BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-        private readonly CSharp csharp = new();
+        private readonly CSharp cs = new();
 
         [SetUp]
         public void Setup()
@@ -30,7 +29,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("nonexistent", ExpectedResult = null)]
         public string? TryGetUrl_ReturnsExpectedDocumentationUrl(string keyword)
         {
-            return csharp.TryGetUrl(keyword, out var url) ? url.ToString() : null;
+            return cs.TryGetUrl(keyword, out var url) ? url.ToString() : null;
         }
 
         [TestCase(null, ExpectedResult = "null")]
@@ -61,356 +60,462 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("\"OK\"", ExpectedResult = "\"\\\"OK\\\"\"")]
         public string FormatValue_ReturnsExpectedString(object? value)
         {
-            return csharp.FormatLiteral(value);
+            return cs.FormatLiteral(value);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.IProcess<>), ExpectedResult = "IProcess<T>")]
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), ExpectedResult = "ValueType")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), ExpectedResult = "Widget")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), ExpectedResult = "NestedClass")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.IMenuItem<>), ExpectedResult = "IMenuItem<T>")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.Del), ExpectedResult = "Del")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.Direction), ExpectedResult = "Direction")]
-        [TestCase(NameQualifier.None, typeof(Acme.MyList<>), ExpectedResult = "MyList<T>")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "MyList<T>.Helper<U, V>")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), ExpectedResult = "UseList")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator")]
+        [TestCase(NameQualifier.None, typeof(Action), ExpectedResult = "Action")]
+        [TestCase(NameQualifier.None, typeof(Action<>), ExpectedResult = "Action<T>")]
+        [TestCase(NameQualifier.None, typeof(Action<,>), ExpectedResult = "Action<T1, T2>")]
+        [TestCase(NameQualifier.None, typeof(DayOfWeek), ExpectedResult = "DayOfWeek")]
+        [TestCase(NameQualifier.None, typeof(DateTime), ExpectedResult = "DateTime")]
+        [TestCase(NameQualifier.None, typeof(ArraySegment<>), ExpectedResult = "ArraySegment<T>")]
+        [TestCase(NameQualifier.None, typeof(List<>), ExpectedResult = "List<T>")]
+        [TestCase(NameQualifier.None, typeof(IReadOnlyList<>), ExpectedResult = "IReadOnlyList<T>")]
+        [TestCase(NameQualifier.None, typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "Enumerator")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>), ExpectedResult = "SampleGenericClass<T>")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass")]
         public string FormatName_ForTypes_ReturnsExpectedString(NameQualifier qualifier, Type type)
         {
-            return csharp.FormatName(type.GetMetadata(), qualifier);
+            return cs.FormatName(type.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), new[] { typeof(string) }, ExpectedResult = "")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget), new[] { typeof(string) }, ExpectedResult = "Acme.Widget")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), ExpectedResult = "")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget.NestedClass), ExpectedResult = "Acme.Widget.NestedClass")]
-        [TestCase(NameQualifier.None, typeof(Acme.MyList<>), new[] { typeof(IEnumerable<>) }, ExpectedResult = "")]
-        [TestCase(NameQualifier.Full, typeof(Acme.MyList<>), new[] { typeof(IEnumerable<>) }, ExpectedResult = "Acme.MyList<T>")]
+        [TestCase(NameQualifier.None, typeof(DateTime), typeof(long), ExpectedResult = "")]
+        [TestCase(NameQualifier.Full, typeof(DateTime), typeof(long), ExpectedResult = "System.DateTime")]
+        [TestCase(NameQualifier.None, typeof(List<>), typeof(IEnumerable<>), ExpectedResult = "")]
+        [TestCase(NameQualifier.Full, typeof(List<>), typeof(IEnumerable<>), ExpectedResult = "System.Collections.Generic.List<T>")]
+        [TestCase(NameQualifier.None, typeof(Dictionary<,>.KeyCollection), typeof(Dictionary<,>), ExpectedResult = "")]
+        [TestCase(NameQualifier.Full, typeof(Dictionary<,>.KeyCollection), typeof(Dictionary<,>), ExpectedResult = "System.Collections.Generic.Dictionary<TKey, TValue>.KeyCollection")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass")]
         public string FormatName_ForConstructors_ReturnsExpectedString(NameQualifier qualifier, Type type, params Type[] paramTypes)
         {
-            var constructor = type.GetMetadata<IClassType>().Constructors.First(
+            var constructor = type.GetMetadata<ICompositeType>().Constructors.First(
                 c => c.Parameters.Count == paramTypes.Length
                   && c.Parameters.All(p => p.Type.Name == paramTypes[p.Position].Name));
 
-            return csharp.FormatName(constructor, qualifier);
+            return cs.FormatName(constructor, qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.M1), ExpectedResult = "M1")]
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.M2), ExpectedResult = "M2")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M0), ExpectedResult = "M0")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M1), ExpectedResult = "M1")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M2), ExpectedResult = "M2")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M3), ExpectedResult = "M3")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M4), ExpectedResult = "M4")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M5), ExpectedResult = "M5")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M6), ExpectedResult = "M6")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M1), ExpectedResult = "M1")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M2), ExpectedResult = "M2")]
-        [TestCase(NameQualifier.Full, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Test), ExpectedResult = "Acme.MyList<T>.Test")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.UseList), nameof(Acme.UseList.ProcessAsync), ExpectedResult = "UseList.ProcessAsync")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "GetValues")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "Intercept")]
-        [TestCase(NameQualifier.None, typeof(Acme.Extensions), nameof(Acme.Extensions.Hello), ExpectedResult = "Hello")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "MoveNext", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.MoveNext")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = "RegularMethod")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod), ExpectedResult = "StaticMethod")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "ISampleInterface.InterfaceMethod")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass.Method")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass.GenericMethod")]
         public string FormatName_ForMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatName(methodInfo!.GetMetadata(), qualifier);
+            return cs.FormatName(methodInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "UnaryPlus", ExpectedResult = "UnaryPlus")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Addition", ExpectedResult = "Addition")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Explicit", ExpectedResult = "Explicit")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Implicit", ExpectedResult = "Implicit")]
-        public string FormatName_ForOperators_ReturnsExpectedString(NameQualifier qualifier, Type type, string operatorName, Type[]? paramTypes = null)
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "extension<T>(SampleGenericClass<T>).ClassicExtensionMethodForClass")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "extension<T>(SampleGenericClass<T>).InstanceExtensionMethodForClass")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "SampleExtensions.extension<T>(SampleGenericClass<T>).StaticExtensionMethodForClass")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "Acme.SampleExtensions.extension<T>(SampleGenericClass<T>).GenericExtensionMethodForClass")]
+        public string FormatName_ForExtensionMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodName = $"op_{operatorName}";
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatName(methodInfo!.GetMetadata(), qualifier);
+            return cs.FormatName(methodInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.Width), ExpectedResult = "Width")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "Item[]")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "Item[]")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Items), ExpectedResult = "MyList<T>.Items")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_UnaryPlus", ExpectedResult = "UnaryPlus")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_UnaryNegation", ExpectedResult = "UnaryNegation")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Addition", ExpectedResult = "Addition")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Subtraction", ExpectedResult = "Subtraction")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_AdditionAssignment", ExpectedResult = "AdditionAssignment")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_SubtractionAssignment", ExpectedResult = "SubtractionAssignment")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_IncrementAssignment", ExpectedResult = "IncrementAssignment")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_DecrementAssignment", ExpectedResult = "DecrementAssignment")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Explicit", ExpectedResult = "Explicit")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Implicit", ExpectedResult = "Implicit")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "Acme.ISampleInterface.op_False", ExpectedResult = "ISampleInterface.False")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "Acme.ISampleInterface.op_False", ExpectedResult = "ISampleInterface.False")]
+        public string FormatName_ForOperators_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
+        {
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
+
+            return cs.FormatName(methodInfo!.GetMetadata(), qualifier);
+        }
+
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "RegularProperty")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = "StaticProperty")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "Item[]")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = "ISampleInterface.InterfaceProperty")]
         [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), "Current", ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator.Current")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Property), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass.Property")]
         public string FormatName_ForProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string propertyName, params Type[] paramTypes)
         {
-            var propertyInfo = type.GetProperty(propertyName, bindingFlags, null, null, paramTypes, null);
+            var propertyInfo = type.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, paramTypes, null);
 
-            return csharp.FormatName(propertyInfo!.GetMetadata(), qualifier);
+            return cs.FormatName(propertyInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "AnEvent")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "Widget.AnEvent")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "Acme.Widget.AnEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), ExpectedResult = "extension(ISampleInterface).InstanceExtensionProperty")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty), ExpectedResult = "SampleExtensions.extension(ISampleInterface).StaticExtensionProperty")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_FullExtensionProperty), ExpectedResult = "Acme.SampleExtensions.extension(ISampleInterface).FullExtensionProperty")]
+        public string FormatName_ForExtensionProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string accessorName)
+        {
+            MemberInfo accessorInfo = type.GetMethod(accessorName, Acme.Bindings.AllDeclared)!;
+
+            return cs.FormatName(accessorInfo.GetMetadata(), qualifier);
+        }
+
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "RegularEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "SampleEvents.RegularEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "StaticEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "SampleEvents.StaticEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "ISampleInterface.InterfaceEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "SampleEvents.Acme.ISampleInterface.InterfaceEvent")]
         public string FormatName_ForEvents_ReturnsExpectedString(NameQualifier qualifier, Type type, string eventName)
         {
-            var eventInfo = type.GetEvent(eventName, bindingFlags);
+            var eventInfo = type.GetEvent(eventName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatName(eventInfo!.GetMetadata(), qualifier);
+            return cs.FormatName(eventInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.total), ExpectedResult = "total")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.message), ExpectedResult = "message")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.defaultDirection), ExpectedResult = "defaultDirection")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.PI), ExpectedResult = "PI")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.monthlyAverage), ExpectedResult = "monthlyAverage")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.array1), ExpectedResult = "array1")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.array2), ExpectedResult = "array2")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.pCount), ExpectedResult = "pCount")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.ppValues), ExpectedResult = "ppValues")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.value), ExpectedResult = "value")]
+        [TestCase(NameQualifier.None, typeof(DateTime), nameof(DateTime.MinValue), ExpectedResult = "MinValue")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         public string FormatName_ForFields_ReturnsExpectedString(NameQualifier qualifier, Type type, string fieldName)
         {
-            var fieldInfo = type.GetField(fieldName, bindingFlags);
+            var fieldInfo = type.GetField(fieldName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatName(fieldInfo!.GetMetadata(), qualifier);
+            return cs.FormatName(fieldInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.IProcess<>), ExpectedResult = "IProcess<T>")]
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), ExpectedResult = "ValueType")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), ExpectedResult = "Widget")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), ExpectedResult = "NestedClass")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.IMenuItem<>), ExpectedResult = "IMenuItem<T>")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.Del), ExpectedResult = "Del")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.Direction), ExpectedResult = "Direction")]
-        [TestCase(NameQualifier.None, typeof(Acme.MyList<>), ExpectedResult = "MyList<T>")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "MyList<T>.Helper<U, V>")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), ExpectedResult = "UseList")]
+        [TestCase(NameQualifier.None, typeof(Action), ExpectedResult = "Action")]
+        [TestCase(NameQualifier.None, typeof(Action<>), ExpectedResult = "Action<T>")]
+        [TestCase(NameQualifier.None, typeof(Action<,>), ExpectedResult = "Action<T1, T2>")]
+        [TestCase(NameQualifier.None, typeof(DayOfWeek), ExpectedResult = "DayOfWeek")]
+        [TestCase(NameQualifier.None, typeof(DateTime), ExpectedResult = "DateTime")]
+        [TestCase(NameQualifier.None, typeof(ArraySegment<>), ExpectedResult = "ArraySegment<T>")]
+        [TestCase(NameQualifier.None, typeof(List<>), ExpectedResult = "List<T>")]
+        [TestCase(NameQualifier.None, typeof(IReadOnlyList<>), ExpectedResult = "IReadOnlyList<T>")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "Dictionary<TKey, TValue>.KeyCollection.Enumerator")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>), ExpectedResult = "SampleGenericClass<T>")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass")]
         public string FormatSignature_ForTypes_ReturnsExpectedString(NameQualifier qualifier, Type type)
         {
-            return csharp.FormatSignature(type.GetMetadata(), qualifier);
+            return cs.FormatSignature(type.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), new[] { typeof(string) }, ExpectedResult = "Widget(string)")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget), new[] { typeof(string) }, ExpectedResult = "Acme.Widget(string)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), ExpectedResult = "NestedClass()")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget.NestedClass), ExpectedResult = "Acme.Widget.NestedClass()")]
-        [TestCase(NameQualifier.None, typeof(Acme.MyList<>), new[] { typeof(IEnumerable<>) }, ExpectedResult = "MyList<T>(IEnumerable<T>)")]
-        [TestCase(NameQualifier.Full, typeof(Acme.MyList<>), new[] { typeof(IEnumerable<>) }, ExpectedResult = "Acme.MyList<T>(IEnumerable<T>)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleConstructors), typeof(string), typeof(double), ExpectedResult = "SampleConstructors(string, double)")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleConstructors), typeof(string), typeof(double), ExpectedResult = "Acme.SampleConstructors(string, double)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleConstructors), typeof(object), ExpectedResult = "SampleConstructors(object)")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleConstructors), typeof(object), ExpectedResult = "Acme.SampleConstructors(object)")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>), ExpectedResult = "Acme.SampleGenericClass<T>()")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>()")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass()")]
         public string FormatSignature_ForConstructors_ReturnsExpectedString(NameQualifier qualifier, Type type, params Type[] paramTypes)
         {
             var constructor = type.GetMetadata<IClassType>().Constructors.First(
                 c => c.Parameters.Count == paramTypes.Length
                   && c.Parameters.All(p => p.Type.Name == paramTypes[p.Position].Name));
 
-            return csharp.FormatSignature(constructor, qualifier);
+            return cs.FormatSignature(constructor, qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.M1), ExpectedResult = "M1(int)")]
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.M2), ExpectedResult = "M2(int?)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M0), ExpectedResult = "M0()")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M1), ExpectedResult = "M1(char, out float, ref ValueType, in int)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M2), ExpectedResult = "M2(short[], int[,], long[][])")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M3), ExpectedResult = "M3(long[][], Widget[][,,])")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M4), ExpectedResult = "M4(char*, Widget.Direction**)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M5), ExpectedResult = "M5(void*, double?*[][,][,,])")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.M6), ExpectedResult = "M6(int, params object[])")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M1), ExpectedResult = "M1()")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M2), ExpectedResult = "M2(int)")]
-        [TestCase(NameQualifier.Full, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Test), ExpectedResult = "Acme.MyList<T>.Test(T)")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.UseList), nameof(Acme.UseList.ProcessAsync), ExpectedResult = "UseList.ProcessAsync(MyList<int>)")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "GetValues<T>(T)")]
-        [TestCase(NameQualifier.None, typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "Intercept<T>(in MyList<T>.Helper<char, string>[])")]
-        [TestCase(NameQualifier.None, typeof(Acme.Extensions), nameof(Acme.Extensions.Hello), ExpectedResult = "Hello(this Widget)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = "RegularMethod()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod), ExpectedResult = "StaticMethod()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = "RefParamsMethod(in int, ref string, out double)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), ExpectedResult = "ArrayParamsMethod(params IEnumerable<string>)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), ExpectedResult = "MixedParamsMethod(string, in DayOfWeek, params double?*[][,][,,,])")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.UnsafeMethod), ExpectedResult = "UnsafeMethod(int**)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), ExpectedResult = "OptionalParamsMethod(int, string)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "ISampleInterface.InterfaceMethod()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method), ExpectedResult = "Method(T, U, V)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod), ExpectedResult = "GenericMethod<W>(T, U, V, W)")]
         public string FormatSignature_ForMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatSignature(methodInfo!.GetMetadata(), qualifier);
+            return cs.FormatSignature(methodInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "UnaryPlus", ExpectedResult = "UnaryPlus(Widget)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Addition", ExpectedResult = "Addition(Widget, Widget)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Explicit", ExpectedResult = "Explicit(Widget)")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Implicit", ExpectedResult = "Implicit(Widget)")]
-        public string FormatSignature_ForOperators_ReturnsExpectedString(NameQualifier qualifier, Type type, string operatorName, Type[]? paramTypes = null)
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "extension<T>(SampleGenericClass<T>).ClassicExtensionMethodForClass()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "extension<T>(SampleGenericClass<T>).InstanceExtensionMethodForClass()")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "SampleExtensions.extension<T>(SampleGenericClass<T>).StaticExtensionMethodForClass()")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "Acme.SampleExtensions.extension<T>(SampleGenericClass<T>).GenericExtensionMethodForClass<U>(U)")]
+        public string FormatSignature_ForExtensionMethods_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodName = $"op_{operatorName}";
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatSignature(methodInfo!.GetMetadata(), qualifier);
+            return cs.FormatSignature(methodInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.Width), ExpectedResult = "Width")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "Item[int]")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "Item[string, int]")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Items), ExpectedResult = "MyList<T>.Items")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_UnaryPlus", ExpectedResult = "UnaryPlus(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_UnaryNegation", ExpectedResult = "UnaryNegation(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Addition", ExpectedResult = "Addition(SampleOperators, SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Subtraction", ExpectedResult = "Subtraction(SampleOperators, SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_AdditionAssignment", ExpectedResult = "AdditionAssignment(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_SubtractionAssignment", ExpectedResult = "SubtractionAssignment(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_IncrementAssignment", ExpectedResult = "IncrementAssignment()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_DecrementAssignment", ExpectedResult = "DecrementAssignment()")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Explicit", ExpectedResult = "Explicit(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "op_Implicit", ExpectedResult = "Implicit(SampleOperators)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleOperators), "Acme.ISampleInterface.op_False", ExpectedResult = "ISampleInterface.False(ISampleInterface)")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "Acme.ISampleInterface.op_False", ExpectedResult = "ISampleInterface.False(ISampleInterface)")]
+        public string FormatSignature_ForOperators_ReturnsExpectedString(NameQualifier qualifier, Type type, string methodName, Type[]? paramTypes = null)
+        {
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
+
+            return cs.FormatSignature(methodInfo!.GetMetadata(), qualifier);
+        }
+
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "RegularProperty")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = "StaticProperty")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "Item[int]")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), "Item", typeof(string), typeof(int), ExpectedResult = "Item[string, int]")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = "ISampleInterface.InterfaceProperty")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Property), ExpectedResult = "Acme.SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass.Property")]
         public string FormatSignature_ForProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string propertyName, params Type[] paramTypes)
         {
-            var propertyInfo = type.GetProperty(propertyName, bindingFlags, null, null, paramTypes, null);
+            var propertyInfo = type.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, paramTypes, null);
 
-            return csharp.FormatSignature(propertyInfo!.GetMetadata(), qualifier);
+            return cs.FormatSignature(propertyInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "AnEvent")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "Widget.AnEvent")]
-        [TestCase(NameQualifier.Full, typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "Acme.Widget.AnEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), ExpectedResult = "extension(ISampleInterface).InstanceExtensionProperty")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty), ExpectedResult = "SampleExtensions.extension(ISampleInterface).StaticExtensionProperty")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_FullExtensionProperty), ExpectedResult = "Acme.SampleExtensions.extension(ISampleInterface).FullExtensionProperty")]
+        public string FormatSignature_ForExtensionProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string accessorName)
+        {
+            MemberInfo accessorInfo = type.GetMethod(accessorName, Acme.Bindings.AllDeclared)!;
+
+            return cs.FormatSignature(accessorInfo.GetMetadata(), qualifier);
+        }
+
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "RegularEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "SampleEvents.RegularEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "StaticEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "SampleEvents.StaticEvent")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "ISampleInterface.InterfaceEvent")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "SampleEvents.Acme.ISampleInterface.InterfaceEvent")]
         public string FormatSignature_ForEvents_ReturnsExpectedString(NameQualifier qualifier, Type type, string eventName)
         {
-            var eventInfo = type.GetEvent(eventName, bindingFlags);
+            var eventInfo = type.GetEvent(eventName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatSignature(eventInfo!.GetMetadata(), qualifier);
+            return cs.FormatSignature(eventInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.ValueType), nameof(Acme.ValueType.total), ExpectedResult = "total")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.message), ExpectedResult = "message")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.defaultDirection), ExpectedResult = "defaultDirection")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.PI), ExpectedResult = "PI")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.monthlyAverage), ExpectedResult = "monthlyAverage")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.array1), ExpectedResult = "array1")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.array2), ExpectedResult = "array2")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.pCount), ExpectedResult = "pCount")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget), nameof(Acme.Widget.ppValues), ExpectedResult = "ppValues")]
-        [TestCase(NameQualifier.None, typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.value), ExpectedResult = "value")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         public string FormatSignature_ForFields_ReturnsExpectedString(NameQualifier qualifier, Type type, string fieldName)
         {
-            var fieldInfo = type.GetField(fieldName, bindingFlags);
+            var fieldInfo = type.GetField(fieldName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatSignature(fieldInfo!.GetMetadata(), qualifier);
+            return cs.FormatSignature(fieldInfo!.GetMetadata(), qualifier);
         }
 
-        [TestCase(typeof(Acme.IProcess<>), ExpectedResult = "public interface IProcess<out T>")]
-        [TestCase(typeof(Acme.ValueType), ExpectedResult = "public struct ValueType : ICloneable")]
-        [TestCase(typeof(Acme.Widget), ExpectedResult = "public class Widget")]
-        [TestCase(typeof(Acme.Widget.NestedClass), ExpectedResult = "public abstract class Widget.NestedClass")]
-        [TestCase(typeof(Acme.Widget.NestedDerivedClass), ExpectedResult = "public class Widget.NestedDerivedClass : Widget.NestedClass")]
-        [TestCase(typeof(Acme.Widget.IMenuItem<>), ExpectedResult = "public interface Widget.IMenuItem<in T>\n\twhere T : Widget, new()")]
-        [TestCase(typeof(Acme.Widget.Del), ExpectedResult = "protected delegate void Widget.Del(int i)")]
-        [TestCase(typeof(Acme.Widget.Direction), ExpectedResult = "public enum Widget.Direction")]
-        [TestCase(typeof(Acme.MyList<>), ExpectedResult = "public class MyList<T>\n\twhere T : struct")]
-        [TestCase(typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "public class MyList<T>.Helper<U, V>\n\twhere T : struct")]
-        [TestCase(typeof(Acme.UseList), ExpectedResult = "public sealed class UseList : IProcess<string>")]
-        [TestCase(typeof(Acme.TestClass), ExpectedResult = "[Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]\npublic class TestClass")]
+        [TestCase(typeof(Acme.SampleFields), ExpectedResult = "public struct SampleFields")]
+        [TestCase(typeof(Acme.SampleMethods), ExpectedResult = "public abstract class SampleMethods : ISampleInterface")]
+        [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = "public class SampleConstructors")]
+        [TestCase(typeof(Acme.SampleAttribute), ExpectedResult = "[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]\npublic class SampleAttribute : Attribute")]
+        [TestCase(typeof(Acme.SampleGenericClass<>), ExpectedResult = "public class SampleGenericClass<T>\n\twhere T : class")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = "public class SampleGenericClass<T>.InnerGenericClass<U, V>\n\twhere T : class\n\twhere U : struct")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "public abstract class SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass : ISampleInterface, IEnumerable<V>\n\twhere T : class\n\twhere U : struct")]
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), ExpectedResult = "public abstract class SampleDerivedGenericClass<T, U, V> : SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass\n\twhere T : class, new()\n\twhere U : struct")]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), ExpectedResult = "public class SampleDerivedConstructedGenericClass : SampleDerivedGenericClass<object, int, string>")]
+        [TestCase(typeof(Acme.SampleDirectDerivedConstructedGenericClass), ExpectedResult = "public class SampleDirectDerivedConstructedGenericClass : SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), ExpectedResult = "public struct SampleGenericStruct<T>\n\twhere T : class, IDisposable")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), ExpectedResult = "public readonly struct SampleGenericStruct<T>.InnerGenericStruct<U, V>\n\twhere T : class, IDisposable\n\twhere U : struct, allows ref struct\n\twhere V : allows ref struct")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), ExpectedResult = "public struct SampleGenericStruct<T>.InnerGenericStruct<U, V>.DeepInnerGenericStruct : ISampleInterface, IEnumerable<V>\n\twhere T : class, IDisposable\n\twhere U : struct, allows ref struct\n\twhere V : allows ref struct")]
+        [TestCase(typeof(Acme.ISampleInterface), ExpectedResult = "public interface ISampleInterface")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), ExpectedResult = "public interface ISampleGenericInterface<T>\n\twhere T : class, new()")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = "interface ISampleGenericInterface<T>.IInnerGenericInterface<in U, out V>\n\twhere T : class, new()")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), ExpectedResult = "interface ISampleGenericInterface<T>.IInnerGenericInterface<in U, out V>.IDeepInnerGenericInterface : ISampleInterface, IEnumerable<V>\n\twhere T : class, new()")]
+        [TestCase(typeof(Acme.ISampleExtendedGenericInterface<,,>), ExpectedResult = "public interface ISampleExtendedGenericInterface<T, in U, out V> : ISampleGenericInterface<T>.IInnerGenericInterface<U, V>.IDeepInnerGenericInterface\n\twhere T : class, new()")]
+        [TestCase(typeof(Acme.ISampleExtendedConstructedGenericInterface), ExpectedResult = "public interface ISampleExtendedConstructedGenericInterface : ISampleExtendedGenericInterface<object, int, string>")]
+        [TestCase(typeof(Acme.ISampleDirectExtendedConstructedGenericInterface), ExpectedResult = "public interface ISampleDirectExtendedConstructedGenericInterface : ISampleGenericInterface<object>.IInnerGenericInterface<int, string>.IDeepInnerGenericInterface")]
+        [TestCase(typeof(Acme.ISampleDirectAndIndirectExtendedInterface), ExpectedResult = "public interface ISampleDirectAndIndirectExtendedInterface : IEnumerable<string>, IReadOnlyCollection<int>")]
+        [TestCase(typeof(BindingFlags), ExpectedResult = "[Flags]\npublic enum BindingFlags")]
         [TestCase(typeof(Predicate<>), ExpectedResult = "public delegate bool Predicate<in T>(T obj)")]
         [TestCase(typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "public struct Dictionary<TKey, TValue>.KeyCollection.Enumerator : IEnumerator<TKey>")]
         public string FormatDefinition_ForTypes_ReturnsExpectedString(Type type)
         {
-            return csharp.FormatDefinition(type.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(type.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.Widget), new[] { typeof(string) }, ExpectedResult = "[SetsRequiredMembers]\nprotected Widget(string s)")]
-        [TestCase(typeof(Acme.Widget.NestedClass), ExpectedResult = "protected NestedClass()")]
-        [TestCase(typeof(Acme.MyList<>), new[] { typeof(IEnumerable<>) }, ExpectedResult = "public MyList<T>(IEnumerable<T> items)")]
+        [TestCase(typeof(Acme.SampleConstructors), typeof(object), ExpectedResult = "protected SampleConstructors([NotNull] object o)")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "public DeepInnerGenericClass()")]
+        [TestCase(typeof(Acme.SampleGenericClass<>), ExpectedResult = "public SampleGenericClass<T>()")]
         public string FormatDefinition_ForConstructors_ReturnsExpectedString(Type type, params Type[] paramTypes)
         {
-            var constructor = type.GetMetadata<IClassType>().Constructors.First(
+            var constructor = type.GetMetadata<ICompositeType>().Constructors.First(
                 c => c.Parameters.Count == paramTypes.Length
                   && c.Parameters.All(p => p.Type.Name == paramTypes[p.Position].Name));
 
-            return csharp.FormatDefinition(constructor).Replace("\r", string.Empty);
+            return cs.FormatDefinition(constructor).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.Extensions), nameof(Acme.Extensions.Hello), ExpectedResult = "public static void Hello(this Widget widget)")]
-        [TestCase(typeof(Acme.ValueType), nameof(Acme.ValueType.M1), ExpectedResult = "public void M1(int i)")]
-        [TestCase(typeof(Acme.ValueType), nameof(Acme.ValueType.M2), ExpectedResult = "public readonly string M2(int? i = null)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M0), ExpectedResult = "public static void M0()")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M1), ExpectedResult = "public void M1(\n\tchar c,\n\tout float f,\n\tref ValueType v,\n\tin int i)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M2), ExpectedResult = "public void M2(short[] x1, int[,] x2, long[][] x3)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M3), ExpectedResult = "public void M3(long[][] x3, Widget[][,,] x4)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M4), ExpectedResult = "public unsafe void M4(char* pc, Widget.Direction** pd = null)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M5), ExpectedResult = "public unsafe void M5(void* pv, double?*[][,][,,] pd)")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.M6), ExpectedResult = "public void M6(int i, params object[] args)")]
-        [TestCase(typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M1), ExpectedResult = "public void M1()")]
-        [TestCase(typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.M2), ExpectedResult = "public abstract void M2(int i = 123)")]
-        [TestCase(typeof(Acme.Widget.NestedDerivedClass), nameof(Acme.Widget.NestedDerivedClass.M1), ExpectedResult = "public void M1()")]
-        [TestCase(typeof(Acme.Widget.NestedDerivedClass), nameof(Acme.Widget.NestedDerivedClass.M2), ExpectedResult = "public sealed override void M2(int i = 123)")]
-        [TestCase(typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Test), ExpectedResult = "protected void Test([Custom] T t = default)")]
-        [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.ProcessAsync), ExpectedResult = "public Task<bool> ProcessAsync(MyList<int> list)")]
-        [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.GetValues), ExpectedResult = "public MyList<T> GetValues<T>(T value)\n\twhere T : struct")]
-        [TestCase(typeof(Acme.UseList), nameof(Acme.UseList.Intercept), ExpectedResult = "[Obsolete(\"For sake of testing\", DiagnosticId = \"XYZ\")]\npublic T Intercept<T>(in MyList<T>.Helper<char, string>[] helper)\n\twhere T : struct")]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.GetStatus", ExpectedResult = "string IProcess<string>.GetStatus(bool state)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = "public void RegularMethod()")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod), ExpectedResult = "public static void StaticMethod()")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = "public void RefParamsMethod(in int i, ref string s, out double d)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), ExpectedResult = "public void ArrayParamsMethod(params IEnumerable<string> args)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), ExpectedResult = "public unsafe void MixedParamsMethod(string s, in DayOfWeek day = DayOfWeek.Monday, params double?*[][,][,,,] values)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.UnsafeMethod), ExpectedResult = "public unsafe void UnsafeMethod(int** p)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), ExpectedResult = "public void OptionalParamsMethod(int i = 42, string s = \"default\")")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), ExpectedResult = "[return: NotNull]\npublic T GenericMethodWithTypeConstraints<T>([NotNull] T value)\n\twhere T : class, ICloneable, new()")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.AbstractMethod), ExpectedResult = "protected abstract void AbstractMethod()")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = "protected virtual void VirtualMethod(int i)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ToString), ExpectedResult = "public sealed override string ToString()")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "void ISampleInterface.InterfaceMethod()")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithInParam", ExpectedResult = "void ISampleInterface.InterfaceMethodWithInParam(in int i)")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithOutParam", ExpectedResult = "void ISampleInterface.InterfaceMethodWithOutParam(out double d)")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.InterfaceMethodWithRefParam), ExpectedResult = "public void InterfaceMethodWithRefParam(ref string s)")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method), ExpectedResult = "public abstract void Method(T t, U u, V v)")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod), ExpectedResult = "public virtual W GenericMethod<W>(\n\tT t,\n\tU u,\n\tV v,\n\tW w)\n\twhere W : class, new()")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Method), ExpectedResult = "public readonly void Method(T t, U u, V v)")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "Acme.ISampleInterface.InterfaceStaticMethod", ExpectedResult = "static void ISampleInterface.InterfaceStaticMethod()")]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceStaticMethod), ExpectedResult = "static abstract void InterfaceStaticMethod()")]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceStaticDefaultMethod), ExpectedResult = "static virtual void InterfaceStaticDefaultMethod()")]
         public string FormatDefinition_ForMethods_ReturnsExpectedString(Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.Widget), "UnaryPlus", ExpectedResult = "public static Widget operator +(Widget x)")]
-        [TestCase(typeof(Acme.Widget), "Addition", ExpectedResult = "public static Widget operator +(Widget x1, Widget x2)")]
-        [TestCase(typeof(Acme.Widget), "Explicit", ExpectedResult = "public static explicit operator int(Widget x)")]
-        [TestCase(typeof(Acme.Widget), "Implicit", ExpectedResult = "[return: NotNullIfNotNull(\"x\")]\npublic static implicit operator long?(Widget x)")]
-        public string FormatDefinition_ForOperators_ReturnsExpectedString(Type type, string operatorName, Type[]? paramTypes = null)
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).ClassicExtensionMethodForClass()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).InstanceExtensionMethodForClass()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "public static void extension<T>(SampleGenericClass<T>).StaticExtensionMethodForClass()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).GenericExtensionMethodForClass<U>(U value)\n\twhere U : struct")]
+        public string FormatDefinition_ForExtensionMethods_ReturnsExpectedString(Type type, string methodName, Type[]? paramTypes = null)
         {
-            var methodName = $"op_{operatorName}";
-            var methodInfo = paramTypes is null ? type.GetMethod(methodName, bindingFlags) : type.GetMethod(methodName, bindingFlags, paramTypes);
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
 
-            return csharp.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.Width), ExpectedResult = "public required int Width { get; init; }")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.Height), ExpectedResult = "public int Height { get; set; }")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.Depth), ExpectedResult = "public int Depth { get; }")]
-        [TestCase(typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "public int this[int i] { get; }")]
-        [TestCase(typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "public int this[string s, int i] { get; }")]
-        [TestCase(typeof(Acme.MyList<>), nameof(Acme.MyList<int>.Items), ExpectedResult = "public IEnumerable<T> Items { get; protected set; }")]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.IsCompleted", ExpectedResult = "bool IProcess<string>.IsCompleted { get; }")]
+        [TestCase(typeof(Acme.SampleOperators), "op_UnaryPlus", ExpectedResult = "public static SampleOperators operator +(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_UnaryNegation", ExpectedResult = "public static SampleOperators operator -(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_Addition", ExpectedResult = "public static SampleOperators operator +(SampleOperators x, SampleOperators y)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_Subtraction", ExpectedResult = "public static SampleOperators operator -(SampleOperators x, SampleOperators y)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_AdditionAssignment", ExpectedResult = "public void operator +=(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_SubtractionAssignment", ExpectedResult = "public void operator -=(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_IncrementAssignment", ExpectedResult = "public void operator ++()")]
+        [TestCase(typeof(Acme.SampleOperators), "op_DecrementAssignment", ExpectedResult = "public void operator --()")]
+        [TestCase(typeof(Acme.SampleOperators), "op_Explicit", ExpectedResult = "public static explicit operator int(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "op_Implicit", ExpectedResult = "public static implicit operator string(SampleOperators x)")]
+        [TestCase(typeof(Acme.SampleOperators), "Acme.ISampleInterface.op_False", ExpectedResult = "static bool ISampleInterface.operator false(ISampleInterface instance)")]
+        [TestCase(typeof(Acme.ISampleInterface), "op_True", ExpectedResult = "static virtual bool operator true(ISampleInterface instance)")]
+        [TestCase(typeof(Acme.ISampleInterface), "op_False", ExpectedResult = "static abstract bool operator false(ISampleInterface instance)")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "Acme.ISampleInterface.op_False", ExpectedResult = "static bool ISampleInterface.operator false(ISampleInterface instance)")]
+        public string FormatDefinition_ForOperators_ReturnsExpectedString(Type type, string methodName, Type[]? paramTypes = null)
+        {
+            var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
+
+            return cs.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
+        }
+
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "public int RegularProperty { get; set; }")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = "public int ReadOnlyProperty { get; }")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = "public int WriteOnlyProperty { set; }")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = "public int InitOnlyProperty { get; init; }")]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "public int this[int i] { get; }")]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(string), typeof(int), ExpectedResult = "public string this[string s, int i] { get; }")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = "public static string StaticProperty { get; set; }")]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = "int ISampleInterface.InterfaceProperty { get; }")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Property), ExpectedResult = "public readonly T Property { get; }")]
         public string FormatDefinition_ForProperties_ReturnsExpectedString(Type type, string propertyName, params Type[] paramTypes)
         {
-            var propertyInfo = type.GetProperty(propertyName, bindingFlags, null, null, paramTypes, null);
+            var propertyInfo = type.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, paramTypes, null);
 
-            return csharp.FormatDefinition(propertyInfo!.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(propertyInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "protected event Widget.Del AnEvent")]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.Completed", ExpectedResult = "event EventHandler IProcess<string>.Completed")]
+        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), ExpectedResult = "public int extension(ISampleInterface).InstanceExtensionProperty { get; }")]
+        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty), ExpectedResult = "public static bool extension(ISampleInterface).StaticExtensionProperty { get; }")]
+        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_FullExtensionProperty), ExpectedResult = "public string extension(ISampleInterface).FullExtensionProperty { get; set; }")]
+        public string FormatDefinition_ForExtensionProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string accessorName)
+        {
+            MemberInfo accessorInfo = type.GetMethod(accessorName, Acme.Bindings.AllDeclared)!;
+
+            return cs.FormatDefinition(accessorInfo.GetMetadata()).Replace("\r", string.Empty);
+        }
+
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "public event EventHandler RegularEvent")]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "public static event EventHandler StaticEvent")]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "event EventHandler ISampleInterface.InterfaceEvent")]
         public string FormatDefinition_ForEvents_ReturnsExpectedString(Type type, string eventName)
         {
-            var eventInfo = type.GetEvent(eventName, bindingFlags);
+            var eventInfo = type.GetEvent(eventName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatDefinition(eventInfo!.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(eventInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.ValueType), nameof(Acme.ValueType.total), ExpectedResult = "public volatile int total")]
-        [TestCase(typeof(Acme.ValueType), nameof(Acme.ValueType.buffer), ExpectedResult = "public unsafe fixed int buffer[10]")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.message), ExpectedResult = "public string message")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.defaultDirection), ExpectedResult = "internal static Widget.Direction defaultDirection")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.PI), ExpectedResult = "public const double PI = 3.14159")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.monthlyAverage), ExpectedResult = "protected readonly double monthlyAverage")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.array1), ExpectedResult = "public long[] array1")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.array2), ExpectedResult = "public Widget[,] array2")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.pCount), ExpectedResult = "public unsafe int* pCount")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.ppValues), ExpectedResult = "public unsafe float** ppValues")]
-        [TestCase(typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.value), ExpectedResult = "public int value")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "public const string ConstField = \"Constant\"")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "public static readonly int StaticReadonlyField")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "public unsafe fixed byte FixedBuffer[16]")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "public volatile int VolatileField")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "public unsafe double?*[][,][,,] ComplexField")]
         public string FormatDefinition_ForFields_ReturnsExpectedString(Type type, string fieldName)
         {
-            var fieldInfo = type.GetField(fieldName, bindingFlags);
+            var fieldInfo = type.GetField(fieldName, Acme.Bindings.AllDeclared);
 
-            return csharp.FormatDefinition(fieldInfo!.GetMetadata()).Replace("\r", string.Empty);
+            return cs.FormatDefinition(fieldInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
         [TestCase("N:Acme", ExpectedResult = "Acme")]
-        [TestCase("T:Acme.Widget", ExpectedResult = "Widget")]
-        [TestCase("T:Acme.MyList`1+Helper`2", ExpectedResult = "MyList<T>.Helper<U, V>")]
-        [TestCase("F:Acme.Widget.PI", ExpectedResult = "Widget.PI")]
-        [TestCase("P:Acme.Widget.Item(System.String,System.Int32)", ExpectedResult = "Widget.Item[string, int]")]
-        [TestCase("M:Acme.Widget.M1(System.Char,System.Single@,Acme.ValueType@,System.Int32@)", ExpectedResult = "Widget.M1(char, out float, ref ValueType, in int)")]
-        [TestCase("M:Acme.Widget.op_Addition(Acme.Widget,Acme.Widget)", ExpectedResult = "Widget.Addition(Widget, Widget)")]
-        [TestCase("E:Acme.Widget.AnEvent", ExpectedResult = "Widget.AnEvent")]
-        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "UseList.Acme.IProcess<string>.Completed")]
+        [TestCase("T:Acme.SampleGenericClass`1", ExpectedResult = "SampleGenericClass<T>")]
+        [TestCase("T:Acme.SampleGenericClass`1.InnerGenericClass`2", ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>")]
+        [TestCase("T:Acme.SampleGenericClass`1.InnerGenericClass`2.DeepInnerGenericClass", ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass")]
+        [TestCase("F:Acme.SampleFields.ConstField", ExpectedResult = "SampleFields.ConstField")]
+        [TestCase("F:Acme.SampleFields.StaticReadonlyField", ExpectedResult = "SampleFields.StaticReadonlyField")]
+        [TestCase("P:Acme.SampleProperties.Item(System.String,System.Int32)", ExpectedResult = "SampleProperties.Item[string, int]")]
+        [TestCase("P:Acme.SampleProperties.Acme#ISampleInterface#InterfaceProperty", ExpectedResult = "SampleProperties.Acme.ISampleInterface.InterfaceProperty")]
+        [TestCase("M:Acme.SampleConstructors.#ctor(System.Object)", ExpectedResult = "SampleConstructors(object)")]
+        [TestCase("M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceMethod", ExpectedResult = "SampleMethods.Acme.ISampleInterface.InterfaceMethod()")]
+        [TestCase("M:Acme.SampleMethods.RefParamsMethod(System.Int32@,System.String@,System.Double@)", ExpectedResult = "SampleMethods.RefParamsMethod(in int, ref string, out double)")]
+        [TestCase("M:Acme.SampleGenericClass`1.InnerGenericClass`2.DeepInnerGenericClass.GenericMethod``1(`0,`1,`2,``0)", ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass.GenericMethod<W>(T, U, V, W)")]
+        [TestCase("M:Acme.SampleOperators.op_Addition(Acme.SampleOperators,Acme.SampleOperators)", ExpectedResult = "SampleOperators.Addition(SampleOperators, SampleOperators)")]
+        [TestCase("M:Acme.SampleOperators.op_IncrementAssignment", ExpectedResult = "SampleOperators.IncrementAssignment()")]
+        [TestCase("E:Acme.SampleEvents.RegularEvent", ExpectedResult = "SampleEvents.RegularEvent")]
+        [TestCase("E:Acme.SampleEvents.Acme#ISampleInterface#InterfaceEvent", ExpectedResult = "SampleEvents.Acme.ISampleInterface.InterfaceEvent")]
         [TestCase("T:Unresolvable.Type", ExpectedResult = "T:Unresolvable.Type")]
         public string FormatCodeReference_WithoutQualifierSelector_ReturnsExpectedString(string cref)
         {
-            return csharp.FormatCodeReference(cref);
+            return cs.FormatCodeReference(cref);
         }
 
         [TestCase("N:Acme", ExpectedResult = "Acme")]
-        [TestCase("T:Acme.Widget", ExpectedResult = "Widget")]
-        [TestCase("T:Acme.MyList`1+Helper`2", ExpectedResult = "MyList<T>.Helper<U, V>")]
-        [TestCase("F:Acme.Widget.PI", ExpectedResult = "PI")]
-        [TestCase("P:Acme.Widget.Item(System.String,System.Int32)", ExpectedResult = "Item[string, int]")]
-        [TestCase("M:Acme.Widget.M1(System.Char,System.Single@,Acme.ValueType@,System.Int32@)", ExpectedResult = "M1(char, out float, ref ValueType, in int)")]
-        [TestCase("M:Acme.Widget.op_Addition(Acme.Widget,Acme.Widget)", ExpectedResult = "Addition(Widget, Widget)")]
-        [TestCase("E:Acme.Widget.AnEvent", ExpectedResult = "AnEvent")]
-        [TestCase("E:Acme.UseList.Acme#IProcess{System#String}#Completed", ExpectedResult = "IProcess<string>.Completed")]
+        [TestCase("T:Acme.SampleGenericClass`1", ExpectedResult = "SampleGenericClass<T>")]
+        [TestCase("T:Acme.SampleGenericClass`1.InnerGenericClass`2", ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>")]
+        [TestCase("T:Acme.SampleGenericClass`1.InnerGenericClass`2.DeepInnerGenericClass", ExpectedResult = "SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass")]
+        [TestCase("F:Acme.SampleFields.ConstField", ExpectedResult = "ConstField")]
+        [TestCase("F:Acme.SampleFields.StaticReadonlyField", ExpectedResult = "StaticReadonlyField")]
+        [TestCase("P:Acme.SampleProperties.Item(System.String,System.Int32)", ExpectedResult = "Item[string, int]")]
+        [TestCase("P:Acme.SampleProperties.Acme#ISampleInterface#InterfaceProperty", ExpectedResult = "ISampleInterface.InterfaceProperty")]
+        [TestCase("M:Acme.SampleConstructors.#ctor(System.Object)", ExpectedResult = "SampleConstructors(object)")]
+        [TestCase("M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceMethod", ExpectedResult = "ISampleInterface.InterfaceMethod()")]
+        [TestCase("M:Acme.SampleMethods.RefParamsMethod(System.Int32@,System.String@,System.Double@)", ExpectedResult = "RefParamsMethod(in int, ref string, out double)")]
+        [TestCase("M:Acme.SampleGenericClass`1.InnerGenericClass`2.DeepInnerGenericClass.GenericMethod``1(`0,`1,`2,``0)", ExpectedResult = "GenericMethod<W>(T, U, V, W)")]
+        [TestCase("M:Acme.SampleOperators.op_Addition(Acme.SampleOperators,Acme.SampleOperators)", ExpectedResult = "Addition(SampleOperators, SampleOperators)")]
+        [TestCase("M:Acme.SampleOperators.op_IncrementAssignment", ExpectedResult = "IncrementAssignment()")]
+        [TestCase("E:Acme.SampleEvents.RegularEvent", ExpectedResult = "RegularEvent")]
+        [TestCase("E:Acme.SampleEvents.Acme#ISampleInterface#InterfaceEvent", ExpectedResult = "ISampleInterface.InterfaceEvent")]
         [TestCase("T:Unresolvable.Type", ExpectedResult = "T:Unresolvable.Type")]
         public string FormatCodeReference_WithQualifierSelector_ReturnsExpectedString(string cref)
         {
-            return csharp.FormatCodeReference(cref, member => member is IType ? NameQualifier.DeclaringType : NameQualifier.None);
+            return cs.FormatCodeReference(cref, member => member is IType ? NameQualifier.DeclaringType : NameQualifier.None);
         }
     }
 }

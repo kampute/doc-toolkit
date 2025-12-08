@@ -8,16 +8,16 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
-    using System.Collections.Generic;
     using System.Linq;
 
     [TestFixture]
     public class InterfaceTypeTests
     {
         [TestCase(typeof(IDisposable), nameof(IDisposable))]
-        [TestCase(typeof(IEnumerable<>), "IEnumerable`1")]
-        [TestCase(typeof(IEnumerable<string>), "IEnumerable`1")]
-        [TestCase(typeof(Acme.IProcess<>), "IProcess`1")]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface))]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), "ISampleGenericInterface`1")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), "IInnerGenericInterface`2")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), "IDeepInnerGenericInterface")]
         public void ImplementsInterfaceType(Type interfaceType, string expectedName)
         {
             var metadata = interfaceType.GetMetadata();
@@ -29,7 +29,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GenericTypeDefinition_HasCorrectGenericMetadata()
         {
-            var metadata = typeof(IEnumerable<>).GetMetadata<IInterfaceType>();
+            var metadata = typeof(System.Collections.Generic.IEnumerable<>).GetMetadata<IInterfaceType>();
 
             using (Assert.EnterMultipleScope())
             {
@@ -46,7 +46,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void ConstructedGenericType_HasCorrectGenericMetadata()
         {
-            var metadata = typeof(IEnumerable<int>).GetMetadata<IInterfaceType>();
+            var metadata = typeof(System.Collections.Generic.IEnumerable<int>).GetMetadata<IInterfaceType>();
 
             using (Assert.EnterMultipleScope())
             {
@@ -55,16 +55,18 @@ namespace Kampute.DocToolkit.Test.Metadata
 
                 Assert.That(metadata.IsConstructedGenericType, Is.True);
                 Assert.That(metadata.TypeArguments, Has.Count.EqualTo(1));
-                Assert.That(metadata.TypeArguments[0].Name, Is.EqualTo("Int32"));
+                Assert.That(metadata.TypeArguments[0].Name, Is.EqualTo(nameof(Int32)));
                 Assert.That(metadata.GenericTypeDefinition, Is.Not.Null);
             }
         }
 
         [TestCase(typeof(IDisposable), 0, 0)]
-        [TestCase(typeof(IEnumerable<>), 0, 1)]
-        [TestCase(typeof(IEnumerable<int>), 0, 1)]
-        [TestCase(typeof(IDictionary<string, int>), 0, 2)]
-        [TestCase(typeof(Acme.IProcess<string>), 0, 1)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), 0, 1)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<object>), 0, 1)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, 2)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<object>.IInnerGenericInterface<int, string>), 1, 2)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), 3, 0)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<object>.IInnerGenericInterface<int, string>.IDeepInnerGenericInterface), 3, 0)]
         public void OwnGenericParameterRange_HasExpectedValue(Type interfaceType, int expectedOffset = 0, int expectedCount = 0)
         {
             var metadata = interfaceType.GetMetadata<IGenericCapableType>();
@@ -72,42 +74,100 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.OwnGenericParameterRange, Is.EqualTo((expectedOffset, expectedCount)));
         }
 
-        [TestCase(typeof(IEnumerable<>))]
-        public void Interfaces_HasExpectedValue(Type interfaceType)
-        {
-            var metadata = interfaceType.GetMetadata() as IInterfaceType;
-            Assert.That(metadata, Is.Not.Null);
-
-            Assert.That(metadata.Interfaces, Is.Not.Empty);
-        }
-
-        [TestCase(typeof(IEnumerable<>))]
-        public void Methods_HasExpectedValue(Type interfaceType)
-        {
-            var metadata = interfaceType.GetMetadata<IInterfaceType>();
-
-            Assert.That(metadata.Methods, Is.Not.Empty);
-        }
-
-        [TestCase(typeof(Acme.IProcess<>))]
-        public void Properties_HasExpectedValue(Type interfaceType)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface),
+            nameof(Acme.ISampleInterface),
+            nameof(System.Collections.IEnumerable),
+            "IEnumerable`1"
+        )]
+        [TestCase(typeof(Acme.ISampleDirectAndIndirectExtendedInterface),
+            nameof(System.Collections.IEnumerable),
+            "IReadOnlyCollection`1", // IReadOnlyCollection<int>
+            "IEnumerable`1", // IEnumerable<int>
+            "IEnumerable`1" // IEnumerable<string>
+        )]
+        public void Interfaces_HasExpectedValue(Type interfaceType, params string[] expectedNames)
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Properties, Is.Not.Empty);
+            Assert.That(metadata.Interfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.IProcess<>))]
-        public void Events_HasExpectedValue(Type interfaceType)
+        [TestCase(typeof(Acme.ISampleInterface),
+            nameof(Acme.ISampleInterface.InterfaceField)
+        )]
+        public void Fields_HasExpectedValue(Type interfaceType, params string[] expectedNames)
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Events, Is.Not.Empty);
+            Assert.That(metadata.Fields.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleInterface),
+            nameof(Acme.ISampleInterface.InterfaceMethod),
+            nameof(Acme.ISampleInterface.InterfaceGenericMethod),
+            nameof(Acme.ISampleInterface.InterfaceMethodWithInParam),
+            nameof(Acme.ISampleInterface.InterfaceMethodWithOutParam),
+            nameof(Acme.ISampleInterface.InterfaceMethodWithRefParam),
+            nameof(Acme.ISampleInterface.InterfaceStaticMethod),
+            nameof(Acme.ISampleInterface.InterfaceStaticDefaultMethod)
+        )]
+        public void Methods_HasExpectedValue(Type interfaceType, params string[] expectedNames)
+        {
+            var metadata = interfaceType.GetMetadata<IInterfaceType>();
+
+            Assert.That(metadata.Methods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleInterface),
+            nameof(Acme.ISampleInterface.InterfaceProperty)
+        )]
+        public void Properties_HasExpectedValue(Type interfaceType, params string[] expectedNames)
+        {
+            var metadata = interfaceType.GetMetadata<IInterfaceType>();
+
+            Assert.That(metadata.Properties.Select(p => p.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleInterface),
+            nameof(Acme.ISampleInterface.InterfaceEvent)
+        )]
+        public void Events_HasExpectedValue(Type interfaceType, params string[] expectedNames)
+        {
+            var metadata = interfaceType.GetMetadata<IInterfaceType>();
+
+            Assert.That(metadata.Events.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleInterface),
+            "True",
+            "False"
+        )]
+        public void Operators_HasExpectedValue(Type interfaceType, params string[] expectedNames)
+        {
+            var metadata = interfaceType.GetMetadata<IInterfaceType>();
+
+            Assert.That(metadata.Operators.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleGenericInterface<>),
+            typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>)
+        )]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>),
+            typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface)
+        )]
+        public void NestedTypes_HasExpectedValue(Type structType, params Type[] expectedTypes)
+        {
+            var metadata = structType.GetMetadata<IInterfaceType>();
+            var expectedNestedTypes = expectedTypes.Select(t => t.GetMetadata());
+
+            Assert.That(metadata.NestedTypes, Is.EquivalentTo(expectedNestedTypes));
         }
 
         [TestCase(typeof(IDisposable), ExpectedResult = "T:System.IDisposable")]
-        [TestCase(typeof(IEnumerable<>), ExpectedResult = "T:System.Collections.Generic.IEnumerable`1")]
-        [TestCase(typeof(Acme.IProcess<>), ExpectedResult = "T:Acme.IProcess`1")]
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<>), ExpectedResult = "T:System.Collections.Generic.IEnumerable`1")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), ExpectedResult = "T:Acme.ISampleGenericInterface`1")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = "T:Acme.ISampleGenericInterface`1.IInnerGenericInterface`2")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), ExpectedResult = "T:Acme.ISampleGenericInterface`1.IInnerGenericInterface`2.IDeepInnerGenericInterface")]
         public string CodeReference_HasExpectedValue(Type interfaceType)
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
@@ -115,17 +175,24 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CodeReference;
         }
 
-        [TestCase(typeof(ICloneable), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.ITestInterface), ExpectedResult = new[] { nameof(TestTypes) })]
-        public string[] DeclaringTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>))]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>),
+            typeof(Acme.ISampleGenericInterface<>)
+        )]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface),
+            typeof(Acme.ISampleGenericInterface<>),
+            typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>)
+        )]
+        public void DeclaringTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
+            var expectedDeclaringTypes = expectedTypes.Select(t => t.GetMetadata());
 
-            return [.. metadata.DeclaringTypeHierarchy.Select(t => t.Name)];
+            Assert.That(metadata.DeclaringTypeHierarchy, Is.EqualTo(expectedDeclaringTypes));
         }
 
-        [TestCase(typeof(TestTypes.ITestInterface))]
-        [TestCase(typeof(TestTypes.IExtendedTestInterface))]
+        [TestCase(typeof(Acme.ISampleInterface))]
+        [TestCase(typeof(Acme.ISampleExtendedGenericInterface<,,>))]
         public void BaseTypeHierarchy_HasExpectedValue(Type type)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
@@ -133,46 +200,98 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.BaseTypeHierarchy, Is.Empty);
         }
 
-        [TestCase(typeof(TestTypes.IExtendedTestInterface), ExpectedResult = new[] { nameof(IDisposable), nameof(TestTypes.ITestInterface) })]
-        public string[] ImplementedInterfaces_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface),
+            nameof(Acme.ISampleInterface),
+            "IEnumerable`1" // IEnumerable<V>
+        )]
+        [TestCase(typeof(Acme.ISampleExtendedGenericInterface<,,>),
+            nameof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface)
+        )]
+        [TestCase(typeof(Acme.ISampleExtendedConstructedGenericInterface),
+            "ISampleExtendedGenericInterface`3" // ISampleExtendedGenericInterface<object, int, string>
+        )]
+        [TestCase(typeof(Acme.ISampleDirectExtendedConstructedGenericInterface),
+            nameof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface)
+        )]
+        [TestCase(typeof(Acme.ISampleDirectAndIndirectExtendedInterface),
+            "IReadOnlyCollection`1", // IReadOnlyCollection<int>
+            "IEnumerable`1" // IEnumerable<string>
+        )]
+        public void ImplementedInterfaces_HasExpectedValue(Type type, params string[] expectedNames)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
 
-            return [.. metadata.ImplementedInterfaces.Select(i => i.Name).OrderBy(n => n)];
+            Assert.That(metadata.ImplementedInterfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.ITestInterface), ExpectedResult = new[] {
-            nameof(TestTypes.IExtendedTestInterface),              // Extends ITestInterface
-            nameof(TestTypes.TestBaseClass),                       // Directly implements ITestInterface
-            nameof(TestTypes.TestDerivedClass),                    // Inherits from TestBaseClass, indirectly
-            nameof(TestTypes.TestGrandChildClass),                 // Inherits from TestDerivedClass, indirectly
-            nameof(TestTypes.TestValueType),                       // Implements ITestInterface
-        })]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<>), ExpectedResult = new[] {
-            nameof(TestTypes.ConstructedGenericImplementedClass),  // Implements IGenericTestInterface<string>
-            "GenericImplementedClass`1",                           // Directly implements IGenericTestInterface<T>
-            "IExtendedGenericTestInterface`1",                     // Extends IGenericTestInterface<T>
-        })]
-        public string[] ImplementingTypes_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.ISampleInterface),
+            typeof(Acme.SampleMethods),
+            typeof(Acme.SampleProperties),
+            typeof(Acme.SampleEvents),
+            typeof(Acme.SampleOperators),
+            typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            typeof(Acme.SampleDerivedGenericClass<,,>),
+            typeof(Acme.SampleDerivedConstructedGenericClass),
+            typeof(Acme.SampleDirectDerivedConstructedGenericClass),
+            typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface),
+            typeof(Acme.ISampleExtendedGenericInterface<,,>),
+            typeof(Acme.ISampleExtendedConstructedGenericInterface),
+            typeof(Acme.ISampleDirectExtendedConstructedGenericInterface)
+        )]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface),
+            typeof(Acme.ISampleExtendedGenericInterface<,,>),
+            typeof(Acme.ISampleExtendedConstructedGenericInterface),
+            typeof(Acme.ISampleDirectExtendedConstructedGenericInterface)
+        )]
+        public void ImplementingTypes_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
+            var expectedImplementingTypes = expectedTypes.Select(t => t.GetMetadata());
 
-            return [.. metadata.ImplementingTypes.Select(t => t.Name).OrderBy(n => n)];
+            Assert.That(metadata.ImplementingTypes, Is.EquivalentTo(expectedImplementingTypes));
         }
 
-        [TestCase(typeof(TestTypes.ITestInterface), typeof(TestTypes.ITestInterface), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.ITestInterface), typeof(TestTypes.TestDerivedClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<>), typeof(TestTypes.GenericImplementedClass<>), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<string>), typeof(TestTypes.ConstructedGenericImplementedClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<>), typeof(TestTypes.IExtendedGenericTestInterface<>), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<string>), typeof(TestTypes.IGenericTestInterface<int>), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.IGenericTestInterface<string>), typeof(TestTypes.IGenericTestInterface<string>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.SampleMethods), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.SampleFields), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.ISampleGenericInterface<>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.SampleDerivedGenericClass<,,>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.SampleDerivedConstructedGenericClass), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), typeof(Acme.ISampleExtendedGenericInterface<,,>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), typeof(Acme.ISampleExtendedConstructedGenericInterface), ExpectedResult = true)]
         public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
         {
             var targetMetadata = targetType.GetMetadata<IInterfaceType>();
             var sourceMetadata = sourceType.GetMetadata();
 
             return targetMetadata.IsAssignableFrom(sourceMetadata);
+        }
+
+        [TestCase(typeof(Acme.ISampleGenericInterface<>),
+            "InstanceExtensionPropertyForInterface",
+            "StaticExtensionPropertyForInterface"
+        )]
+        public void ExtensionProperties_HasExpectedValue(Type type, params string[] expectedNames)
+        {
+            var extendedType = type.GetMetadata<IInterfaceType>();
+
+            Assert.That(extendedType.ExtensionProperties.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.ISampleGenericInterface<>),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForInterface)
+        )]
+        public void ExtensionMethods_HasExpectedValue(Type type, params string[] expectedNames)
+        {
+            var extendedType = type.GetMetadata<IInterfaceType>();
+
+            Assert.That(extendedType.ExtensionMethods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
         }
     }
 }

@@ -6,6 +6,9 @@
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Reflection;
 
     /// <summary>
     /// An adapter that wraps a reflection <see cref="Type"/> representing a class type and provides metadata access.
@@ -44,5 +47,47 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         public virtual bool IsSealed => Reflection.IsSealed && !Reflection.IsAbstract;
+
+        /// <inheritdoc/>
+        public virtual bool MayContainExtensionMembers => Reflection.IsSealed && Reflection.IsAbstract && !Reflection.IsNested && !IsGenericType;
+
+        /// <inheritdoc/>
+        protected override IEnumerable<MethodInfo> GetMethods()
+        {
+            var methods = base.GetMethods();
+            return MayContainExtensionMembers
+                ? NormalizedMethods(methods)
+                : methods;
+
+            IEnumerable<MethodInfo> NormalizedMethods(IEnumerable<MethodInfo> methods)
+            {
+                foreach (var method in methods)
+                {
+                    switch (Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo(method))
+                    {
+                        case null:
+                            // A regular method
+                            yield return method;
+                            break;
+                        case MethodInfo extensionMethod:
+                            // An extension method
+                            yield return extensionMethod;
+                            break;
+                        default:
+                            // An extension property accessor, skip it
+                            break;
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<PropertyInfo> GetProperties()
+        {
+            var properties = base.GetProperties();
+            return MayContainExtensionMembers
+                ? properties.Concat(Assembly.Repository.ExtensionReflection.GetDeclaredExtensionProperties(Reflection))
+                : properties;
+        }
     }
 }

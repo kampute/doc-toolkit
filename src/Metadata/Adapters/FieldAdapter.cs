@@ -34,7 +34,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public FieldAdapter(IType declaringType, FieldInfo field)
             : base(declaringType, field)
         {
-            fieldType = new(Reflection.FieldType.GetMetadata);
+            fieldType = new(GetFieldType);
         }
 
         /// <inheritdoc/>
@@ -53,10 +53,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsReadOnly => Reflection.IsInitOnly;
 
         /// <inheritdoc/>
-        public virtual bool IsVolatile => HasRequiredCustomModifier("System.Runtime.CompilerServices.IsVolatile");
+        public virtual bool IsVolatile => HasRequiredCustomModifier(ModifierNames.IsVolatile);
 
         /// <inheritdoc/>
-        public virtual bool IsFixedSizeBuffer => HasCustomAttribute("System.Runtime.CompilerServices.FixedBufferAttribute");
+        public virtual bool IsFixedSizeBuffer => HasCustomAttribute(AttributeNames.FixedBuffer);
 
         /// <inheritdoc/>
         public virtual bool IsLiteral => Reflection.IsLiteral;
@@ -68,7 +68,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool TryGetFixedSizeBufferInfo([NotNullWhen(true)] out IType? elementType, out int length)
         {
             var args = GetCustomAttributes()
-                .FirstOrDefault(a => a.AttributeType.FullName == "System.Runtime.CompilerServices.FixedBufferAttribute")?
+                .FirstOrDefault(a => a.AttributeType.FullName == AttributeNames.FixedBuffer)?
                 .ConstructorArguments;
 
             if
@@ -132,5 +132,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts() => ('F', Name);
+
+        /// <summary>
+        /// Retrieves the type of the field.
+        /// </summary>
+        /// <returns>An <see cref="IType"/> representing the type of the field.</returns>
+        protected virtual IType GetFieldType() => Reflection.FieldType.GetMetadata();
+
     }
 }

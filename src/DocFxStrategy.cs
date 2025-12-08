@@ -97,7 +97,7 @@ namespace Kampute.DocToolkit
             if (member is not IType type)
             {
                 type = member.DeclaringType!;
-                memberAnchor = member.CodeReference[2..].ReplaceMany(['.', '`', '#', ',', '(', ')', '~'], '_');
+                memberAnchor = member.CodeReference[2..].ReplaceChars(['.', '`', '#', ',', '(', ')', '~'], '_');
             }
 
             var typePath = type.Signature.Replace('`', '_');

@@ -64,21 +64,17 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CodeReference;
         }
 
-        [TestCase(typeof(DayOfWeek), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestEnum), ExpectedResult = new[] { nameof(TestTypes) })]
-        public string[] DeclaringTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(DayOfWeek),
+            typeof(object),
+            typeof(ValueType),
+            typeof(Enum)
+        )]
+        public void BaseTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IEnumType>();
+            var expectedBaseTypes = expectedTypes.Select(t => t.GetMetadata<IClassType>());
 
-            return [.. metadata.DeclaringTypeHierarchy.Select(t => t.Name)];
-        }
-
-        [TestCase(typeof(DayOfWeek), ExpectedResult = new[] { nameof(Object), nameof(ValueType), nameof(Enum) })]
-        public string[] BaseTypeHierarchy_HasExpectedValue(Type type)
-        {
-            var metadata = type.GetMetadata<IEnumType>();
-
-            return [.. metadata.BaseTypeHierarchy.Select(t => t.Name)];
+            Assert.That(metadata.BaseTypeHierarchy, Is.EqualTo(expectedBaseTypes));
         }
 
         [TestCase(typeof(DayOfWeek), DayOfWeek.Sunday, ExpectedResult = "Sunday")]

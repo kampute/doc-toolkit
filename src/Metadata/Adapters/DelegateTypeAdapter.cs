@@ -37,7 +37,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             : base(declaringEntity, delegateType)
         {
             var invoker = GetInvokeMethod() ?? throw new ArgumentException("Type must be a delegate.", nameof(delegateType));
-            invokeMethod = new(() => (IMethod)Assembly.Repository.GetMethodMetadata(invoker));
+            invokeMethod = new(() => Assembly.Repository.GetMethodMetadata<IMethod>(invoker));
         }
 
         /// <inheritdoc/>

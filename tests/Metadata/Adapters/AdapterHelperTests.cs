@@ -25,9 +25,9 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [TestCase("IFoo<T<U,V>>.Bar", "IFoo`1", "Bar")]
         [TestCase("IFoo<T<U>,V>.Method", "IFoo`2", "Method")]
         [TestCase("IFoo<T<U<W>>,V>.Method", "IFoo`2", "Method")]
-        public void DecodeExplicitName_ReturnsCorrectComponents(string explicitName, string expectedInterface, string expectedMember)
+        public void SplitExplicitName_ReturnsCorrectComponents(string explicitName, string expectedInterface, string expectedMember)
         {
-            var (interfaceName, memberName) = AdapterHelper.DecodeExplicitName(explicitName);
+            var (interfaceName, memberName) = AdapterHelper.SplitExplicitName(explicitName);
 
             using (Assert.EnterMultipleScope())
             {
@@ -37,82 +37,9 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CanonicalizeType_WithRegularType_ReturnsSameInstance()
-        {
-            var type = typeof(string);
-
-            var result = AdapterHelper.CanonicalizeType(type);
-
-            Assert.That(result, Is.SameAs(type));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithGenericTypeDefinition_ReturnsSameInstance()
-        {
-            var type = typeof(List<>);
-
-            var result = AdapterHelper.CanonicalizeType(type);
-
-            Assert.That(result, Is.SameAs(type));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithConstructedGenericType_ReturnsSameInstance()
-        {
-            var type = typeof(List<int>);
-
-            var result = AdapterHelper.CanonicalizeType(type);
-
-            Assert.That(result, Is.SameAs(type));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithNestedGenericDefinition_ReturnsSameInstance()
-        {
-            var type = typeof(Acme.MyList<>.Helper<,>);
-
-            var result = AdapterHelper.CanonicalizeType(type);
-
-            Assert.That(result, Is.SameAs(type));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithNonNestedType_ReturnsSameInstance()
-        {
-            var type = typeof(Acme.Widget);
-
-            var result = AdapterHelper.CanonicalizeType(type);
-
-            Assert.That(result, Is.SameAs(type));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithTypeParameter_ReturnsSameInstance()
-        {
-            var genericType = typeof(Acme.MyList<>);
-            var typeParameter = genericType.GetGenericArguments()[0];
-
-            var result = AdapterHelper.CanonicalizeType(typeParameter);
-
-            Assert.That(result, Is.SameAs(typeParameter));
-        }
-
-        [Test]
-        public void CanonicalizeType_WithBaseTypeContainingNestedGeneric_HandlesCorrectly()
-        {
-            var baseType = typeof(TestTypes.GenericDerivedClass<>).BaseType;
-            Assert.That(baseType, Is.Not.Null);
-            Assert.That(baseType, Is.Not.EqualTo(typeof(TestTypes.GenericBaseClass<>)));
-
-            var result = AdapterHelper.CanonicalizeType(baseType);
-
-            Assert.That(result, Is.EqualTo(typeof(TestTypes.GenericBaseClass<>)));
-        }
-
-        [Test]
         public void FindByFullName_WithEmptyCollection_ReturnsNull()
         {
-            var types = new List<IType>();
+            var types = CreateSortedTypes();
 
             var result = types.FindByFullName("SomeType");
 
@@ -217,7 +144,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void FindIndexByName_WithEmptyCollection_ReturnsMinusOne()
         {
-            var members = new List<IMember>();
+            var members = CreateSortedMembers();
 
             var result = members.FindIndexByName("SomeName");
 
@@ -297,7 +224,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void FindByName_WithEmptyCollection_ReturnsNull()
         {
-            var members = new List<IMember>();
+            var members = CreateSortedMembers();
 
             var result = members.FindByName("SomeName");
 
@@ -381,7 +308,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void WhereName_WithEmptyCollection_ReturnsEmpty()
         {
-            var members = new List<IMember>();
+            var members = CreateSortedMembers();
 
             var result = members.WhereName("SomeName");
 
@@ -406,7 +333,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = members.WhereName("Cherry").ToList();
 
             Assert.That(result, Has.Count.EqualTo(1));
-            Assert.That(result.Select(e => e.Name), Is.EqualTo(["Cherry"]));
+            Assert.That(result.Select(static e => e.Name), Is.EqualTo(["Cherry"]));
         }
 
         [Test]
@@ -417,7 +344,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = members.WhereName("Banana").ToList();
 
             Assert.That(result, Has.Count.EqualTo(3));
-            Assert.That(result.All(m => m.Name == "Banana"), Is.True);
+            Assert.That(result.All(static m => m.Name == "Banana"), Is.True);
         }
 
         [Test]
@@ -428,7 +355,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = members.WhereName("Apple").ToList();
 
             Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That(result.All(m => m.Name == "Apple"), Is.True);
+            Assert.That(result.All(static m => m.Name == "Apple"), Is.True);
         }
 
         [Test]
@@ -439,7 +366,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = members.WhereName("Cherry").ToList();
 
             Assert.That(result, Has.Count.EqualTo(2));
-            Assert.That(result.All(m => m.Name == "Cherry"), Is.True);
+            Assert.That(result.All(static m => m.Name == "Cherry"), Is.True);
         }
 
         [Test]
@@ -475,7 +402,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void WhereName_PreservingOrder_WithEmptyCollection_ReturnsEmpty()
         {
-            var members = new List<IMember>();
+            var members = CreateSortedMembers();
 
             var result = members.WhereName("SomeName", preserveOrder: true);
 
@@ -500,7 +427,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = members.WhereName("Cherry", preserveOrder: true).ToList();
 
             Assert.That(result, Has.Count.EqualTo(1));
-            Assert.That(result.Select(e => e.Name), Is.EqualTo(["Cherry"]));
+            Assert.That(result.Select(static e => e.Name), Is.EqualTo(["Cherry"]));
         }
 
         [Test]
@@ -537,7 +464,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             Assert.That(result, Has.Count.EqualTo(2));
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(result.All(m => m.Name == "Apple"), Is.True);
+                Assert.That(result.All(static m => m.Name == "Apple"), Is.True);
                 Assert.That(result.Select(GetMemberId), Is.EqualTo([1, 2]));
             }
         }
@@ -558,7 +485,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             Assert.That(result, Has.Count.EqualTo(2));
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(result.All(m => m.Name == "Cherry"), Is.True);
+                Assert.That(result.All(static m => m.Name == "Cherry"), Is.True);
                 Assert.That(result.Select(GetMemberId), Is.EqualTo([3, 4]));
             }
         }
@@ -606,7 +533,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             foreach (var fullName in fullNames)
             {
                 var mock = new Mock<IType>();
-                mock.SetupGet(t => t.FullName).Returns(fullName);
+                mock.SetupGet(static t => t.FullName).Returns(fullName);
                 types.Add(mock.Object);
             }
             return types;
@@ -618,7 +545,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             foreach (var name in names)
             {
                 var mock = new Mock<IMember>();
-                mock.SetupGet(m => m.Name).Returns(name);
+                mock.SetupGet(static m => m.Name).Returns(name);
                 members.Add(mock.Object);
             }
             return members;
@@ -630,8 +557,8 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             foreach (var (name, id) in items)
             {
                 var mock = new Mock<IMember>();
-                mock.SetupGet(m => m.Name).Returns(name);
-                mock.SetupGet(m => m.CodeReference).Returns($"M:{id}");
+                mock.SetupGet(static m => m.Name).Returns(name);
+                mock.SetupGet(static m => m.CodeReference).Returns($"M:{id}");
                 members.Add(mock.Object);
             }
             return members;

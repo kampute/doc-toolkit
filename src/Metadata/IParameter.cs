@@ -111,7 +111,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <see langword="true"/> if the specified parameter can be used in place of the current parameter; otherwise, <see langword="false"/>.
         /// </returns>
         /// <remarks>
-        /// This method behaviour depends on the type of the current parameter:
+        /// This method behavior depends on the type of the current parameter:
         /// <list type="bullet">
         ///   <item>
         ///   When the current parameter has a non-generic type, this method returns <see langword="true"/> when the given parameter is an exact match.
@@ -121,6 +121,10 @@ namespace Kampute.DocToolkit.Metadata
         ///   type based on the same generic type definition.
         ///   </item>
         /// </list>
+        /// <note type="caution" title="Important">
+        /// This method does not verify that the parameters belong to compatible members or contexts. The caller must ensure that the parameters are from related members, 
+        /// such as in method inheritance hierarchies.
+        /// </note>
         /// </remarks>
         bool IsSatisfiableBy(IParameter other);
     }

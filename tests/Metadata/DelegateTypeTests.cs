@@ -114,25 +114,22 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CodeReference;
         }
 
-        [TestCase(typeof(Action), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestDelegate), ExpectedResult = new[] { nameof(TestTypes) })]
-        public string[] DeclaringTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(Action),
+            nameof(Object),
+            nameof(Delegate),
+            nameof(MulticastDelegate)
+        )]
+        public void BaseTypeHierarchy_HasExpectedValue(Type type, params string[] expectedNames)
         {
             var metadata = type.GetMetadata<IDelegateType>();
 
-            return [.. metadata.DeclaringTypeHierarchy.Select(t => t.Name)];
+            Assert.That(metadata.BaseTypeHierarchy.Select(t => t.Name), Is.EqualTo(expectedNames));
         }
 
-        [TestCase(typeof(Action), ExpectedResult = new[] { nameof(Object), nameof(Delegate), nameof(MulticastDelegate) })]
-        public string[] BaseTypeHierarchy_HasExpectedValue(Type type)
-        {
-            var metadata = type.GetMetadata<IDelegateType>();
-
-            return [.. metadata.BaseTypeHierarchy.Select(t => t.Name)];
-        }
-
-        [TestCase(typeof(TestTypes.TestDelegate), typeof(TestTypes.TestDelegate), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestDelegate), typeof(Action), ExpectedResult = false)]
+        [TestCase(typeof(Func<>), typeof(Action), ExpectedResult = false)]
+        [TestCase(typeof(Action<>), typeof(Action), ExpectedResult = false)]
+        [TestCase(typeof(Func<int, string>), typeof(Func<,>), ExpectedResult = false)]
+        [TestCase(typeof(Action<int, string>), typeof(Action<int, string>), ExpectedResult = true)]
         public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
         {
             var targetMetadata = targetType.GetMetadata<IDelegateType>();

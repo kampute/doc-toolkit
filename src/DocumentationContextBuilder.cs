@@ -230,7 +230,7 @@ namespace Kampute.DocToolkit
         /// <returns>The current builder instance for method chaining.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="topic"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="topic"/> is a subtopic.</exception>
-        /// <exception cref="ArgumentException">Thrown when a topic with the same ID already exists.</exception>"
+        /// <exception cref="ArgumentException">Thrown when a topic with the same ID already exists.</exception>
         public virtual DocumentationContextBuilder<TContext> AddTopic(ITopic topic)
         {
             if (topic is null)

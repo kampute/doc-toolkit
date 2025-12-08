@@ -20,31 +20,13 @@ namespace Kampute.DocToolkit.Metadata
         /// Gets the interfaces that are directly implemented by the type, excluding those inherited from base types or other interfaces.
         /// </summary>
         /// <value>
-        /// An enumerable of <see cref="IInterfaceType"/> representing the directly implemented interfaces.
+        /// A read-only list of <see cref="IInterfaceType"/> representing the directly implemented interfaces.
         /// </value>
         /// <remarks>
         /// This property filters out interfaces that are inherited from base types or other interfaces, providing a clear view of the
         /// interfaces that are explicitly implemented by the type itself.
-        /// <para>
-        /// This property is implemented by using deferred execution. The immediate return value is an object that stores all the
-        /// information that is required to perform the action.
-        /// </para>
         /// </remarks>
-        IEnumerable<IInterfaceType> ImplementedInterfaces
-        {
-            get
-            {
-                if (Interfaces.Count == 0)
-                    return [];
-
-                var inheritedInterfaces = Interfaces.SelectMany(i => i.Interfaces);
-
-                if (BaseType is IWithInterfaces baseType)
-                    inheritedInterfaces = inheritedInterfaces.Concat(baseType.Interfaces);
-
-                return Interfaces.Except(inheritedInterfaces, ReferenceEqualityComparer<IInterfaceType>.Instance);
-            }
-        }
+        IReadOnlyList<IInterfaceType> ImplementedInterfaces { get; }
 
         /// <summary>
         /// Determines whether the current type implements the specified interface.

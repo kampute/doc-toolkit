@@ -78,18 +78,18 @@ namespace Kampute.DocToolkit.Test.IO.Writers
         }
 
         [Test]
-        [Acme.Example(typeof(DateTime), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
+        [Acme.Sample(typeof(DateTime), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
         public void WriteDocLink_Attribute_WritesExpectedMarkdown()
         {
             using var writer = new MarkdownWriter(new StringWriter());
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
 
             var attributeData = MethodBase.GetCurrentMethod()!.GetMetadata().CustomAttributes
-                .First(a => a.Type.FullName == "Acme.ExampleAttribute");
+                .First(a => a.Type.FullName == "Acme.SampleAttribute");
 
             writer.WriteDocLink(attributeData, context, NameQualifier.None);
 
-            var expected = "[Example](https://example.com/acme.exampleattribute)(typeof([DateTime](https://example.com/system.datetime)), Days = \\[[DayOfWeek](https://example.com/system.dayofweek).Saturday, [DayOfWeek](https://example.com/system.dayofweek).Sunday\\])";
+            var expected = "[Sample](https://example.com/acme.sampleattribute)(typeof([DateTime](https://example.com/system.datetime)), Days = \\[[DayOfWeek](https://example.com/system.dayofweek).Saturday, [DayOfWeek](https://example.com/system.dayofweek).Sunday\\])";
             Assert.That(writer.ToString(), Is.EqualTo(expected));
         }
 

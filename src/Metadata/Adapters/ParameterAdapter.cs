@@ -73,7 +73,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsOptional => Reflection.IsOptional;
 
         /// <inheritdoc/>
-        public virtual bool IsParameterArray => HasCustomAttribute("System.ParamArrayAttribute");
+        public virtual bool IsParameterArray => HasCustomAttribute(AttributeNames.ParamArray) || HasCustomAttribute(AttributeNames.ParamsCollection);
 
         /// <inheritdoc/>
         public virtual bool IsReturnParameter => Reflection.Position == -1;

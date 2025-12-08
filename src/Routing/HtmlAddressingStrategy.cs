@@ -138,7 +138,7 @@ namespace Kampute.DocToolkit.Routing
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             void PushSanitizedPathSegment(string pathSegment)
             {
-                var sanitizedSegment = pathSegment.ReplaceMany(UriHelper.InvalidPathSegmentCharacters, replacement, true);
+                var sanitizedSegment = pathSegment.ReplaceChars(UriHelper.InvalidPathSegmentCharacters, replacement, true);
                 pathSegments.Push(sanitizedSegment);
             }
         }

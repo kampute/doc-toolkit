@@ -457,9 +457,6 @@ namespace Kampute.DocToolkit.Languages
 
             var parameterType = parameter.Type;
 
-            if (parameter.Position == 0 && parameter.Member is IMethod method && method.IsExtensionMethodFor(parameterType))
-                writer.Write("this ");
-
             if (parameterType is ITypeDecorator { Modifier: TypeModifier.ByRef } reference)
             {
                 parameterType = reference.ElementType;
@@ -564,10 +561,13 @@ namespace Kampute.DocToolkit.Languages
         /// Writes the modifiers that define the visibility of a member to the provided <see cref="TextWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to which the member modifiers are written.</param>
-        /// <param name="visibility">The visibility level to be written.</param>
-        private static void WriteVisibilityModifiers(TextWriter writer, MemberVisibility visibility)
+        /// <param name="member">The <see cref="IMember"/> whose visibility modifiers are to be written.</param>
+        private static void WriteVisibilityModifiers(TextWriter writer, IMember member)
         {
-            switch (visibility)
+            if (member.DeclaringType is IType { IsInterface: true } || member is IVirtualTypeMember { IsExplicitInterfaceImplementation: true })
+                return;
+
+            switch (member.Visibility)
             {
                 case MemberVisibility.Public:
                     writer.Write("public ");
@@ -594,10 +594,13 @@ namespace Kampute.DocToolkit.Languages
         /// Writes the modifiers that define the virtuality of a member to the provided <see cref="TextWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to which the member modifiers are written.</param>
-        /// <param name="virtuality">The virtuality level to be written.</param>
-        private static void WriteVirtualityModifiers(TextWriter writer, MemberVirtuality virtuality)
+        /// <param name="member">The <see cref="IVirtualTypeMember"/> whose virtuality modifiers are to be written.</param>
+        private static void WriteVirtualityModifiers(TextWriter writer, IVirtualTypeMember member)
         {
-            switch (virtuality)
+            if (!member.IsStatic && (member.DeclaringType.IsInterface || member.IsExplicitInterfaceImplementation))
+                return;
+
+            switch (member.Virtuality)
             {
                 case MemberVirtuality.Abstract:
                     writer.Write("abstract ");

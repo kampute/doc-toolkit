@@ -23,7 +23,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     {
         private readonly Lazy<IClassType?> baseType;
         private string? signature;
-        private string? parametericSignature;
+        private string? parametricSignature;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeAdapter"/> class.
@@ -96,6 +96,15 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsNested => Reflection.IsNested && !Reflection.IsGenericParameter;
 
         /// <inheritdoc/>
+        public virtual bool IsPrimitive => Reflection.IsPrimitive;
+
+        /// <inheritdoc/>
+        public virtual bool IsInterface => Reflection.IsInterface;
+
+        /// <inheritdoc/>
+        public virtual bool IsEnum => Reflection.IsEnum;
+
+        /// <inheritdoc/>
         public virtual bool IsValueType => Reflection.IsValueType;
 
         /// <inheritdoc/>
@@ -105,16 +114,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public string Signature => signature ??= ConstructSignature(useParameterNotation: false);
 
         /// <inheritdoc/>
-        public string ParametericSignature => parametericSignature ??= ConstructSignature(useParameterNotation: true);
+        public string ParametricSignature => parametricSignature ??= ConstructSignature(useParameterNotation: true);
 
         /// <inheritdoc/>
         public sealed override string CodeReference => $"T:{Signature}";
 
         /// <inheritdoc/>
-        public override bool Represents(Type reflection) => base.Represents(AdapterHelper.CanonicalizeType(reflection));
-
-        /// <inheritdoc/>
-        public virtual bool IsSubstitutableBy(IType other) => Equals(other);
+        public override bool Represents(Type reflection) => base.Represents(Assembly.Repository.ResolveCanonicalType(reflection));
 
         /// <inheritdoc/>
         public virtual bool IsAssignableFrom(IType source)
@@ -129,6 +135,39 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             }
 
             return false;
+        }
+
+        /// <inheritdoc/>
+        public virtual bool IsSubstitutableBy(IType other) => Equals(other);
+
+        /// <inheritdoc/>
+        public virtual IMember? ResolveMember(string cref)
+        {
+            if (cref is null)
+                throw new ArgumentNullException(nameof(cref));
+
+            if (cref.Length < 3 || cref[1] != ':')
+                return null; // Not a valid member code reference.
+
+            var typeSig = Signature;
+            var nameStart = 2 + typeSig.Length + 1;
+
+            if (cref.Length <= nameStart || cref[nameStart - 1] != '.' || !cref.AsSpan(2).StartsWith(typeSig, StringComparison.Ordinal))
+                return null; // The member does not belong to this type.
+
+            var nameEnd = cref.IndexOfAny(['`', '('], nameStart);
+            var namePart = nameEnd == -1 ? cref[nameStart..] : cref[nameStart..nameEnd];
+            var memberName = namePart.TranslateChars("#{}", ".<>");
+
+            var members = Reflection.GetMember(memberName, BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+            foreach (var member in members)
+            {
+                var memberMetadata = Assembly.Repository.GetMemberMetadata(member);
+                if (memberMetadata.CodeReference == cref)
+                    return memberMetadata;
+            }
+
+            return null; // No matching members found.
         }
 
         /// <summary>

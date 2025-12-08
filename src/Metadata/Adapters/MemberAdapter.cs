@@ -69,6 +69,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsDirectDeclaration => true;
 
         /// <inheritdoc/>
+        public bool IsCompilerGenerated => HasCustomAttribute(AttributeNames.CompilerGenerated);
+
+        /// <inheritdoc/>
         public abstract string CodeReference { get; }
 
         /// <inheritdoc/>

@@ -22,6 +22,7 @@ namespace Kampute.DocToolkit.Models
     /// </remarks>
     public abstract class TypeModel : MemberModel<IType>, IComparable<TypeModel>
     {
+        private readonly Lazy<List<PropertyModel>> extensionProperties;
         private readonly Lazy<List<MethodModel>> extensionMethods;
 
         /// <summary>
@@ -57,6 +58,12 @@ namespace Kampute.DocToolkit.Models
                 DeclaringType = declaringType;
             }
 
+            extensionProperties = new(() => [.. Metadata.ExtensionProperties
+                .Select(Context.FindMember)
+                .OfType<PropertyModel>()
+                .OrderBy(p => p.Name)
+                .ThenBy(p => p.Metadata.Parameters.Count)]);
+
             extensionMethods = new(() => [.. Metadata.ExtensionMethods
                 .Select(Context.FindMember)
                 .OfType<MethodModel>()
@@ -89,10 +96,18 @@ namespace Kampute.DocToolkit.Models
         public virtual IEnumerable<TypeMemberModel> Members => [];
 
         /// <summary>
-        /// Gets the extension methods associated with the type.
+        /// Gets the extension properties of the type.
         /// </summary>
         /// <value>
-        /// A read-only collection of extension methods associated with the type.
+        /// A read-only collection of extension properties of the type.
+        /// </value>
+        public IReadOnlyList<PropertyModel> ExtensionProperties => extensionProperties.Value;
+
+        /// <summary>
+        /// Gets the extension methods of the type.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of extension methods of the type.
         /// </value>
         public IReadOnlyList<MethodModel> ExtensionMethods => extensionMethods.Value;
 

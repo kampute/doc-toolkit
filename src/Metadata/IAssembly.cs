@@ -109,5 +109,21 @@ namespace Kampute.DocToolkit.Metadata
         /// <returns><see langword="true"/> if the type is found; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="fullName"/> is <see langword="null"/>.</exception>
         bool TryGetType(string fullName, [NotNullWhen(true)] out IType? type);
+
+        /// <summary>
+        /// Retrieves extension properties for the specified type.
+        /// </summary>
+        /// <param name="type">The type for which to get extension properties.</param>
+        /// <returns>An enumerable collection of <see cref="IProperty"/> representing the extension properties for the specified type.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> is <see langword="null"/>.</exception>
+        IEnumerable<IProperty> GetExtensionProperties(IType type);
+
+        /// <summary>
+        /// Retrieves extension methods for the specified type.
+        /// </summary>
+        /// <param name="type">The type for which to get extension methods.</param>
+        /// <returns>An enumerable collection of <see cref="IMethod"/> representing the extension methods for the specified type.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> is <see langword="null"/>.</exception>
+        IEnumerable<IMethod> GetExtensionMethods(IType type);
     }
 }

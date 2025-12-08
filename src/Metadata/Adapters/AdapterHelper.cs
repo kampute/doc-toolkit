@@ -18,12 +18,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     public static class AdapterHelper
     {
         /// <summary>
-        /// Decodes an explicit interface implementation name into its interface and member components.
+        /// Splits an explicit interface implementation name into its interface and member components.
         /// </summary>
         /// <param name="explicitName">The explicit interface implementation name.</param>
         /// <returns>A tuple containing the interface name and member name.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="explicitName"/> is <see langword="null"/> or empty.</exception>
-        public static (string InterfaceName, string MemberName) DecodeExplicitName(string explicitName)
+        public static (string InterfaceName, string MemberName) SplitExplicitName(string explicitName)
         {
             if (string.IsNullOrEmpty(explicitName))
                 throw new ArgumentException($"'{nameof(explicitName)}' cannot be null or empty.", nameof(explicitName));
@@ -35,79 +35,54 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return (qualification, memberName);
 
             var interfaceName = qualification[..genericStart];
-
-            var arity = 1;
-            var depth = 0;
-            foreach (var c in qualification.AsSpan(genericStart + 1))
-            {
-                switch (c)
-                {
-                    case ',' when depth == 0:
-                        arity++;
-                        break;
-                    case '<':
-                        depth++;
-                        break;
-                    case '>' when depth > 0:
-                        depth--;
-                        break;
-                    case '>':
-                        goto done;
-                }
-            }
-
-        done:
+            var arity = GetGenericTypeArity(qualification.AsSpan(genericStart + 1));
             return ($"{interfaceName}`{arity}", memberName);
-        }
 
-        /// <summary>
-        /// Resolves the canonical form of a type.
-        /// </summary>
-        /// <param name="type">The type to canonicalize.</param>
-        /// <returns>A canonicalized version of the type if applicable; otherwise, the original type.</returns>
-        /// <remarks>
-        /// This method addresses a specific .NET reflection behavior where accessing nested generic types through inheritance
-        /// relationships (such as <see cref="Type.BaseType"/> or <see cref="Type.GetInterfaces()"/>) can return <see cref="Type"/>
-        /// instances that are semantically equivalent to direct <see langword="typeof"/> results but are not reference-equal when
-        /// using the default equality comparer.
-        /// <para>
-        /// When a nested generic type definition is accessed via inheritance, the returned <see cref="Type"/> instance may be
-        /// incorrectly flagged as a constructed generic type despite having only generic parameters as type arguments. This leads
-        /// to discrepancies in equality comparisons, especially when such types are used as keys in collections that rely on
-        /// reference equality.
-        /// </para>
-        /// </remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Type CanonicalizeType(Type type)
-        {
-            return type.IsConstructedGenericType
-                && type.FullName is null
-                && type.ReflectedType is not null
-                && type.GenericTypeArguments.All(arg => arg.IsGenericParameter)
-                    ? type.GetGenericTypeDefinition()
-                    : type;
+            static int GetGenericTypeArity(ReadOnlySpan<char> span)
+            {
+                var arity = 1;
+                var depth = 0;
+                foreach (var c in span)
+                {
+                    switch (c)
+                    {
+                        case ',' when depth == 0:
+                            arity++;
+                            break;
+                        case '<':
+                            depth++;
+                            break;
+                        case '>' when depth > 0:
+                            depth--;
+                            break;
+                        case '>':
+                            return arity;
+                    }
+                }
+                return arity;
+            }
         }
 
         /// <summary>
         /// Determines whether two parameter lists represent equivalent signatures from the perspective of method overriding or interface implementation.
         /// </summary>
         /// <param name="baseParameters">The overridden or interface parameter list to compare against.</param>
-        /// <param name="derivedParameters">The overriding or implementing parameter list to compare.</param>
+        /// <param name="sourceParameters">The overriding or implementing parameter list to compare.</param>
         /// <returns><see langword="true"/> if the parameter lists are equivalent; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseParameters"/> or <paramref name="derivedParameters"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseParameters"/> or <paramref name="sourceParameters"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool AreParameterSignaturesMatching(IReadOnlyList<IParameter> baseParameters, IReadOnlyList<IParameter> derivedParameters)
+        public static bool EquivalentParameters(IReadOnlyList<IParameter> baseParameters, IReadOnlyList<IParameter> sourceParameters)
         {
             if (baseParameters is null)
                 throw new ArgumentNullException(nameof(baseParameters));
-            if (derivedParameters is null)
-                throw new ArgumentNullException(nameof(derivedParameters));
+            if (sourceParameters is null)
+                throw new ArgumentNullException(nameof(sourceParameters));
 
-            if (baseParameters.Count != derivedParameters.Count)
+            if (baseParameters.Count != sourceParameters.Count)
                 return false;
 
             for (var i = 0; i < baseParameters.Count; ++i)
-                if (!baseParameters[i].IsSatisfiableBy(derivedParameters[i]))
+                if (!baseParameters[i].IsSatisfiableBy(sourceParameters[i]))
                     return false;
 
             return true;
@@ -267,5 +242,86 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                     yield return members[index++];
             }
         }
+
+        /// <summary>
+        /// Orders types by their full names.
+        /// </summary>
+        /// <typeparam name="T">The type of types in the sequence.</typeparam>
+        /// <param name="source">The source types to order.</param>
+        /// <returns>An ordered sequence of types.</returns>
+        /// <seealso cref="FindByFullName{T}(IReadOnlyList{T}, string)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<T> OrderByFullName<T>(this IEnumerable<T> source) where T : IType => source
+            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+
+        /// <summary>
+        /// Orders constructors by their parameter count.
+        /// </summary>
+        /// <param name="source">The source constructors to order.</param>
+        /// <returns>An ordered sequence of constructors.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IConstructor> OrderByParameterCount(this IEnumerable<IConstructor> source) => source
+            .OrderBy(c => c.Parameters.Count);
+
+        /// <summary>
+        /// Orders operators by their names, then by parameter count.
+        /// </summary>
+        /// <param name="source">The source operators to order.</param>
+        /// <returns>An ordered sequence of operators.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IOperator> OrderByName(this IEnumerable<IOperator> source) => source
+            .OrderBy(op => op.Name, StringComparer.Ordinal)
+            .ThenBy(op => op.Parameters.Count);
+
+        /// <summary>
+        /// Orders methods by their names, then by type parameter count, then by parameter count.
+        /// </summary>
+        /// <param name="source">The source methods to order.</param>
+        /// <returns>An ordered sequence of methods.</returns>
+        /// <seealso cref="FindByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="FindIndexByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IMethod> OrderByName(this IEnumerable<IMethod> source) => source
+            .OrderBy(m => m.Name, StringComparer.Ordinal)
+            .ThenBy(m => m.TypeParameters.Count)
+            .ThenBy(m => m.Parameters.Count);
+
+        /// <summary>
+        /// Orders properties by their names, then by index parameter count.
+        /// </summary>
+        /// <param name="source">The source properties to order.</param>
+        /// <returns>An ordered sequence of properties.</returns>
+        /// <seealso cref="FindByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="FindIndexByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IProperty> OrderByName(this IEnumerable<IProperty> source) => source
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .ThenBy(p => p.Parameters.Count);
+
+        /// <summary>
+        /// Orders events by their names.
+        /// </summary>
+        /// <param name="source">The source events to order.</param>
+        /// <returns>An ordered sequence of events.</returns>
+        /// <seealso cref="FindByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="FindIndexByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IEvent> OrderByName(this IEnumerable<IEvent> source) => source
+            .OrderBy(e => e.Name, StringComparer.Ordinal);
+
+        /// <summary>
+        /// Orders fields by their names.
+        /// </summary>
+        /// <param name="source">The source fields to order.</param>
+        /// <returns>An ordered sequence of fields.</returns>
+        /// <seealso cref="FindByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="FindIndexByName{T}(IReadOnlyList{T}, string)"/>
+        /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IEnumerable<IField> OrderByName(this IEnumerable<IField> source) => source
+            .OrderBy(f => f.Name, StringComparer.Ordinal);
     }
 }

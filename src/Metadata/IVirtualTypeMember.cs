@@ -36,14 +36,6 @@ namespace Kampute.DocToolkit.Metadata
         bool IsOverridable => Virtuality is MemberVirtuality.Virtual or MemberVirtuality.Abstract or MemberVirtuality.Override;
 
         /// <summary>
-        /// Gets a value indicating whether the member is declared in an interface.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if the member is declared in an interface; otherwise, <see langword="false"/>.
-        /// </value>
-        bool IsInterfaceMember { get; }
-
-        /// <summary>
         /// Gets a value indicating whether the member is an explicit interface implementation.
         /// </summary>
         /// <value>
@@ -57,7 +49,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <value>
         /// <see langword="true"/> if the member is a default interface implementation; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsDefaultInterfaceImplementation => IsInterfaceMember && !IsAbstract;
+        bool IsDefaultInterfaceImplementation => DeclaringType.IsInterface && !IsAbstract;
 
         /// <summary>
         /// Gets the base member that this member overrides in a base class, if any.

@@ -27,6 +27,32 @@ namespace Kampute.DocToolkit.Metadata
         IAssembly Assembly { get; }
 
         /// <summary>
+        /// Gets the repository that provides access to reflection information about extension members.
+        /// </summary>
+        /// <value>
+        /// An <see cref="IExtensionReflectionRepository"/> instance that provides access to reflection information about extension members.
+        /// </value>
+        IExtensionReflectionRepository ExtensionReflection { get; }
+
+        /// <summary>
+        /// Resolves the canonical form of a type.
+        /// </summary>
+        /// <param name="type">The type to resolve.</param>
+        /// <returns>A <see cref="Type"/> instance that is reference-equal to the canonical type definition if applicable; otherwise, the original <paramref name="type"/>.</returns>
+        /// <remarks>
+        /// When a nested generic type definition is collected indirectly (such as <see cref="Type.BaseType"/> or
+        /// <see cref="Type.GetInterfaces()"/>), the returned <see cref="Type"/> instance may be incorrectly flagged
+        /// as a constructed generic type despite having only generic parameters as type arguments. This leads
+        /// to discrepancies in equality comparisons, especially when such types are used as keys in collections that
+        /// rely on reference equality.
+        /// <para>
+        /// This method ensures that when such types are encountered, they are converted back to their generic type
+        /// definitions and thus reference-equal to instances obtained directly via <see langword="typeof"/> expressions.
+        /// </para>
+        /// </remarks>
+        Type ResolveCanonicalType(Type type);
+
+        /// <summary>
         /// Gets the type metadata for the specified type within the assembly.
         /// </summary>
         /// <param name="type">The reflection type to get metadata for.</param>
@@ -45,7 +71,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> does not belong to the assembly.</exception>
         /// <exception cref="NotSupportedException">Thrown when the type is not supported.</exception>
-        /// <exception cref="InvalidCastException">Thrown when the retrieved type metadata cannot be cast to <typeparamref name="T"/>.</exception>"
+        /// <exception cref="InvalidCastException">Thrown when the retrieved type metadata cannot be cast to <typeparamref name="T"/>.</exception>
         T GetTypeMetadata<T>(Type type) where T : IType => (T)GetTypeMetadata(type);
 
         /// <summary>
@@ -112,12 +138,22 @@ namespace Kampute.DocToolkit.Metadata
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberInfo"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="memberInfo"/> does not belong to the assembly.</exception>
         /// <exception cref="NotSupportedException">Thrown when the member is not supported.</exception>
+        /// <remarks>
+        /// The provided <paramref name="memberInfo"/> can represent any member type, including types, constructors, methods,
+        /// properties, events, and fields. If the <paramref name="memberInfo"/> corresponds to an accessor of an extension
+        /// property, the method will resolve and return the appropriate property metadata.
+        /// </remarks>
         IMember GetMemberMetadata(MemberInfo memberInfo) => memberInfo switch
         {
             null => throw new ArgumentNullException(nameof(memberInfo)),
             Type type => GetTypeMetadata(type),
             ConstructorInfo constructorInfo => GetConstructorMetadata(constructorInfo),
-            MethodInfo methodInfo => GetMethodMetadata(methodInfo),
+            MethodInfo methodInfo => ExtensionReflection.GetExtensionMemberInfo(methodInfo) switch
+            {
+                MethodInfo extensionMethodInfo => GetMethodMetadata(extensionMethodInfo),
+                PropertyInfo extensionPropertyInfo => GetPropertyMetadata(extensionPropertyInfo),
+                _ => GetMethodMetadata(methodInfo),
+            },
             PropertyInfo propertyInfo => GetPropertyMetadata(propertyInfo),
             EventInfo eventInfo => GetEventMetadata(eventInfo),
             FieldInfo fieldInfo => GetFieldMetadata(fieldInfo),
@@ -129,6 +165,7 @@ namespace Kampute.DocToolkit.Metadata
         /// </summary>
         /// <param name="parameterInfo">The reflection parameter to get metadata for.</param>
         /// <returns>A metadata representation of the specified parameter.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameterInfo"/> is <see langword="null"/>.</exception>
         IParameter GetParameterMetadata(ParameterInfo parameterInfo);
 
         /// <summary>
@@ -137,6 +174,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <param name="attributeData">The reflection custom attribute data to get metadata for.</param>
         /// <param name="target">The target of the attribute.</param>
         /// <returns>A metadata representation of the specified custom attribute.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="attributeData"/> is <see langword="null"/>.</exception>
         ICustomAttribute GetCustomAttributeMetadata(CustomAttributeData attributeData, AttributeTarget target);
     }
 }

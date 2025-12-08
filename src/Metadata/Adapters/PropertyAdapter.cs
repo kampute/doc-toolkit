@@ -7,10 +7,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Capabilities;
+    using Kampute.DocToolkit.Metadata.Reflection;
+    using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="PropertyInfo"/> and provides metadata access.
@@ -25,6 +28,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     public class PropertyAdapter : VirtualTypeMemberAdapter<PropertyInfo>, IProperty
     {
         private readonly Lazy<IReadOnlyList<IParameter>> indexParameters;
+        private readonly Lazy<IParameter?> receiverParameter;
         private readonly Lazy<IType> propertyType;
         private readonly Lazy<IMethod?> getMethod;
         private readonly Lazy<IMethod?> setMethod;
@@ -43,6 +47,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             getMethod = new(GetGetterMethod);
             setMethod = new(GetSetterMethod);
             indexParameters = new(() => [.. GetIndexParameters()]);
+            receiverParameter = new(GetReceiverParameter);
         }
 
         /// <inheritdoc/>
@@ -52,19 +57,19 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public override bool IsSpecialName => Reflection.IsSpecialName;
 
         /// <inheritdoc/>
-        public override bool IsStatic => GetAccessors().Any(static m => m.IsStatic);
+        public override bool IsStatic => AnyAccessor.IsStatic;
 
         /// <inheritdoc/>
-        public override bool IsUnsafe => GetAccessors().Any(static m => m.IsUnsafe);
+        public override bool IsUnsafe => AnyAccessor.IsUnsafe;
 
         /// <inheritdoc/>
-        public virtual bool IsReadOnly => GetAccessors().Any(static m => m.IsReadOnly);
+        public virtual bool IsReadOnly => AnyAccessor.IsReadOnly;
 
         /// <inheritdoc/>
-        public virtual bool IsInitOnly => SetMethod?.Return.HasRequiredCustomModifier("System.Runtime.CompilerServices.IsExternalInit") == true;
+        public virtual bool IsInitOnly => SetMethod?.Return.HasRequiredCustomModifier(ModifierNames.IsExternalInit) == true;
 
         /// <inheritdoc/>
-        public virtual bool IsRequired => HasCustomAttribute("System.Runtime.CompilerServices.RequiredMemberAttribute");
+        public virtual bool IsRequired => HasCustomAttribute(AttributeNames.RequiredMember);
 
         /// <inheritdoc/>
         public virtual bool IsIndexer => Reflection.GetIndexParameters().Length > 0;
@@ -79,6 +84,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IReadOnlyList<IParameter> Parameters => indexParameters.Value;
 
         /// <inheritdoc/>
+        public IParameter? ReceiverParameter => receiverParameter.Value;
+
+        /// <inheritdoc/>
         public virtual IMethod? GetMethod => getMethod.Value;
 
         /// <inheritdoc/>
@@ -91,8 +99,16 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IProperty? ImplementedProperty => (IProperty?)ImplementedMember;
 
         /// <inheritdoc/>
-        public virtual IEnumerable<IMember> Overloads => !IsIndexer ? [] : ((IWithProperties)DeclaringType)
-            .Properties.WhereName(Name, preserveOrder: true).Where(p => !ReferenceEquals(p, this));
+        public virtual IEnumerable<IMember> Overloads
+            => IsIndexer ? GetPropertiesWithSameName(DeclaringType, preserveOrder: true).Where(p => !ReferenceEquals(p, this)) : [];
+
+        /// <summary>
+        /// Gets either the getter or setter method of the property, whichever is available.
+        /// </summary>
+        /// <value>
+        /// The getter method if it exists; otherwise, the setter method.
+        /// </value>
+        protected IMethod AnyAccessor => GetMethod ?? SetMethod!;
 
         /// <inheritdoc/>
         public virtual bool HasRequiredCustomModifier(string modifierFullName)
@@ -152,19 +168,31 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts()
         {
-            var signature = Name;
-            if (signature.Contains('.'))
-                signature = signature.Replace('.', '#').Replace('<', '{').Replace('>', '}');
-            if (IsIndexer)
-                signature += $"({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
+            if (!IsIndexer && !Name.Contains('.'))
+                return ('P', Name);
 
-            return ('P', signature);
+            using var reusable = StringBuilderPool.Shared.GetBuilder();
+            var sb = reusable.Builder;
+
+            sb.Append(Name);
+
+            if (Name.Contains('.'))
+                sb.Replace('.', '#').Replace('<', '{').Replace('>', '}');
+
+            if (IsIndexer)
+            {
+                sb.Append('(');
+                sb.AppendJoin(',', Parameters.Select(p => p.Type.ParametricSignature));
+                sb.Append(')');
+            }
+
+            return ('P', sb.ToString());
         }
 
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindOverriddenMember()
         {
-            if (IsStatic || IsExplicitInterfaceImplementation || Virtuality == MemberVirtuality.None)
+            if (Virtuality == MemberVirtuality.None)
                 return null;
 
             for (var baseType = DeclaringType.BaseType; baseType is not null; baseType = baseType.BaseType)
@@ -185,7 +213,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindImplementedMember()
         {
-            if (IsPublic && !IsStatic)
+            if (IsPublic)
             {
                 return ((IInterfaceCapableType)DeclaringType).Interfaces
                     .SelectMany(i => i.Properties.WhereName(Name))
@@ -194,7 +222,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             if (IsExplicitInterfaceImplementation)
             {
-                var (interfaceFullName, memberName) = AdapterHelper.DecodeExplicitName(Name);
+                var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
 
                 return ((IInterfaceCapableType)DeclaringType)
                     .Interfaces.FindByFullName(interfaceFullName)?
@@ -207,8 +235,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
-            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IWithProperties typeDef }
-                ? typeDef.Properties.WhereName(Name).FirstOrDefault(HasMatchingSignature)
+            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
+                ? GetPropertiesWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
                 : (IVirtualTypeMember?)null;
         }
 
@@ -224,8 +252,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected virtual bool HasMatchingSignature(IProperty? baseCandidate)
         {
             return baseCandidate is not null
+                && baseCandidate.IsStatic == IsStatic
                 && baseCandidate.Type.IsSubstitutableBy(Type)
-                && (!IsIndexer || AdapterHelper.AreParameterSignaturesMatching(baseCandidate.Parameters, Parameters));
+                && (!IsIndexer || AdapterHelper.EquivalentParameters(baseCandidate.Parameters, Parameters));
         }
 
         /// <summary>
@@ -238,18 +267,44 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Retrieves the getter method of the property, if it exists.
         /// </summary>
         /// <returns>An <see cref="IMethod"/> representing the getter method, or <see langword="null"/> if the property does not have a getter.</returns>
-        protected virtual IMethod? GetGetterMethod() => Reflection.GetMethod is MethodInfo getter ? (IMethod)Assembly.Repository.GetMethodMetadata(getter) : null;
+        protected virtual IMethod? GetGetterMethod() => Reflection.GetMethod is MethodInfo getter ? Assembly.Repository.GetMethodMetadata<IMethod>(getter) : null;
 
         /// <summary>
         /// Retrieves the setter method of the property, if it exists.
         /// </summary>
         /// <returns>An <see cref="IMethod"/> representing the setter method, or <see langword="null"/> if the property does not have a setter.</returns>
-        protected virtual IMethod? GetSetterMethod() => Reflection.SetMethod is MethodInfo setter ? (IMethod)Assembly.Repository.GetMethodMetadata(setter) : null;
+        protected virtual IMethod? GetSetterMethod() => Reflection.SetMethod is MethodInfo setter ? Assembly.Repository.GetMethodMetadata<IMethod>(setter) : null;
 
         /// <summary>
         /// Retrieves the index parameters of the property.
         /// </summary>
         /// <returns>An enumerable collection of <see cref="IParameter"/> objects representing the index parameters of the property.</returns>
         protected virtual IEnumerable<IParameter> GetIndexParameters() => Reflection.GetIndexParameters().Select(Assembly.Repository.GetParameterMetadata);
+
+        /// <summary>
+        /// Retrieves the receiver parameter if the property is an extension method.
+        /// </summary>
+        /// <returns>The <see cref="IParameter"/> representing the receiver parameter; or <see langword="null"/> if the method is not an extension property.</returns>
+        protected virtual IParameter? GetReceiverParameter() => Reflection is IExtensionMemberInfo extensionMember
+            ? Assembly.Repository.GetParameterMetadata(extensionMember.ReceiverParameter)
+            : null;
+
+        /// <summary>
+        /// Retrieves properties from the specified type that have same name as this property.
+        /// </summary>
+        /// <param name="type">The type to search for similar property names.</param>
+        /// <param name="preserveOrder">Indicates whether to preserve the order of properties as they appear in the type.</param>
+        /// <returns>An enumerable collection of <see cref="IProperty"/> objects with same name as this property.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected IEnumerable<IProperty> GetPropertiesWithSameName(IType type, bool preserveOrder = false)
+        {
+            return IsExplicitInterfaceImplementation
+                ? type is IWithExplicitInterfaceProperties withExplicitProperties
+                    ? withExplicitProperties.ExplicitInterfaceProperties.WhereName(Name, preserveOrder)
+                    : []
+                : type is IWithProperties withProperties
+                    ? withProperties.Properties.WhereName(Name, preserveOrder)
+                    : [];
+        }
     }
 }

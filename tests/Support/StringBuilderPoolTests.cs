@@ -7,9 +7,8 @@ namespace Kampute.DocToolkit.Test.Support
 {
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
-    using System;
     using System.Globalization;
-    using System.Text;
+    using System.IO;
 
     [TestFixture]
     public class StringBuilderPoolTests
@@ -90,28 +89,15 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
-        public void ReusableStringBuilder_ThrowsAfterDispose()
-        {
-            var pool = new StringBuilderPool();
-            var rsb = pool.GetBuilder();
-            rsb.Dispose();
-
-            Assert.That(() => { var _ = rsb.Builder; }, Throws.TypeOf<ObjectDisposedException>());
-            Assert.That(rsb.ToString, Throws.TypeOf<ObjectDisposedException>());
-        }
-
-        [Test]
         public void ImplicitConversion_ReturnsBuilder()
         {
             var pool = new StringBuilderPool();
             using var rsb = pool.GetBuilder();
 
-            StringBuilder sb = rsb;
-            Assert.That(sb, Is.Not.Null);
+            using (var writer = new StringWriter(rsb))
+                writer.Write("TEST");
 
-            sb.Append("test");
-
-            Assert.That(rsb.ToString(), Is.EqualTo("test"));
+            Assert.That(rsb.ToString(), Is.EqualTo("TEST"));
         }
     }
 }

@@ -188,17 +188,18 @@ namespace Kampute.DocToolkit.Metadata
         /// <returns>A member metadata abstraction.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberInfo"/> is <see langword="null"/>.</exception>
         /// <exception cref="NotSupportedException">Thrown the member's type is not supported.</exception>
-        public static IMember GetMetadata(this MemberInfo memberInfo) => memberInfo switch
+        /// <remarks>
+        /// The provided <paramref name="memberInfo"/> can represent any member type, including types, constructors, methods,
+        /// properties, events, and fields. If the <paramref name="memberInfo"/> corresponds to an accessor of an extension
+        /// property, the method will resolve and return the appropriate property metadata.
+        /// </remarks>
+        public static IMember GetMetadata(this MemberInfo memberInfo)
         {
-            null => throw new ArgumentNullException(nameof(memberInfo)),
-            Type type => GetMetadata(type),
-            ConstructorInfo constructorInfo => GetMetadata(constructorInfo),
-            MethodInfo methodInfo => GetMetadata(methodInfo),
-            PropertyInfo propertyInfo => GetMetadata(propertyInfo),
-            EventInfo eventInfo => GetMetadata(eventInfo),
-            FieldInfo fieldInfo => GetMetadata(fieldInfo),
-            _ => throw new NotSupportedException($"Member type '{memberInfo.GetType().FullName}' is not supported."),
-        };
+            if (memberInfo is null)
+                throw new ArgumentNullException(nameof(memberInfo));
+
+            return GetMetadata(memberInfo.Module.Assembly).Repository.GetMemberMetadata(memberInfo);
+        }
 
         /// <summary>
         /// Searches for type metadata by its full name across all loaded assemblies.

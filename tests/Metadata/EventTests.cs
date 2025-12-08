@@ -8,20 +8,17 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
-    using System.Reflection;
 
     [TestFixture]
     public class EventTests
     {
-        private readonly BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-
-        [TestCase("VirtualEvent")]
-        [TestCase("RegularEvent")]
-        [TestCase("InterfaceEvent")]
-        [TestCase("StaticEvent")]
-        public void ImplementsEvent(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
+        public void ImplementsEvent(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -29,13 +26,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.Name, Is.EqualTo(eventName));
         }
 
-        [TestCase("VirtualEvent", ExpectedResult = "EventHandler")]
-        [TestCase("RegularEvent", ExpectedResult = "Del")]
-        [TestCase("InterfaceEvent", ExpectedResult = "EventHandler")]
-        [TestCase("StaticEvent", ExpectedResult = "EventHandler`1")]
-        public string EventHandlerType_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = "EventHandler")]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "EventHandler")]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "EventHandler")]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "EventHandler")]
+        public string EventHandlerType_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -44,13 +41,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Type.Name;
         }
 
-        [TestCase("VirtualEvent")]
-        [TestCase("RegularEvent")]
-        [TestCase("InterfaceEvent")]
-        [TestCase("StaticEvent")]
-        public void AddMethod_IsNotNull(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
+        public void AddMethod_IsNotNull(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -59,13 +56,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.AddMethod, Is.InstanceOf<IMethod>());
         }
 
-        [TestCase("VirtualEvent")]
-        [TestCase("RegularEvent")]
-        [TestCase("InterfaceEvent")]
-        [TestCase("StaticEvent")]
-        public void RemoveMethod_IsNotNull(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
+        public void RemoveMethod_IsNotNull(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -74,13 +71,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.RemoveMethod, Is.InstanceOf<IMethod>());
         }
 
-        [TestCase("VirtualEvent", ExpectedResult = MemberVisibility.Protected)]
-        [TestCase("RegularEvent", ExpectedResult = MemberVisibility.Internal)]
-        [TestCase("StaticEvent", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("Acme.IProcess<System.String>.Completed", ExpectedResult = MemberVisibility.Private)]
-        public MemberVisibility Visibility_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = MemberVisibility.ProtectedInternal)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = MemberVisibility.Private)]
+        public MemberVisibility Visibility_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -89,13 +86,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Visibility;
         }
 
-        [TestCase("VirtualEvent", ExpectedResult = false)]
-        [TestCase("RegularEvent", ExpectedResult = false)]
-        [TestCase("InterfaceEvent", ExpectedResult = false)]
-        [TestCase("StaticEvent", ExpectedResult = true)]
-        public bool IsStatic_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = false)]
+        public bool IsStatic_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -104,14 +101,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsStatic;
         }
 
-        [TestCase("VirtualEvent", ExpectedResult = true)]
-        [TestCase("RegularEvent", ExpectedResult = false)]
-        [TestCase("StaticEvent", ExpectedResult = true)]
-        [TestCase("InterfaceEvent", ExpectedResult = true)]
-        [TestCase("Acme.IProcess<System.String>.Completed", ExpectedResult = false)]
-        public bool IsVisible_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = false)]
+        public bool IsVisible_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -120,13 +116,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsVisible;
         }
 
-        [TestCase("VirtualEvent", ExpectedResult = false)]
-        [TestCase("RegularEvent", ExpectedResult = false)]
-        [TestCase("InterfaceEvent", ExpectedResult = false)]
-        [TestCase("StaticEvent", ExpectedResult = false)]
-        public bool IsSpecialName_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = false)]
+        public bool IsSpecialName_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -135,11 +131,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsSpecialName;
         }
 
-        [TestCase("InterfaceEvent", ExpectedResult = false)]
-        [TestCase("Acme.IProcess<System.String>.Completed", ExpectedResult = true)]
-        public bool IsExplicitInterfaceImplementation_HasExpectedValue(string eventName)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceEvent), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = true)]
+        public bool IsExplicitInterfaceImplementation_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = typeof(Acme.DerivedClass).GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -148,11 +145,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsExplicitInterfaceImplementation;
         }
 
-        [TestCase("RegularEvent", typeof(Acme.DerivedClass))]
-        [TestCase("Acme.IProcess<System.String>.Completed", typeof(Acme.DerivedClass))]
-        public void DeclaringType_HasExpectedType(string eventName, Type declaringType)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
+        public void DeclaringType_HasExpectedType(Type declaringType, string eventName)
         {
-            var eventInfo = declaringType.GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -161,15 +158,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.DeclaringType.Represents(declaringType), Is.True);
         }
 
-        [TestCase("VirtualEvent", typeof(Acme.BaseClass), ExpectedResult = MemberVirtuality.Virtual)]
-        [TestCase("VirtualEvent", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.Override)]
-        [TestCase("RegularEvent", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        [TestCase("StaticEvent", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        [TestCase("InterfaceEvent", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        [TestCase("Acme.IProcess<System.String>.Completed", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        public MemberVirtuality Virtuality_HasExpectedValue(string eventName, Type declaringType)
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedConstructedGenericClass.Event), ExpectedResult = MemberVirtuality.Override)]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Event), ExpectedResult = MemberVirtuality.SealedOverride)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.AbstractEvent), ExpectedResult = MemberVirtuality.Abstract)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = MemberVirtuality.Virtual)]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = MemberVirtuality.None)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = MemberVirtuality.None)]
+        public MemberVirtuality Virtuality_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = declaringType.GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
@@ -178,37 +175,38 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Virtuality;
         }
 
-        [TestCase("VirtualEvent", typeof(Acme.DerivedClass), ExpectedResult = "BaseClass")]
-        [TestCase("RegularEvent", typeof(Acme.DerivedClass), ExpectedResult = null)]
-        public string? OverriddenEvent_HasExpectedValue(string eventName, Type declaringType)
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Event), typeof(Acme.SampleDerivedGenericClass<,,>))]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), null)]
+        public void OverriddenEvent_HasExpectedValue(Type declaringType, string eventName, Type? expectedBaseType)
         {
-            var eventInfo = declaringType.GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            return metadata.OverriddenEvent?.DeclaringType.Name;
+            Assert.That(metadata.OverriddenEvent?.DeclaringType, Is.EqualTo(expectedBaseType?.GetMetadata()));
         }
 
-        [TestCase("Acme.IProcess<System.String>.Completed", typeof(Acme.DerivedClass), ExpectedResult = "IProcess`1")]
-        [TestCase("RegularEvent", typeof(Acme.DerivedClass), ExpectedResult = null)]
-        public string? InterfaceEvent_HasExpectedValue(string eventName, Type declaringType)
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), null)]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceEvent), null)]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", typeof(Acme.ISampleInterface))]
+        public void InterfaceEvent_HasExpectedValue(Type declaringType, string eventName, Type? expectedInterfaceType)
         {
-            var eventInfo = declaringType.GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            return metadata.ImplementedEvent?.DeclaringType.Name;
+            Assert.That(metadata.ImplementedEvent?.DeclaringType, Is.EqualTo(expectedInterfaceType?.GetMetadata()));
         }
 
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.AnEvent), ExpectedResult = "E:Acme.Widget.AnEvent")]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.Completed", ExpectedResult = "E:Acme.UseList.Acme#IProcess{System#String}#Completed")]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "E:Acme.SampleEvents.RegularEvent")]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "E:Acme.SampleEvents.Acme#ISampleInterface#InterfaceEvent")]
         public string CodeReference_HasExpectedValue(Type declaringType, string eventName)
         {
-            var eventInfo = declaringType.GetEvent(eventName, bindingFlags);
+            var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();

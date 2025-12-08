@@ -7,10 +7,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Capabilities;
+    using Kampute.DocToolkit.Metadata.Reflection;
+    using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="MethodInfo"/> and provides metadata access.
@@ -22,11 +25,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// Language Runtime (CLR) or Metadata Load Context (MLC).
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
-    public class MethodAdapter : VirtualTypeMemberAdapter<MethodInfo>, IMethod
+    public class MethodAdapter : MethodBaseAdapter, IMethod
     {
+        private readonly Lazy<IParameter?> receiverParameter;
         private readonly Lazy<IReadOnlyList<ITypeParameter>> typeParameters;
-        private readonly Lazy<IReadOnlyList<IParameter>> parameters;
-        private readonly Lazy<IParameter> returnParameter;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodAdapter"/> class.
@@ -38,40 +40,18 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public MethodAdapter(IType declaringType, MethodInfo method)
             : base(declaringType, method)
         {
+            receiverParameter = new(GetReceiverParameter);
             typeParameters = new(() => [.. GetTypeParameters()]);
-            parameters = new(() => [.. GetParameters()]);
-            returnParameter = new(GetReturnParameter);
         }
+
+        /// <inheritdoc/>
+        public IParameter? ReceiverParameter => receiverParameter.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<ITypeParameter> TypeParameters => typeParameters.Value;
 
         /// <inheritdoc/>
-        public IReadOnlyList<IParameter> Parameters => parameters.Value;
-
-        /// <inheritdoc/>
-        public IParameter Return => returnParameter.Value;
-
-        /// <inheritdoc/>
-        public override bool IsSpecialName => Reflection.IsSpecialName;
-
-        /// <inheritdoc/>
-        public override bool IsStatic => Reflection.IsStatic;
-
-        /// <inheritdoc/>
         public virtual bool IsGenericMethod => Reflection.IsGenericMethod;
-
-        /// <inheritdoc/>
-        public virtual bool IsExtension => IsStatic && HasCustomAttribute("System.Runtime.CompilerServices.ExtensionAttribute");
-
-        /// <inheritdoc/>
-        public virtual bool IsAsync => HasCustomAttribute("System.Runtime.CompilerServices.AsyncStateMachineAttribute");
-
-        /// <inheritdoc/>
-        public virtual bool IsReadOnly => HasCustomAttribute("System.Runtime.CompilerServices.IsReadOnlyAttribute");
-
-        /// <inheritdoc/>
-        public override bool IsUnsafe => Return.Type.IsUnsafe || Parameters.Any(static p => p.Type.IsUnsafe);
 
         /// <inheritdoc/>
         public IMethod? OverriddenMethod => (IMethod?)OverriddenMember;
@@ -80,82 +60,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IMethod? ImplementedMethod => (IMethod?)ImplementedMember;
 
         /// <inheritdoc/>
-        public virtual IEnumerable<IMember> Overloads => ((IWithMethods)DeclaringType)
-            .Methods.WhereName(Name, preserveOrder: true).Where(m => !ReferenceEquals(m, this));
-
-        /// <inheritdoc/>
-        protected override MemberVisibility GetMemberVisibility()
-        {
-            if (Reflection.IsPublic)
-                return MemberVisibility.Public;
-            else if (Reflection.IsFamily)
-                return MemberVisibility.Protected;
-            else if (Reflection.IsAssembly)
-                return MemberVisibility.Internal;
-            else if (Reflection.IsFamilyAndAssembly)
-                return MemberVisibility.PrivateProtected;
-            else if (Reflection.IsFamilyOrAssembly)
-                return MemberVisibility.ProtectedInternal;
-            else
-                return MemberVisibility.Private;
-        }
-
-        /// <inheritdoc/>
-        protected override MemberVirtuality GetMemberVirtuality()
-        {
-            if (!Reflection.IsVirtual)
-                return MemberVirtuality.None;
-            else if (Reflection.IsAbstract)
-                return MemberVirtuality.Abstract;
-            else if (Reflection.IsFinal)
-                return OverriddenMember is not null ? MemberVirtuality.SealedOverride : MemberVirtuality.None;
-            else
-                return OverriddenMember is not null ? MemberVirtuality.Override : MemberVirtuality.Virtual;
-        }
-
-        /// <inheritdoc/>
-        protected sealed override (char, string) GetCodeReferenceParts()
-        {
-            var signature = Name;
-            if (signature.Contains('.'))
-                signature = signature.Replace('.', '#').Replace('<', '{').Replace('>', '}');
-            if (IsGenericMethod && TypeParameters.Count > 0)
-                signature += $"``{TypeParameters.Count}";
-            if (Parameters.Count > 0)
-                signature += $"({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
-
-            return ('M', signature);
-        }
-
-        /// <inheritdoc/>
-        protected override IVirtualTypeMember? FindOverriddenMember()
-        {
-            if (IsStatic || IsExplicitInterfaceImplementation || !Reflection.IsVirtual)
-                return null;
-
-            for (var baseType = Reflection.DeclaringType.BaseType; baseType is not null; baseType = baseType.BaseType)
-            {
-                if (baseType.IsConstructedGenericType)
-                    baseType = baseType.GetGenericTypeDefinition();
-
-                foreach (var member in baseType.GetMember(Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                {
-                    if (member is not MethodInfo method || method.IsFinal || method.IsPrivate || method.IsFamilyAndAssembly)
-                        continue;
-
-                    var candidate = MetadataProvider.GetMetadata(method) as IMethod;
-                    if (HasMatchingSignature(candidate))
-                        return candidate;
-                }
-            }
-
-            return null;
-        }
+        public override IEnumerable<IMember> Overloads
+            => GetMethodsWithSameName(DeclaringType, preserveOrder: true).Where(m => !ReferenceEquals(m, this));
 
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindImplementedMember()
         {
-            if (IsPublic && !IsStatic)
+            if (IsPublic)
             {
                 return ((IInterfaceCapableType)DeclaringType).Interfaces
                     .SelectMany(i => i.Methods.WhereName(Name))
@@ -164,7 +75,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             if (IsExplicitInterfaceImplementation)
             {
-                var (interfaceFullName, memberName) = AdapterHelper.DecodeExplicitName(Name);
+                var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
 
                 return ((IInterfaceCapableType)DeclaringType)
                     .Interfaces.FindByFullName(interfaceFullName)?
@@ -177,9 +88,33 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
-            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IWithMethods typeDef }
-                ? typeDef.Methods.WhereName(Name).FirstOrDefault(HasMatchingSignature)
+            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
+                ? GetMethodsWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
                 : (IVirtualTypeMember?)null;
+        }
+
+        /// <inheritdoc/>
+        protected sealed override (char, string) GetCodeReferenceParts()
+        {
+            using var reusable = StringBuilderPool.Shared.GetBuilder();
+            var sb = reusable.Builder;
+
+            sb.Append(Name);
+
+            if (Name.Contains('.'))
+                sb.Replace('.', '#').Replace('<', '{').Replace('>', '}');
+
+            if (IsGenericMethod && TypeParameters.Count > 0)
+                sb.Append("``").Append(TypeParameters.Count);
+
+            if (Parameters.Count > 0)
+            {
+                sb.Append('(');
+                sb.AppendJoin(',', Parameters.Select(p => p.Type.ParametricSignature));
+                sb.Append(')');
+            }
+
+            return ('M', sb.ToString());
         }
 
         /// <summary>
@@ -191,14 +126,21 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// This method compares only the signature of the methods. It assumes that the caller has already verified other necessary conditions,
         /// such as matching names and accessibility.
         /// </remarks>
-        protected virtual bool HasMatchingSignature(IMethod? baseCandidate)
+        protected override bool HasMatchingSignature(IMethodBase? baseCandidate)
         {
-            return baseCandidate is not null
-                && baseCandidate.Parameters.Count == Parameters.Count
-                && baseCandidate.TypeParameters.Count == TypeParameters.Count
-                && baseCandidate.Return.IsSatisfiableBy(Return)
-                && AdapterHelper.AreParameterSignaturesMatching(baseCandidate.Parameters, Parameters);
+            return baseCandidate is IMethod baseCandidateMethod
+                && baseCandidateMethod.IsGenericMethod == IsGenericMethod
+                && baseCandidateMethod.TypeParameters.Count == TypeParameters.Count
+                && base.HasMatchingSignature(baseCandidate);
         }
+
+        /// <summary>
+        /// Retrieves the receiver parameter if the method is an extension method.
+        /// </summary>
+        /// <returns>The <see cref="IParameter"/> representing the receiver parameter; or <see langword="null"/> if the method is not an extension method.</returns>
+        protected virtual IParameter? GetReceiverParameter() => Reflection is IExtensionMemberInfo extensionMember
+            ? Assembly.Repository.GetParameterMetadata(extensionMember.ReceiverParameter)
+            : null;
 
         /// <summary>
         /// Retrieves the type parameters defined by the method.
@@ -207,15 +149,21 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected virtual IEnumerable<ITypeParameter> GetTypeParameters() => Reflection.GetGenericArguments().Select(Assembly.Repository.GetTypeMetadata<ITypeParameter>);
 
         /// <summary>
-        /// Retrieves the parameters of the method.
+        /// Retrieves methods from the specified type that have the same name as this method.
         /// </summary>
-        /// <returns>An enumerable collection of <see cref="IParameter"/> objects representing the parameters of the method.</returns>
-        protected virtual IEnumerable<IParameter> GetParameters() => Reflection.GetParameters().Select(Assembly.Repository.GetParameterMetadata);
-
-        /// <summary>
-        /// Retrieves the return parameter of the method.
-        /// </summary>
-        /// <returns>An <see cref="IParameter"/> object representing the return parameter of the method.</returns>
-        protected virtual IParameter GetReturnParameter() => Assembly.Repository.GetParameterMetadata(Reflection.ReturnParameter);
+        /// <param name="type">The type to search for similar property names.</param>
+        /// <param name="preserveOrder">Indicates whether to preserve the order of methods as they appear in the type.</param>
+        /// <returns>An enumerable collection of <see cref="IMethod"/> objects with same name as this method.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected IEnumerable<IMethod> GetMethodsWithSameName(IType type, bool preserveOrder = false)
+        {
+            return IsExplicitInterfaceImplementation
+                ? type is IWithExplicitInterfaceMethods withExplicitMethods
+                    ? withExplicitMethods.ExplicitInterfaceMethods.WhereName(Name, preserveOrder)
+                    : []
+                : type is IWithMethods withMethods
+                    ? withMethods.Methods.WhereName(Name, preserveOrder)
+                    : [];
+        }
     }
 }

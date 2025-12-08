@@ -135,7 +135,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                         sb.Append(',');
 
                     var typeArg = typeArgs[typeArgIndex++];
-                    sb.Append(useParameterNotation ? typeArg.ParametericSignature : typeArg.Signature);
+                    sb.Append(useParameterNotation ? typeArg.ParametricSignature : typeArg.Signature);
                 }
                 sb.Append('}');
             }

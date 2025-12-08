@@ -13,305 +13,354 @@
 namespace Acme
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using System.Threading.Tasks;
+    using System.Reflection;
 
-    [AttributeUsage(AttributeTargets.Parameter)]
-    public class CustomAttribute : Attribute { }
-
-    public interface IProcess<out T>
+    public static class Bindings
     {
-        bool IsCompleted { get; }
-
-        event EventHandler? Completed;
-
-        T GetStatus(bool state);
-    }
-
-    public struct ValueType : ICloneable
-    {
-        public volatile int total;
-        public unsafe fixed int buffer[10];
-
-        public ValueType(int initial) => total = initial;
-
-        public readonly bool HasTotal => total != 0;
-
-        public int HalfTotal
-        {
-            readonly get => total / 2;
-            set => total = value * 2;
-        }
-
-        public unsafe void M1(int i) => buffer[i % 10] = ++total;
-        public readonly string M2(int? i = null) => $"{i}";
-
-        public readonly object Clone() => new ValueType(total);
-
-        public event EventHandler? E1;
-
-        public enum State
-        {
-            Empty,
-            NotEmpty
-        }
-    }
-
-    /// <seealso href="https://ecma-international.org/wp-content/uploads/ECMA-334_7th_edition_december_2023.pdf"/>
-    public class Widget
-    {
-        public string message;
-        internal static Direction defaultDirection;
-        public const double PI = 3.14159;
-        protected internal readonly double monthlyAverage;
-        public long[] array1;
-        public Widget[,] array2;
-        public unsafe int* pCount;
-        public unsafe float** ppValues;
-        private volatile bool valid;
-
-        static Widget() { }
-
-        [SetsRequiredMembers]
-        internal Widget() => Width = 0;
-
-        [SetsRequiredMembers]
-        protected Widget(string s) => Width = s.Length;
-
-        [SetsRequiredMembers]
-        public Widget(int width, int height)
-        {
-            Width = width;
-            Height = height;
-            valid = true;
-            Validated?.Invoke(this, EventArgs.Empty);
-        }
-
-        public static void M0() { }
-        public void M1(char c, out float f, ref ValueType v, in int i) { f = 0; }
-        public void M2(short[] x1, int[,] x2, long[][] x3) { }
-        public void M3(long[][] x3, Widget[][,,] x4) { }
-        public unsafe void M4(char* pc, Direction** pd = null) { }
-        public unsafe void M5(void* pv, double?*[][,][,,] pd) { }
-        public void M6(int i, params object[] args) { valid = i % 2 == 0; }
-        public T? M7<T>() => valid ? default : throw new InvalidOperationException();
-        public void M8<T>(T t, bool isTrusted = true) where T : class, new() { }
-        private bool Valid() => valid;
-
-        [return: NotNullIfNotNull(nameof(x))]
-        public static implicit operator long?(Widget? x) => x?.Width;
-        public static explicit operator int(Widget x) => x.Width;
-        public static Widget operator +(Widget x) => x;
-        public static Widget operator +(Widget x1, Widget x2) => x1;
-
-        public static Direction DefaultDirection
-        {
-            get => defaultDirection;
-            set => defaultDirection = value;
-        }
-
-        public required int Width { get; init; }
-        public int Height { get; set; }
-        public int Depth { get; private set; }
-        private bool IsValid => Valid();
-
-        public int this[int i] => IsValid ? i : -1;
-        public int this[string s, int i] => i;
-
-        protected internal event Del AnEvent;
-        internal event EventHandler? Validated;
-
-        public abstract class NestedClass
-        {
-            protected NestedClass() => value = 999;
-
-            public int value;
-
-            public void M1() { }
-            public abstract void M2(int i = 123);
-
-            public enum DeepNestedEnum
-            {
-                Value1,
-                Value2
-            }
-        }
-
-        public class NestedDerivedClass : NestedClass
-        {
-            public NestedDerivedClass() : base() { }
-            public NestedDerivedClass(int initialValue) => value = initialValue;
-            public NestedDerivedClass(string name) => value = name.Length;
-
-            public new void M1() { }
-            public sealed override void M2(int i = 123) { }
-        }
-
-        public interface IMenuItem<in T> where T : Widget, new()
-        {
-        }
-
-        protected internal delegate void Del(int i);
-
-        public enum Direction
-        {
-            North,
-            South,
-            East,
-            West
-        }
-
-        private struct PrivateType { }
-    }
-
-    public class DerivedWidget : Widget
-    {
-        [SetsRequiredMembers]
-        public DerivedWidget() : base() { }
-    }
-
-    public class MyList<T>(IEnumerable<T> items)
-        where T : struct
-    {
-        public IEnumerable<T> Items { get; protected set; } = items;
-
-        protected internal void Test([Custom] T t = default) { }
-
-        public Scope BeginScope() => new(Items);
-        public void EndScope(Scope scope) { }
-
-        public class Scope
-        {
-            public Scope(IEnumerable<T> items) => Items = [.. items];
-
-            public List<T> Items { get; }
-
-            public static implicit operator List<T>(Scope scope) => scope.Items;
-        }
-
-        public class Helper<U, V>
-        {
-            public U First { get; set; }
-            public V Second { get; set; }
-        }
-    }
-
-    public class MyExtendedList<T> : MyList<T>
-        where T : struct
-    {
-        public MyExtendedList() : base([]) { }
-    }
-
-    public sealed class UseList : IProcess<string>
-    {
-        bool IProcess<string>.IsCompleted => true;
-
-        event EventHandler? IProcess<string>.Completed
-        {
-            add { }
-            remove { }
-        }
-
-        string IProcess<string>.GetStatus(bool state) => string.Empty;
-
-        public async Task<bool> ProcessAsync(MyList<int> list) => await Task.FromResult(list.Items is not null);
-        public MyList<T> GetValues<T>(T value) where T : struct => new([value]);
-
-        [Obsolete("For sake of testing", DiagnosticId = "XYZ")]
-        public T Intercept<T>(in MyList<T>.Helper<char, string>[] helper) where T : struct => default;
-    }
-
-    public static class Extensions
-    {
-        public static void Hello(this Widget widget) => widget.message = "Hello, World!";
-    }
-
-    public interface ITestInterface
-    {
-        int Count { get; }
-        bool IsEmpty => Count == 0;
-
-        int this[int i] { get; }
-
-        void InterfaceMethod();
-        void InterfaceDefaultMethod() { }
-
-        event EventHandler? InterfaceEvent;
-    }
-
-    public class BaseClass
-    {
-        public virtual string VirtualProperty { get; set; } = "Base";
-        public string RegularProperty { get; set; } = "Regular";
-        public virtual int VirtualReadOnly { get; } = 42;
-
-        protected virtual event EventHandler? VirtualEvent;
-
-        public virtual string VirtualMethod() => "Base";
-        public virtual async Task<string> VirtualAsyncMethod() => await Task.FromResult("Base Async");
-    }
-
-    public class DerivedClass : BaseClass, ITestInterface, IProcess<string>
-    {
-        public sealed override string VirtualProperty { get; set; } = "Derived";
-        public override int VirtualReadOnly { get; } = 99;
-        public int Count => 10;
-        public int this[int i] => i * 2;
-        public bool InitOnlyProperty { get; init; }
-        public required int RequiredProperty { get; set; }
-        public static string StaticProperty { get; set; } = "Static";
-
-        bool IProcess<string>.IsCompleted => true;
-
-        public void RegularMethod() { }
-        public void InterfaceMethod() { }
-        public sealed override string VirtualMethod() => "Derived";
-        public override async Task<string> VirtualAsyncMethod() => await Task.FromResult("Derived Async");
-        string IProcess<string>.GetStatus(bool state) => state ? "Complete" : "Incomplete";
-
-        protected override event EventHandler? VirtualEvent;
-        public static event EventHandler<int>? StaticEvent;
-        internal event Widget.Del? RegularEvent;
-        public event EventHandler? InterfaceEvent;
-        event EventHandler? IProcess<string>.Completed
-        {
-            add { }
-            remove { }
-        }
-    }
-
-    [Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
-    public class TestClass
-    {
-        public TestClass() { }
-        public TestClass(int value) { }
-        public TestClass(string name) { }
-        public TestClass(int value, string name) { }
+        public const BindingFlags AllDeclared = BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-    public class ExampleAttribute : Attribute
+    public class SampleAttribute : Attribute
     {
-        public ExampleAttribute(Type type) => Type = type;
+        public SampleAttribute(Type type) => Type = type;
 
         protected Type Type { get; }
         public DayOfWeek[] Days { get; set; } = [];
     }
 
-    public class UnmanagedConstraintClass<T> where T : unmanaged
+    public interface ISampleInterface
     {
-        public void TestMethod<U>(U value) where U : unmanaged { }
+        static ISampleInterface()
+        {
+            InterfaceField = DateTime.Now;
+        }
+
+        public static readonly DateTime InterfaceField;
+
+        int InterfaceProperty => 42;
+
+        void InterfaceMethod() { }
+        T InterfaceGenericMethod<T>(T value) where T : struct => value;
+        void InterfaceMethodWithInParam(in int i) { }
+        void InterfaceMethodWithRefParam(ref string s) { }
+        void InterfaceMethodWithOutParam(out double d) { d = default; }
+
+        static abstract void InterfaceStaticMethod();
+        static virtual void InterfaceStaticDefaultMethod() { }
+
+        static virtual bool operator true(ISampleInterface instance) => true;
+        static abstract bool operator false(ISampleInterface instance);
+
+        event EventHandler? InterfaceEvent { add { } remove { } }
     }
 
-    public class NotNullConstraintClass<T> where T : notnull
+    public class SampleConstructors
     {
-        public void TestMethod<U>(U value) where U : notnull { }
+        [SetsRequiredMembers] protected SampleConstructors() { }
+        public SampleConstructors(int i) { }
+        public SampleConstructors(string s, double d) { }
+        protected SampleConstructors([NotNull] object o) { }
+        internal SampleConstructors(string s) { }
     }
 
-    public class MultipleConstraintClass<T, U> where T : class, ICloneable where U : class, new()
+    public class SampleOperators : ISampleInterface
     {
-        public T? Value { get; set; }
+        public static SampleOperators operator +(SampleOperators x) => x;
+        public static SampleOperators operator -(SampleOperators x) => x;
+
+        public static SampleOperators operator +(SampleOperators x, SampleOperators y) => x;
+        public static SampleOperators operator -(SampleOperators x, SampleOperators y) => x;
+
+        public void operator +=(SampleOperators x) { }
+        public void operator -=(SampleOperators x) { }
+
+        public void operator ++() { }
+        public void operator --() { }
+
+        public static implicit operator string(SampleOperators x) => "Sample";
+        public static explicit operator int(SampleOperators x) => 42;
+
+        static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+
+        static void ISampleInterface.InterfaceStaticMethod() { }
+    }
+
+    public abstract class SampleMethods : ISampleInterface
+    {
+        public static void StaticMethod() { }
+        public void RegularMethod() { }
+        internal protected abstract void AbstractMethod();
+        internal protected virtual void VirtualMethod(int i) { }
+        public unsafe void UnsafeMethod(int** p) { }
+        [return: NotNull] public T GenericMethodWithTypeConstraints<T>([NotNull] T value) where T : class, ICloneable, new() => value;
+        public U GenericMethodWithoutTypeConstraints<T, U>(T t, U u) where T : class where U : struct => u;
+        public void RefParamsMethod(in int i, ref string s, out double d) { d = 0.0; }
+        public void ArrayParamsMethod(params IEnumerable<string> args) { }
+        public void OptionalParamsMethod(int i = 42, string s = "default") { }
+        public unsafe void MixedParamsMethod(string s, in DayOfWeek day = DayOfWeek.Monday, params double?*[][,][,,,] values) { }
+        public void OverloadedMethod() { }
+        public void OverloadedMethod(string s, int i) { }
+        void ISampleInterface.InterfaceMethod() { }
+        public T InterfaceGenericMethod<T>(T value) where T : struct => value;
+        void ISampleInterface.InterfaceMethodWithInParam(in int i) { }
+        void ISampleInterface.InterfaceMethodWithOutParam(out double d) => d = default;
+        public void InterfaceMethodWithRefParam(ref string s) { }
+        static void ISampleInterface.InterfaceStaticMethod() { }
+        public sealed override string ToString() => "SampleMethods";
+        internal void InternalMethod() { }
+
+        static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+    }
+
+    public abstract class SampleProperties : ISampleInterface
+    {
+        public static string StaticProperty { get; set; } = "Static";
+
+        public int RegularProperty { get; set; }
+        internal protected abstract int AbstractProperty { get; }
+        internal protected virtual int VirtualProperty { get; }
+        int ISampleInterface.InterfaceProperty => 42;
+
+        public int ReadOnlyProperty { get; }
+        public int WriteOnlyProperty { set { } }
+        public int InitOnlyProperty { get; init; }
+        public required int RequiredProperty { get; set; }
+
+        public int this[int i] => i;
+        public string this[string s, int i] => $"{s}:{i}";
+
+        internal int InternalProperty { get; set; }
+
+        static void ISampleInterface.InterfaceStaticMethod() => throw new NotImplementedException();
+        static bool ISampleInterface.operator false(ISampleInterface instance) => throw new NotImplementedException();
+    }
+
+    public abstract class SampleEvents : ISampleInterface
+    {
+        public static event EventHandler? StaticEvent;
+        public event EventHandler? RegularEvent;
+        internal protected abstract event EventHandler? AbstractEvent;
+        internal protected virtual event EventHandler? VirtualEvent;
+        event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+
+        internal event EventHandler? InternalEvent;
+
+        static void ISampleInterface.InterfaceStaticMethod() => throw new NotImplementedException();
+        static bool ISampleInterface.operator false(ISampleInterface instance) => throw new NotImplementedException();
+    }
+
+    public struct SampleFields
+    {
+        public static readonly int StaticReadonlyField = 10;
+        public const string ConstField = "Constant";
+
+        public volatile int VolatileField;
+        public unsafe fixed byte FixedBuffer[16];
+        public unsafe double?*[][,][,,] ComplexField;
+        public int[] ArrayField;
+
+        internal int InternalField;
+    }
+
+    public class SampleGenericClass<T>
+        where T : class
+    {
+        public class InnerGenericClass<U, V>()
+            where U : struct
+            where V : notnull
+        {
+            public abstract class DeepInnerGenericClass : ISampleInterface, IEnumerable<V>
+            {
+                public const string Field = "DeepClass";
+
+                public DeepInnerGenericClass() { }
+
+                public virtual T? Property { get; set; }
+                int ISampleInterface.InterfaceProperty => 42;
+
+                public abstract void Method(T t, U u, V v);
+                public virtual W GenericMethod<W>(T t, U u, V v, W w) where W : class, new() => w;
+                void ISampleInterface.InterfaceMethod() { }
+                static void ISampleInterface.InterfaceStaticMethod() { }
+
+                IEnumerator<V> IEnumerable<V>.GetEnumerator() => throw new NotImplementedException();
+                IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+                public static implicit operator T?(DeepInnerGenericClass instance) => instance.Property;
+                static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+
+                public virtual event EventHandler? Event;
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        internal class NonVisibleInnerClass { }
+    }
+
+    public abstract class SampleDerivedGenericClass<T, U, V> : SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass
+        where T : class, new()
+        where U : struct
+        where V : notnull
+    {
+        public SampleDerivedGenericClass() : base() { }
+
+        public override T? Property { get; set; }
+
+        public override W GenericMethod<W>(T t, U u, V v, W w) => w;
+        public override event EventHandler? Event;
+    }
+
+    public class SampleDerivedConstructedGenericClass : SampleDerivedGenericClass<object, int, string>
+    {
+        public SampleDerivedConstructedGenericClass() : base() { }
+        public SampleDerivedConstructedGenericClass(object o) : base() => Property = o;
+
+        public sealed override object? Property { get; set; }
+        public override void Method(object t, int u, string v) { }
+        public sealed override W GenericMethod<W>(object t, int u, string v, W w) => w;
+        public sealed override event EventHandler? Event;
+    }
+
+    public class SampleDirectDerivedConstructedGenericClass : SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass
+    {
+        public sealed override void Method(object t, int u, string v) { }
+    }
+
+    public struct SampleGenericStruct<T>
+        where T : class, IDisposable
+    {
+        public readonly struct InnerGenericStruct<U, V>
+            where U : struct, allows ref struct
+            where V : allows ref struct
+        {
+            public struct DeepInnerGenericStruct : ISampleInterface, IEnumerable<V>
+            {
+                public const string Field = "DeepStruct";
+
+                public DeepInnerGenericStruct(T value) => Property = value;
+
+                public readonly T? Property { get; }
+                readonly int ISampleInterface.InterfaceProperty => 42;
+
+                public readonly void Method(T t, U u, V v) { }
+                public readonly W GenericMethod<W>(T t, U u, V v, W w) where W : class, new() => w;
+                readonly void ISampleInterface.InterfaceMethod() { }
+                static void ISampleInterface.InterfaceStaticMethod() { }
+
+                readonly IEnumerator<V> IEnumerable<V>.GetEnumerator() => throw new NotImplementedException();
+                readonly IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+                public static implicit operator T?(DeepInnerGenericStruct instance) => instance.Property;
+                static bool ISampleInterface.operator false(ISampleInterface instance) => throw new NotImplementedException();
+
+                public event EventHandler? Event;
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        internal struct NonVisibleInnerStruct { }
+    }
+
+    public interface ISampleGenericInterface<T>
+        where T : class, new()
+    {
+        public interface IInnerGenericInterface<in U, out V>
+        {
+            public interface IDeepInnerGenericInterface : ISampleInterface, IEnumerable<V>
+            {
+                const string Field = "DeepInterface";
+
+                T? Property { get; set; }
+                int ISampleInterface.InterfaceProperty => 42;
+
+                V Method(T t, U u);
+                W GenericMethod<W>(T t, U u, W w) where W : class;
+                void ISampleInterface.InterfaceMethod() { }
+
+                void operator ++();
+
+                event EventHandler? Event;
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        internal interface INonVisibleInnerInterface { }
+    }
+
+    public interface ISampleExtendedGenericInterface<T, in U, out V> : ISampleGenericInterface<T>.IInnerGenericInterface<U, V>.IDeepInnerGenericInterface
+        where T : class, new()
+    {
+    }
+
+    public interface ISampleExtendedConstructedGenericInterface : ISampleExtendedGenericInterface<object, int, string>
+    {
+    }
+
+    public interface ISampleDirectExtendedConstructedGenericInterface : ISampleGenericInterface<object>.IInnerGenericInterface<int, string>.IDeepInnerGenericInterface
+    {
+    }
+
+    public interface ISampleDirectAndIndirectExtendedInterface : IReadOnlyCollection<int>, IEnumerable<string>
+    {
+    }
+
+    public static class SampleExtensions
+    {
+        public static void ClassicExtensionMethodForClass<T>(this SampleGenericClass<T> instance) where T : class { }
+
+        extension<T>(SampleGenericClass<T> instance)
+            where T : class
+        {
+            public int InstanceExtensionPropertyForClass => 42;
+            public static bool StaticExtensionPropertyForClass => true;
+
+            public void InstanceExtensionMethodForClass() { }
+            public static void StaticExtensionMethodForClass() { }
+            public void GenericExtensionMethodForClass<U>(U value) where U : struct { }
+        }
+        public static void ClassicExtensionMethodForStruct<T>(this SampleGenericStruct<T> instance) where T : class, IDisposable { }
+
+        extension<T>(SampleGenericStruct<T> instance)
+            where T : class, IDisposable
+        {
+            public int InstanceExtensionPropertyForStruct => 42;
+            public static bool StaticExtensionPropertyForStruct => true;
+
+            public void InstanceExtensionMethodForStruct() { }
+            public static void StaticExtensionMethodForStruct() { }
+            public void GenericExtensionMethodForStruct<U>(U value) where U : struct { }
+        }
+
+        public static void ClassicExtensionMethodForInterface<T>(this ISampleGenericInterface<T> instance) where T : class, new() { }
+
+        extension<T>(ISampleGenericInterface<T> instance)
+            where T : class, new()
+        {
+            public int InstanceExtensionPropertyForInterface => 42;
+            public static bool StaticExtensionPropertyForInterface => true;
+
+            public void InstanceExtensionMethodForInterface() { }
+            public static void StaticExtensionMethodForInterface() { }
+            public void GenericExtensionMethodForInterface<U>(U value) where U : struct { }
+        }
+
+        extension(ISampleInterface instance)
+        {
+            public int InstanceExtensionProperty => 42;
+            public static bool StaticExtensionProperty => true;
+            public string FullExtensionProperty { get => string.Empty; set { } }
+
+            public void InstanceExtensionMethod() { }
+            public static void StaticExtensionMethod() { }
+            public void GenericExtensionMethod<U>(U value) where U : struct { }
+        }
+
+        public static void NonExtensionMethod() { }
+
     }
 }
 #pragma warning restore CS0067 // The event is never used

@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Collections;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
@@ -26,6 +27,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     {
         private readonly Lazy<SortedDictionary<string, IReadOnlyList<IType>>> namespaces;
         private readonly Lazy<SortedDictionary<string, IType>> exportedTypes;
+        private readonly Lazy<IReadOnlyDictionary<IType, IReadOnlyList<IProperty>>> extensionProperties;
+        private readonly Lazy<IReadOnlyDictionary<IType, IReadOnlyList<IMethod>>> extensionMethods;
         private readonly Lazy<IReadOnlyDictionary<string, object?>> attributes;
 
         /// <summary>
@@ -59,6 +62,28 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
                 foreach (var group in ExportedTypes.GroupBy(type => type.Namespace, StringComparer.Ordinal))
                     result[group.Key] = [.. group.OrderBy(t => t.FullName, StringComparer.Ordinal)];
+
+                return result;
+            });
+
+            extensionProperties = new(() =>
+            {
+                var comparer = ReferenceEqualityComparer<IType>.Instance;
+                var result = new Dictionary<IType, IReadOnlyList<IProperty>>(comparer);
+
+                foreach (var group in GetExtensionProperties().GroupBy(p => p.ReceiverParameter!.Type, comparer))
+                    result[group.Key] = [.. group];
+
+                return result;
+            });
+
+            extensionMethods = new(() =>
+            {
+                var comparer = ReferenceEqualityComparer<IType>.Instance;
+                var result = new Dictionary<IType, IReadOnlyList<IMethod>>(comparer);
+
+                foreach (var group in GetExtensionMethods().GroupBy(m => m.ReceiverParameter!.Type, comparer))
+                    result[group.Key] = [.. group];
 
                 return result;
             });
@@ -105,11 +130,90 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             return exportedTypes.Value.TryGetValue(NormalizeTypeName(fullName), out type);
         }
 
+        /// <inheritdoc/>
+        public IEnumerable<IProperty> GetExtensionProperties(IType type)
+        {
+            if (type is null)
+                throw new ArgumentNullException(nameof(type));
+
+            return EnumerateExtensionProperties();
+
+            IEnumerable<IProperty> EnumerateExtensionProperties()
+            {
+                foreach (var entry in extensionProperties.Value)
+                {
+                    if (entry.Key.IsAssignableFrom(type))
+                    {
+                        foreach (var property in entry.Value)
+                            yield return property;
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public IEnumerable<IMethod> GetExtensionMethods(IType type)
+        {
+            if (type is null)
+                throw new ArgumentNullException(nameof(type));
+
+            return EnumerateExtensionMethods();
+
+            IEnumerable<IMethod> EnumerateExtensionMethods()
+            {
+                foreach (var entry in extensionMethods.Value)
+                {
+                    if (entry.Key.IsAssignableFrom(type))
+                    {
+                        foreach (var method in entry.Value)
+                            yield return method;
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Retrieves the types exported by the assembly.
         /// </summary>
         /// <returns>An enumerable collection of types exported by the assembly.</returns>
-        protected virtual IEnumerable<Type> GetExportedTypes() => Reflection.ExportedTypes;
+        /// <remarks>
+        /// By default, this method returns all exported types from the assembly, excluding special name types.
+        /// </remarks>
+        protected virtual IEnumerable<Type> GetExportedTypes() => Reflection.ExportedTypes.Where(type => !type.IsSpecialName);
+
+        /// <summary>
+        /// Retrieves all extension methods defined in the assembly.
+        /// </summary>
+        /// <returns>An enumerable collection <see cref="IMethod"/> instances representing the extension methods found in the assembly.</returns>
+        protected virtual IEnumerable<IProperty> GetExtensionProperties()
+        {
+            foreach (var type in ExportedTypes)
+            {
+                if (type is IClassType { MayContainExtensionMembers: true } classType)
+                {
+                    foreach (var property in classType.Properties)
+                        if (property.IsExtension)
+                            yield return property;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all extension methods defined in the assembly.
+        /// </summary>
+        /// <returns>An enumerable collection <see cref="IMethod"/> instances representing the extension methods found in the assembly.</returns>
+        protected virtual IEnumerable<IMethod> GetExtensionMethods()
+        {
+            foreach (var type in ExportedTypes)
+            {
+                if (type is IClassType { MayContainExtensionMembers: true } classType)
+                {
+                    foreach (var method in classType.Methods)
+                        if (method.IsExtension)
+                            yield return method;
+                }
+            }
+        }
 
         /// <summary>
         /// Retrieves the assembly's metadata attributes as key-value pairs.
@@ -158,6 +262,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             return attributes;
         }
 
+        /// <inheritdoc/>
+        protected override IEnumerable<CustomAttributeData> GetCustomAttributes() => Reflection.CustomAttributes;
+
+        /// <inheritdoc/>
+        protected override ICustomAttribute CreateAttributeMetadata(CustomAttributeData attribute)
+            => Repository.GetCustomAttributeMetadata(attribute, AttributeTarget.Assembly);
+
         /// <summary>
         /// Normalizes a type name by replacing '+' with '.' to handle nested types.
         /// </summary>
@@ -165,12 +276,5 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>The normalized type name.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static string NormalizeTypeName(string name) => name.Replace('+', '.');
-
-        /// <inheritdoc/>
-        protected override IEnumerable<CustomAttributeData> GetCustomAttributes() => Reflection.CustomAttributes;
-
-        /// <inheritdoc/>
-        protected override ICustomAttribute CreateAttributeMetadata(CustomAttributeData attribute)
-            => Repository.GetCustomAttributeMetadata(attribute, AttributeTarget.Assembly);
     }
 }

@@ -10,19 +10,22 @@ namespace Kampute.DocToolkit.Test.Metadata
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Reflection;
 
     [TestFixture]
     public class PropertyTests
     {
-        private readonly BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-
-        [TestCase("VirtualProperty")]
-        [TestCase("Item")]
-        [TestCase("StaticProperty")]
-        public void ImplementsProperty(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RequiredProperty))]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int))]
+        public void ImplementsProperty(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -31,12 +34,17 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.Name, Is.EqualTo(propertyName));
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = "String")]
-        [TestCase("Item", ExpectedResult = "Int32")]
-        [TestCase("StaticProperty", ExpectedResult = "String")]
-        public string PropertyType_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = nameof(String))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RequiredProperty), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = nameof(Int32))]
+        public string PropertyType_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -45,11 +53,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Type.Name;
         }
 
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("Item", ExpectedResult = true)]
-        public bool IsIndexer_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = true)]
+        public bool IsIndexer_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -58,11 +66,14 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsIndexer;
         }
 
-        [TestCase("HasTotal", ExpectedResult = true)]
-        [TestCase("HalfTotal", ExpectedResult = true)]
-        public bool IsReadOnly_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Property), ExpectedResult = true)]
+        public bool IsReadOnly_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.ValueType).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -71,12 +82,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsReadOnly;
         }
 
-        [TestCase("InitOnlyProperty", ExpectedResult = true)]
-        [TestCase("RequiredProperty", ExpectedResult = false)]
-        [TestCase("Count", ExpectedResult = false)]
-        public bool IsInitOnly_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = true)]
+        public bool IsInitOnly_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -85,12 +97,14 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsInitOnly;
         }
 
-        [TestCase("InitOnlyProperty", ExpectedResult = false)]
-        [TestCase("RequiredProperty", ExpectedResult = true)]
-        [TestCase("Count", ExpectedResult = false)]
-        public bool IsRequired_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RequiredProperty), ExpectedResult = true)]
+        public bool IsRequired_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -99,14 +113,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsRequired;
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = true)]
-        [TestCase("Count", ExpectedResult = true)]
-        [TestCase("Item", ExpectedResult = true)]
-        [TestCase("InitOnlyProperty", ExpectedResult = true)]
-        [TestCase("StaticProperty", ExpectedResult = true)]
-        public bool CanRead_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = true)]
+        public bool CanRead_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -115,14 +130,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CanRead;
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = true)]
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("Item", ExpectedResult = false)]
-        [TestCase("InitOnlyProperty", ExpectedResult = true)]
-        [TestCase("StaticProperty", ExpectedResult = true)]
-        public bool CanWrite_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InitOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = false)]
+        public bool CanWrite_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -131,14 +147,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CanWrite;
         }
 
-        [TestCase("VirtualProperty")]
-        [TestCase("Count")]
-        [TestCase("Item")]
-        [TestCase("InitOnlyProperty")]
-        [TestCase("StaticProperty")]
-        public void GetMethod_ForReadableIsNotNull(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int))]
+        public void GetMethod_ForReadableIsNotNull(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -147,12 +162,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.GetMethod, Is.InstanceOf<IMethod>());
         }
 
-        [TestCase("VirtualProperty")]
-        [TestCase("InitOnlyProperty")]
-        [TestCase("StaticProperty")]
-        public void SetMethod_ForWritableIsNotNull(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty))]
+        public void SetMethod_ForWritableIsNotNull(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -161,11 +176,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.SetMethod, Is.InstanceOf<IMethod>());
         }
 
-        [TestCase("Count")]
-        [TestCase("Item")]
-        public void SetMethod_ForReadOnlyIsNull(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty))]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int))]
+        public void SetMethod_ForReadOnlyIsNull(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -174,13 +189,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.SetMethod, Is.Null);
         }
 
-        [TestCase("Count", ExpectedResult = 1)]
-        [TestCase("VirtualProperty", ExpectedResult = 2)]
-        [TestCase("InitOnlyProperty", ExpectedResult = 2)]
-        [TestCase("StaticProperty", ExpectedResult = 2)]
-        public int GetAccessors_ReturnsExpectedCount(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = 1)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = 2)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = 2)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = 1)]
+        public int GetAccessors_ReturnsExpectedCount(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -189,15 +204,18 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.GetAccessors().Count();
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("Count", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("Item", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("InitOnlyProperty", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("StaticProperty", ExpectedResult = MemberVisibility.Public)]
-        [TestCase("Acme.IProcess<System.String>.IsCompleted", ExpectedResult = MemberVisibility.Private)]
-        public MemberVisibility Visibility_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = MemberVisibility.Private)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = MemberVisibility.ProtectedInternal)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InternalProperty), ExpectedResult = MemberVisibility.Internal)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = MemberVisibility.Private)]
+        public MemberVisibility Visibility_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -206,14 +224,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Visibility;
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = false)]
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("Item", ExpectedResult = false)]
-        [TestCase("InitOnlyProperty", ExpectedResult = false)]
-        [TestCase("StaticProperty", ExpectedResult = true)]
-        public bool IsStatic_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = false)]
+        public bool IsStatic_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -222,15 +241,17 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsStatic;
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = true)]
-        [TestCase("Count", ExpectedResult = true)]
-        [TestCase("Item", ExpectedResult = true)]
-        [TestCase("InitOnlyProperty", ExpectedResult = true)]
-        [TestCase("StaticProperty", ExpectedResult = true)]
-        [TestCase("Acme.IProcess<System.String>.IsCompleted", ExpectedResult = false)]
-        public bool IsVisible_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InternalProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = false)]
+        public bool IsVisible_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -239,14 +260,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsVisible;
         }
 
-        [TestCase("VirtualProperty", ExpectedResult = false)]
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("Item", ExpectedResult = false)] // Indexers are not special name properties!
-        [TestCase("InitOnlyProperty", ExpectedResult = false)]
-        [TestCase("StaticProperty", ExpectedResult = false)]
-        public bool IsSpecialName_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = false)]
+        public bool IsSpecialName_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -255,11 +277,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsSpecialName;
         }
 
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("Acme.IProcess<System.String>.IsCompleted", ExpectedResult = true)]
-        public bool IsExplicitInterfaceImplementation_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = true)]
+        public bool IsExplicitInterfaceImplementation_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -268,11 +291,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsExplicitInterfaceImplementation;
         }
 
-        [TestCase("Count", ExpectedResult = false)]
-        [TestCase("IsEmpty", ExpectedResult = true)]
-        public bool IsDefaultInterfaceImplementation_HasExpectedValue(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = false)]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceProperty), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = false)]
+        public bool IsDefaultInterfaceImplementation_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.ITestInterface).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -281,27 +305,29 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsDefaultInterfaceImplementation;
         }
 
-        [TestCase("VirtualProperty")]
-        public void DeclaringType_HasExpectedType(string propertyName)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty))]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty")]
+        public void DeclaringType_HasExpectedType(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.DerivedClass).GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
             Assert.That(metadata.DeclaringType, Is.Not.Null);
-            Assert.That(metadata.DeclaringType.Name, Is.EqualTo(nameof(Acme.DerivedClass)));
+            Assert.That(metadata.DeclaringType.Name, Is.EqualTo(nameof(Acme.SampleProperties)));
         }
 
-        [TestCase("VirtualProperty", typeof(Acme.BaseClass), ExpectedResult = MemberVirtuality.Virtual)]
-        [TestCase("VirtualProperty", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.SealedOverride)]
-        [TestCase("VirtualReadOnly", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.Override)]
-        [TestCase("StaticProperty", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        [TestCase("Acme.IProcess<System.String>.IsCompleted", typeof(Acme.DerivedClass), ExpectedResult = MemberVirtuality.None)]
-        public MemberVirtuality Virtuality_HasExpectedValue(string propertyName, Type declaringType)
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = MemberVirtuality.Override)]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = MemberVirtuality.SealedOverride)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.AbstractProperty), ExpectedResult = MemberVirtuality.Abstract)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = MemberVirtuality.Virtual)]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = MemberVirtuality.None)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = MemberVirtuality.None)]
+        public MemberVirtuality Virtuality_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = declaringType.GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -310,15 +336,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Virtuality;
         }
 
-        [TestCase("VirtualProperty", typeof(Acme.DerivedClass), ExpectedResult = nameof(Acme.BaseClass))]
-        [TestCase("RegularProperty", typeof(Acme.DerivedClass), ExpectedResult = null)]
-        [TestCase("Value", typeof(TestTypes.GenericDerivedClass<>), ExpectedResult = "GenericBaseClass`1")]
-        [TestCase("Value", typeof(TestTypes.GenericDerivedClass<int>), ExpectedResult = "GenericBaseClass`1")]
-        [TestCase("Value", typeof(TestTypes.ConstructedGenericDerivedClass), ExpectedResult = "GenericBaseClass`1")]
-        //[TestCase("Value", typeof(TestTypes.DrivedFromConstructedGeneric), ExpectedResult = "ConstructedGenericDerivedClass")]
-        public string? OverriddenProperty_HasExpectedValue(string propertyName, Type declaringType)
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = "SampleDerivedGenericClass`3")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = null)]
+        public string? OverriddenProperty_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = declaringType.GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -327,11 +349,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.OverriddenProperty?.DeclaringType.Name;
         }
 
-        [TestCase("Acme.IProcess<System.String>.IsCompleted", typeof(Acme.DerivedClass), ExpectedResult = "IProcess`1")]
-        [TestCase("RegularProperty", typeof(Acme.DerivedClass), ExpectedResult = null)]
-        public string? InterfaceProperty_HasExpectedValue(string propertyName, Type declaringType)
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = null)]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceProperty), ExpectedResult = null)]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = nameof(Acme.ISampleInterface))]
+        public string? InterfaceProperty_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = declaringType.GetProperty(propertyName, bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -340,10 +363,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.ImplementedProperty?.DeclaringType.Name;
         }
 
-        [Test]
-        public void Indexer_HasCorrectParameterCount()
+        [TestCase(typeof(Acme.SampleProperties), typeof(int))]
+        [TestCase(typeof(Acme.SampleProperties), typeof(string), typeof(int))]
+        public void Indexer_HasCorrectParameterCount(Type declaringType, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.Widget).GetProperty("Item", bindingFlags, null, typeof(int), [typeof(string), typeof(int)], null);
+            var propertyInfo = declaringType.GetProperty("Item", Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -352,19 +376,14 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(metadata.IsIndexer, Is.True);
-                Assert.That(metadata.Parameters, Has.Count.EqualTo(2));
-            }
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(metadata.Parameters[0].Type.Name, Is.EqualTo("String"));
-                Assert.That(metadata.Parameters[1].Type.Name, Is.EqualTo("Int32"));
+                Assert.That(metadata.Parameters.Select(p => p.Type.Name), Is.EqualTo(parameterTypes.Select(t => t.Name)));
             }
         }
 
-        [Test]
-        public void NonIndexer_HasNoParameters()
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty))]
+        public void NonIndexer_HasNoParameters(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = typeof(Acme.Widget).GetProperty("Width", bindingFlags);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
@@ -377,14 +396,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             }
         }
 
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.Width), ExpectedResult = "P:Acme.Widget.Width")]
-        [TestCase(typeof(Acme.Widget), "Item", new[] { typeof(int) }, ExpectedResult = "P:Acme.Widget.Item(System.Int32)")]
-        [TestCase(typeof(Acme.Widget), "Item", new[] { typeof(string), typeof(int) }, ExpectedResult = "P:Acme.Widget.Item(System.String,System.Int32)")]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.IsCompleted", ExpectedResult = "P:Acme.UseList.Acme#IProcess{System#String}#IsCompleted")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "P:Acme.SampleProperties.RegularProperty")]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.Int32)")]
+        [TestCase(typeof(Acme.SampleProperties), "Item", typeof(string), typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.String,System.Int32)")]
         [TestCase(typeof(Dictionary<,>), "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.IsReadOnly", ExpectedResult = "P:System.Collections.Generic.Dictionary`2.System#Collections#Generic#ICollection{System#Collections#Generic#KeyValuePair{TKey,TValue}}#IsReadOnly")]
         public string CodeReference_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
-            var propertyInfo = declaringType.GetProperty(propertyName, bindingFlags, null, null, parameterTypes, null);
+            var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();

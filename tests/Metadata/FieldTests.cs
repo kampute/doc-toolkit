@@ -8,43 +8,32 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
-    using System.Reflection;
 
     [TestFixture]
     public class FieldTests
     {
-        private readonly BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-
-        [TestCase(nameof(Acme.Widget.message))]
-        [TestCase(nameof(Acme.Widget.defaultDirection))]
-        [TestCase(nameof(Acme.Widget.PI))]
-        [TestCase(nameof(Acme.Widget.monthlyAverage))]
-        [TestCase(nameof(Acme.Widget.array1))]
-        [TestCase(nameof(Acme.Widget.array2))]
-        [TestCase(nameof(Acme.Widget.pCount))]
-        [TestCase(nameof(Acme.Widget.ppValues))]
-        public void ImplementsField(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.InternalField))]
+        public void ImplementsField(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
-
             Assert.That(metadata, Is.InstanceOf<IField>());
             Assert.That(metadata.Name, Is.EqualTo(fieldName));
         }
 
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = "String")]
-        [TestCase(nameof(Acme.Widget.defaultDirection), ExpectedResult = "Direction")]
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = "Double")]
-        [TestCase(nameof(Acme.Widget.monthlyAverage), ExpectedResult = "Double")]
-        [TestCase(nameof(Acme.Widget.array1), ExpectedResult = "Int64[]")]
-        [TestCase(nameof(Acme.Widget.array2), ExpectedResult = "Widget[,]")]
-        [TestCase(nameof(Acme.Widget.pCount), ExpectedResult = "Int32*")]
-        [TestCase(nameof(Acme.Widget.ppValues), ExpectedResult = "Single**")]
-        public string FieldType_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = nameof(String))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = nameof(Int32))]
+        public string FieldType_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -53,11 +42,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Type.Name;
         }
 
-        [TestCase(nameof(Acme.Widget.pCount), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        public bool IsUnsafe_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = false)]
+        public bool IsUnsafe_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -66,11 +57,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsUnsafe;
         }
 
-        [TestCase(nameof(Acme.Widget.monthlyAverage), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        public bool IsReadOnly_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = false)]
+        public bool IsReadOnly_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -79,11 +71,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsReadOnly;
         }
 
-        [TestCase("valid", ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        public bool IsVolatile_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.InternalField), ExpectedResult = false)]
+        public bool IsVolatile_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -92,11 +85,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsVolatile;
         }
 
-        [TestCase(nameof(Acme.ValueType.buffer), ExpectedResult = true)]
-        [TestCase(nameof(Acme.ValueType.total), ExpectedResult = false)]
-        public bool IsFixedSizeBuffer_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ArrayField), ExpectedResult = false)]
+        public bool IsFixedSizeBuffer_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.ValueType).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -105,11 +99,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsFixedSizeBuffer;
         }
 
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        public bool IsLiteral_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = false)]
+        public bool IsLiteral_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -118,11 +113,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsLiteral;
         }
 
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = 3.14159)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = null)]
-        public object? LiteralValue_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "Constant")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = null)]
+        public object? LiteralValue_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -131,14 +126,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.LiteralValue;
         }
 
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = MemberVisibility.Public)]
-        [TestCase(nameof(Acme.Widget.defaultDirection), ExpectedResult = MemberVisibility.Internal)]
-        [TestCase(nameof(Acme.Widget.monthlyAverage), ExpectedResult = MemberVisibility.ProtectedInternal)]
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = MemberVisibility.Public)]
-        [TestCase("valid", ExpectedResult = MemberVisibility.Private)]
-        public MemberVisibility Visibility_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = MemberVisibility.Public)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.InternalField), ExpectedResult = MemberVisibility.Internal)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = MemberVisibility.Public)]
+        public MemberVisibility Visibility_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -147,13 +140,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Visibility;
         }
 
-        [TestCase(nameof(Acme.Widget.defaultDirection), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        [TestCase(nameof(Acme.Widget.monthlyAverage), ExpectedResult = false)]
-        public bool IsStatic_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.InternalField), ExpectedResult = false)]
+        public bool IsStatic_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -162,13 +155,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsStatic;
         }
 
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.PI), ExpectedResult = true)]
-        [TestCase(nameof(Acme.Widget.defaultDirection), ExpectedResult = false)]
-        [TestCase(nameof(Acme.Widget.monthlyAverage), ExpectedResult = true)]
-        public bool IsVisible_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.InternalField), ExpectedResult = false)]
+        public bool IsVisible_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -177,10 +169,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsVisible;
         }
 
-        [TestCase(nameof(Acme.Widget.message), ExpectedResult = false)]
-        public bool IsSpecialName_HasExpectedValue(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = false)]
+        public bool IsSpecialName_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -189,32 +182,25 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.IsSpecialName;
         }
 
-        [TestCase(nameof(Acme.Widget.message))]
-        public void DeclaringType_HasExpectedType(string fieldName)
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField))]
+        public void DeclaringType_HasExpectedType(Type declaringType, string fieldName)
         {
-            var fieldInfo = typeof(Acme.Widget).GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            Assert.That(metadata.DeclaringType, Is.Not.Null);
-            Assert.That(metadata.DeclaringType.Name, Is.EqualTo(nameof(Acme.Widget)));
+            Assert.That(metadata.DeclaringType.Represents(declaringType), Is.True);
         }
 
-        [TestCase(typeof(Acme.ValueType), nameof(Acme.ValueType.total), ExpectedResult = "F:Acme.ValueType.total")]
-        [TestCase(typeof(Acme.Widget.NestedClass), nameof(Acme.Widget.NestedClass.value), ExpectedResult = "F:Acme.Widget.NestedClass.value")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.message), ExpectedResult = "F:Acme.Widget.message")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.defaultDirection), ExpectedResult = "F:Acme.Widget.defaultDirection")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.PI), ExpectedResult = "F:Acme.Widget.PI")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.monthlyAverage), ExpectedResult = "F:Acme.Widget.monthlyAverage")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.array1), ExpectedResult = "F:Acme.Widget.array1")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.array2), ExpectedResult = "F:Acme.Widget.array2")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.pCount), ExpectedResult = "F:Acme.Widget.pCount")]
-        [TestCase(typeof(Acme.Widget), nameof(Acme.Widget.ppValues), ExpectedResult = "F:Acme.Widget.ppValues")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "F:Acme.SampleFields.ConstField")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "F:Acme.SampleFields.ComplexField")]
         public string CodeReference_HasExpectedValue(Type declaringType, string fieldName)
         {
-            var fieldInfo = declaringType.GetField(fieldName, bindingFlags);
+            var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -226,7 +212,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void TryGetFixedSizeBufferInfo_ReturnsExpectedValues()
         {
-            var fieldInfo = typeof(Acme.ValueType).GetField(nameof(Acme.ValueType.buffer), bindingFlags);
+            var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.FixedBuffer), Acme.Bindings.AllDeclared);
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
@@ -241,8 +227,8 @@ namespace Kampute.DocToolkit.Test.Metadata
             }
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(elementType.Name, Is.EqualTo("Int32"));
-                Assert.That(length, Is.EqualTo(10));
+                Assert.That(elementType.Name, Is.EqualTo(nameof(Byte)));
+                Assert.That(length, Is.EqualTo(16));
             }
         }
     }

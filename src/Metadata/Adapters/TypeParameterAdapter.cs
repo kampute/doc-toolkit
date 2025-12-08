@@ -25,6 +25,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     public class TypeParameterAdapter : TypeAdapter, ITypeParameter
     {
         private readonly Lazy<IMember> declaringMember;
+        private readonly Lazy<TypeParameterConstraints> constraints;
         private readonly Lazy<IReadOnlyList<IType>> typeConstraints;
 
         /// <summary>
@@ -42,6 +43,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentException("Type must be a generic parameter.", nameof(type));
 
             declaringMember = new(GetDeclaringMember);
+            constraints = new(GetConstraints);
             typeConstraints = new(() => [.. GetConstraintTypes()]);
         }
 
@@ -59,12 +61,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             get
             {
-                var attrs = Reflection.GenericParameterAttributes;
+                var attributes = Reflection.GenericParameterAttributes & GenericParameterAttributes.VarianceMask;
 
-                if ((attrs & GenericParameterAttributes.Covariant) != 0)
+                if (attributes.HasFlag(GenericParameterAttributes.Covariant))
                     return TypeParameterVariance.Covariant;
 
-                if ((attrs & GenericParameterAttributes.Contravariant) != 0)
+                if (attributes.HasFlag(GenericParameterAttributes.Contravariant))
                     return TypeParameterVariance.Contravariant;
 
                 return TypeParameterVariance.Invariant;
@@ -72,35 +74,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public virtual TypeParameterConstraints Constraints
-        {
-            get
-            {
-                var attrs = Reflection.GenericParameterAttributes;
-                var constraints = TypeParameterConstraints.None;
-
-                if ((attrs & GenericParameterAttributes.ReferenceTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.ReferenceType;
-
-                if ((attrs & GenericParameterAttributes.NotNullableValueTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.ValueType;
-
-                if ((attrs & GenericParameterAttributes.DefaultConstructorConstraint) != 0)
-                    constraints |= TypeParameterConstraints.DefaultConstructor;
-
-                /* .NET Standard 2.1 does not have the following flags:
-
-                if ((attrs & GenericParameterAttributes.NotNullConstraint) != 0)
-                    constraints |= TypeParameterConstraints.NotNull;
-
-                if ((attrs & GenericParameterAttributes.UnmanagedTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.UnmanagedType;
-
-                */
-
-                return constraints;
-            }
-        }
+        public TypeParameterConstraints Constraints => constraints.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<IType> TypeConstraints => typeConstraints.Value;
@@ -132,20 +106,26 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (other is ITypeParameter otherTypeParameter)
                 return Accepts(otherTypeParameter);
 
-            // Check reference type constraint
+            // Check reference type constraint, disallow value and by-ref-like types
             if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && other.IsValueType)
                 return false;
 
-            // Check value type constraint
-            if (Constraints.HasFlag(TypeParameterConstraints.ValueType) && !other.IsValueType)
+            // Check not-nullable value type constraint, disallow reference types
+            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !other.IsValueType)
+                return false;
+
+            // Check by-ref-like constraint, disallow by-ref-like types if not allowed
+            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && other.IsValueType && other is IStructType { IsRefLike: true })
                 return false;
 
             // Check default constructor constraint (only applies to reference types)
             if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !other.IsValueType)
             {
+                // Must have constructors
                 if (other is not IWithConstructors sourceWithConstructors)
                     return false;
 
+                // Must one of the constructors be a default constructor
                 if (!sourceWithConstructors.Constructors.Any(c => c.IsDefaultConstructor))
                     return false;
             }
@@ -247,6 +227,30 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>An <see cref="IMember"/> representing the declaring member, or <see langword="null"/> if not available.</returns>
         protected virtual IMember GetDeclaringMember()
             => Assembly.Repository.GetMemberMetadata(IsGenericMethodParameter ? Reflection.DeclaringMethod! : Reflection.DeclaringType!);
+
+        /// <summary>
+        /// Retrieves the constraints applied to the type parameter.
+        /// </summary>
+        /// <returns>A <see cref="TypeParameterConstraints"/> value representing the constraints.</returns>
+        protected virtual TypeParameterConstraints GetConstraints()
+        {
+            var attributes = Reflection.GenericParameterAttributes;
+            var constraints = TypeParameterConstraints.None;
+
+            if (attributes.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint))
+                constraints |= TypeParameterConstraints.ReferenceType;
+
+            if (attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
+                constraints |= TypeParameterConstraints.NotNullableValueType;
+
+            if (attributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint))
+                constraints |= TypeParameterConstraints.DefaultConstructor;
+
+            if (attributes.HasFlag((GenericParameterAttributes)32 /* AllowByRefLike */))
+                constraints |= TypeParameterConstraints.AllowByRefLike;
+
+            return constraints;
+        }
 
         /// <summary>
         /// Retrieves the constraint types for the type parameter.

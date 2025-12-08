@@ -100,10 +100,10 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("aabbcc", "ab", '-', false, ExpectedResult = "----cc")]
         [TestCase("aabbcc", "ab", '-', true, ExpectedResult = "-cc")]
         [TestCase("a b c", " ", '_', true, ExpectedResult = "a_b_c")]
-        public string ReplaceMany_ReturnsExpectedResult(
+        public string ReplaceChars_ReturnsExpectedResult(
             string text, string charsToReplace, char replacement, bool skipConsecutiveReplacements)
         {
-            return text.ReplaceMany(charsToReplace, replacement, skipConsecutiveReplacements);
+            return text.ReplaceChars(charsToReplace, replacement, skipConsecutiveReplacements);
         }
 
         [TestCase("hello world", "eo", ExpectedResult = "hll wrld")]
@@ -114,9 +114,24 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("hello", "h", ExpectedResult = "ello")]
         [TestCase("hello", "o", ExpectedResult = "hell")]
         [TestCase("hello", "hel", ExpectedResult = "o")]
-        public string RemoveMany_ReturnsExpectedResult(string text, string charsToRemove)
+        public string RemoveChars_ReturnsExpectedResult(string text, string charsToRemove)
         {
-            return text.RemoveMany(charsToRemove);
+            return text.RemoveChars(charsToRemove);
+        }
+
+        [TestCase("hello", "", "", ExpectedResult = "hello")]
+        [TestCase("hallo", "e", "a", ExpectedResult = "hallo")]
+        [TestCase("abc", "ab", "xy", ExpectedResult = "xyc")]
+        [TestCase("hello", "xyz", "123", ExpectedResult = "hello")]
+        [TestCase("", "a", "b", ExpectedResult = "")]
+        [TestCase("a", "a", "b", ExpectedResult = "b")]
+        [TestCase("aa", "a", "b", ExpectedResult = "bb")]
+        [TestCase("hello world", "eo", "12", ExpectedResult = "h1ll2 w2rld")]
+        [TestCase("test", "t", "T", ExpectedResult = "TesT")]
+        [TestCase("12345", "123", "abc", ExpectedResult = "abc45")]
+        public string TranslateChars_ReturnsExpectedResult(string text, string fromChars, string toChars)
+        {
+            return text.TranslateChars(fromChars, toChars);
         }
 
         [TestCase("simple_title", ExpectedResult = "Simple Title")]

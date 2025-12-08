@@ -60,7 +60,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <value>
         /// <see langword="true"/> if the field is an enum value; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsEnumValue => IsLiteral && DeclaringType is IEnumType;
+        bool IsEnumValue => IsLiteral && DeclaringType.IsEnum;
 
         /// <summary>
         /// Gets the constant value of the field, if it is a literal.

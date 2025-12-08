@@ -23,17 +23,22 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public abstract class CompositeTypeAdapter : GenericCapableTypeAdapter, ICompositeType
     {
-        private readonly Lazy<IReadOnlyList<IInterfaceType>> interfaces;
         private readonly Lazy<IReadOnlyList<IType>> nestedTypes;
+
         private readonly Lazy<IReadOnlyList<IConstructor>> constructors;
         private readonly Lazy<IReadOnlyList<IField>> fields;
         private readonly Lazy<IReadOnlyList<IProperty>> properties;
         private readonly Lazy<IReadOnlyList<IMethod>> methods;
         private readonly Lazy<IReadOnlyList<IEvent>> events;
         private readonly Lazy<IReadOnlyList<IOperator>> operators;
+
         private readonly Lazy<IReadOnlyList<IProperty>> explicitInterfaceProperties;
         private readonly Lazy<IReadOnlyList<IMethod>> explicitInterfaceMethods;
         private readonly Lazy<IReadOnlyList<IEvent>> explicitInterfaceEvents;
+        private readonly Lazy<IReadOnlyList<IOperator>> explicitInterfaceOperators;
+
+        private readonly Lazy<IReadOnlyList<IInterfaceType>> interfaces;
+        private readonly Lazy<IReadOnlyList<IInterfaceType>> implementedInterfaces;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompositeTypeAdapter"/> class.
@@ -47,21 +52,59 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected CompositeTypeAdapter(object declaringEntity, Type type)
             : base(declaringEntity, type)
         {
-            interfaces = new(() => [.. GetInterfaces()]);
-            nestedTypes = new(() => [.. GetNestedTypes()]);
-            constructors = new(() => [.. GetConstructors()]);
-            fields = new(() => [.. GetFields()]);
-            methods = new(() => [.. GetMethods()]);
-            operators = new(() => [.. GetOperators()]);
-            properties = new(() => [.. GetProperties()]);
-            events = new(() => [.. GetEvents()]);
-            explicitInterfaceMethods = new(() => [.. GetExplicitInterfaceMethods()]);
-            explicitInterfaceProperties = new(() => [.. GetExplicitInterfaceProperties()]);
-            explicitInterfaceEvents = new(() => [.. GetExplicitInterfaceEvents()]);
+            nestedTypes = new(() => [.. GetNestedTypes()
+                .Select(Assembly.Repository.GetTypeMetadata<IType>)
+                .OrderByFullName()]);
+
+            constructors = new(() => [.. GetConstructors()
+                .Select(Assembly.Repository.GetConstructorMetadata)
+                .OrderByParameterCount()]);
+
+            fields = new(() => [.. GetFields()
+                .Select(Assembly.Repository.GetFieldMetadata)
+                .OrderByName()]);
+
+            methods = new(() => [.. GetMethods()
+                .Select(Assembly.Repository.GetMethodMetadata<IMethod>)
+                .OrderByName()]);
+
+            operators = new(() => [.. GetOperators()
+                .Select(Assembly.Repository.GetMethodMetadata<IOperator>)
+                .OrderByName()]);
+
+            properties = new(() => [.. GetProperties()
+                .Select(Assembly.Repository.GetPropertyMetadata)
+                .OrderByName()]);
+
+            events = new(() => [.. GetEvents()
+                .Select(Assembly.Repository.GetEventMetadata)
+                .OrderByName()]);
+
+            explicitInterfaceMethods = new(() => [.. GetExplicitInterfaceMethods()
+                .Select(Assembly.Repository.GetMethodMetadata<IMethod>)
+                .OrderByName()]);
+
+            explicitInterfaceProperties = new(() => [.. GetExplicitInterfaceProperties()
+                .Select(Assembly.Repository.GetPropertyMetadata)
+                .OrderByName()]);
+
+            explicitInterfaceEvents = new(() => [.. GetExplicitInterfaceEvents()
+                .Select(Assembly.Repository.GetEventMetadata)
+                .OrderByName()]);
+
+            explicitInterfaceOperators = new(() => [.. GetExplicitInterfaceOperators()
+                .Select(Assembly.Repository.GetMethodMetadata<IOperator>)
+                .OrderByName()]);
+
+            interfaces = new(() => [.. GetInterfaces()
+                .Select(MetadataProvider.GetMetadata<IInterfaceType>)
+                .OrderByFullName()]);
+
+            implementedInterfaces = new(() => [.. Interfaces.Except(GetIndirectInterfaces())]);
         }
 
         /// <inheritdoc/>
-        public virtual IReadOnlyList<IInterfaceType> Interfaces => interfaces.Value;
+        public IReadOnlyList<IType> NestedTypes => nestedTypes.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<IConstructor> Constructors => constructors.Value;
@@ -82,9 +125,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual IReadOnlyList<IOperator> Operators => operators.Value;
 
         /// <inheritdoc/>
-        public IReadOnlyList<IType> NestedTypes => nestedTypes.Value;
-
-        /// <inheritdoc/>
         public IReadOnlyList<IMethod> ExplicitInterfaceMethods => explicitInterfaceMethods.Value;
 
         /// <inheritdoc/>
@@ -93,123 +133,129 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public IReadOnlyList<IEvent> ExplicitInterfaceEvents => explicitInterfaceEvents.Value;
 
+        /// <inheritdoc/>
+        public IReadOnlyList<IOperator> ExplicitInterfaceOperators => explicitInterfaceOperators.Value;
+
+        /// <inheritdoc/>
+        public virtual IReadOnlyList<IInterfaceType> Interfaces => interfaces.Value;
+
+        /// <inheritdoc/>
+        public IReadOnlyList<IInterfaceType> ImplementedInterfaces => implementedInterfaces.Value;
+
         /// <summary>
-        /// Retrieves the interfaces implemented or inherited by the type.
+        /// Retrieves the interfaces indirectly implemented by the type.
+        /// </summary>
+        /// <returns>An enumeration of <see cref="IInterfaceType"/> objects representing the interfaces indirectly implemented by the type.</returns>
+        protected virtual IEnumerable<IInterfaceType> GetIndirectInterfaces()
+        {
+            var allInterfaces = Interfaces;
+            if (allInterfaces.Count == 0)
+                return allInterfaces;
+
+            var indirectInterfaces = allInterfaces.SelectMany(i => i.Interfaces);
+            return BaseType is not null && BaseType.HasInterfaces
+                ? indirectInterfaces.Concat(BaseType.Interfaces)
+                : indirectInterfaces;
+        }
+
+        /// <summary>
+        /// Retrieves all the interfaces implemented or inherited by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IInterfaceType"/> objects representing the interfaces implemented or inherited by the type.</returns>
-        protected virtual IEnumerable<IInterfaceType> GetInterfaces()
+        protected virtual IEnumerable<Type> GetInterfaces()
         {
             return Reflection
                 .GetInterfaces()
-                .Where(i => i.IsPublic || i.IsNestedPublic || i.IsNestedFamily || i.IsNestedFamORAssem)
-                .Select(MetadataProvider.GetMetadata<IInterfaceType>)
-                .OrderBy(i => i.FullName, StringComparer.Ordinal);
+                .Where(i => i.IsPublic || i.IsNestedPublic || i.IsNestedFamily || i.IsNestedFamORAssem);
         }
 
         /// <summary>
         /// Retrieves the types nested within the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IType"/> objects representing the types nested within the type.</returns>
-        protected virtual IEnumerable<IType> GetNestedTypes() => Reflection
+        protected virtual IEnumerable<Type> GetNestedTypes() => Reflection
             .GetNestedTypes(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(t => !t.IsSpecialName && IsVisibleNestedType(t))
-            .Select(Assembly.Repository.GetTypeMetadata)
-            .OrderBy(t => t.Name, StringComparer.Ordinal);
+            .Where(t => !t.IsSpecialName && IsVisibleNestedType(t));
 
         /// <summary>
         /// Retrieves the visible constructors declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IConstructor"/> objects representing the constructors declared by the type.</returns>
-        protected virtual IEnumerable<IConstructor> GetConstructors() => Reflection
+        protected virtual IEnumerable<ConstructorInfo> GetConstructors() => Reflection
             .GetConstructors(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(IsVisibleMethod)
-            .Select(Assembly.Repository.GetConstructorMetadata)
-            .OrderBy(c => c.Parameters.Count);
+            .Where(IsVisibleMethod);
 
         /// <summary>
         /// Retrieves the visible fields declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IField"/> objects representing the fields declared by the type.</returns>
-        protected virtual IEnumerable<IField> GetFields() => Reflection
+        protected virtual IEnumerable<FieldInfo> GetFields() => Reflection
             .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-            .Where(f => !f.IsSpecialName && IsVisibleField(f))
-            .Select(Assembly.Repository.GetFieldMetadata)
-            .OrderBy(f => f.Name, StringComparer.Ordinal);
+            .Where(f => !f.IsSpecialName && IsVisibleField(f));
 
         /// <summary>
         /// Retrieves the visible methods declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IMethod"/> objects representing the methods declared by the type.</returns>
-        protected virtual IEnumerable<IMethod> GetMethods() => Reflection
+        protected virtual IEnumerable<MethodInfo> GetMethods() => Reflection
             .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-            .Where(m => !m.IsSpecialName && IsVisibleMethod(m))
-            .Select(Assembly.Repository.GetMethodMetadata<IMethod>)
-            .OrderBy(m => m.Name, StringComparer.Ordinal)
-            .ThenBy(m => m.Parameters.Count);
+            .Where(m => !m.IsSpecialName && IsVisibleMethod(m));
 
         /// <summary>
         /// Retrieves the visible properties declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IProperty"/> objects representing the properties declared by the type.</returns>
-        protected virtual IEnumerable<IProperty> GetProperties() => Reflection
+        protected virtual IEnumerable<PropertyInfo> GetProperties() => Reflection
             .GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-            .Where(p => !p.IsSpecialName && (IsVisibleMethod(p.GetMethod) || IsVisibleMethod(p.SetMethod)))
-            .Select(Assembly.Repository.GetPropertyMetadata)
-            .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .ThenBy(p => p.Parameters.Count);
+            .Where(p => !p.IsSpecialName && (IsVisibleMethod(p.GetMethod) || IsVisibleMethod(p.SetMethod)));
 
         /// <summary>
         /// Retrieves the visible events declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IEvent"/> objects representing the events declared by the type.</returns>
-        protected virtual IEnumerable<IEvent> GetEvents() => Reflection
+        protected virtual IEnumerable<EventInfo> GetEvents() => Reflection
             .GetEvents(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-            .Where(e => !e.IsSpecialName && (IsVisibleMethod(e.AddMethod) || IsVisibleMethod(e.RemoveMethod)))
-            .Select(Assembly.Repository.GetEventMetadata)
-            .OrderBy(e => e.Name, StringComparer.Ordinal);
+            .Where(e => !e.IsSpecialName && (IsVisibleMethod(e.AddMethod) || IsVisibleMethod(e.RemoveMethod)));
 
         /// <summary>
         /// Retrieves the operator methods declared by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IOperator"/> objects representing the operator methods declared by the type.</returns>
-        protected virtual IEnumerable<IOperator> GetOperators() => Reflection
-            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static)
-            .Where(m => m.IsSpecialName && m.Name.StartsWith("op_", StringComparison.Ordinal))
-            .Select(Assembly.Repository.GetMethodMetadata<IOperator>)
-            .OrderBy(o => o.Name, StringComparer.Ordinal)
-            .ThenBy(o => o.Parameters.Count);
+        protected virtual IEnumerable<MethodInfo> GetOperators() => Reflection
+            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
+            .Where(m => m.IsSpecialName && m.Name.StartsWith("op_", StringComparison.Ordinal));
 
         /// <summary>
         /// Retrieves the explicit interface methods implemented by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IMethod"/> objects representing the explicit interface methods implemented by the type.</returns>
-        protected virtual IEnumerable<IMethod> GetExplicitInterfaceMethods() => Reflection
-            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(m => !m.IsSpecialName && IsExplicitMethod(m))
-            .Select(Assembly.Repository.GetMethodMetadata<IMethod>)
-            .OrderBy(m => m.Name, StringComparer.Ordinal)
-            .ThenBy(m => m.Parameters.Count);
+        protected virtual IEnumerable<MethodInfo> GetExplicitInterfaceMethods() => Reflection
+            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+            .Where(m => !m.IsSpecialName && m.IsPrivate && m.IsFinal && m.IsVirtual && !IsCompilerGeneratedBridgeMethod(m));
 
         /// <summary>
         /// Retrieves the explicit interface properties implemented by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IProperty"/> objects representing the explicit interface properties implemented by the type.</returns>
-        protected virtual IEnumerable<IProperty> GetExplicitInterfaceProperties() => Reflection
-            .GetProperties(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(p => !p.IsSpecialName && IsExplicitMember(p))
-            .Select(Assembly.Repository.GetPropertyMetadata)
-            .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .ThenBy(p => p.Parameters.Count);
+        protected virtual IEnumerable<PropertyInfo> GetExplicitInterfaceProperties() => Reflection
+            .GetProperties(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+            .Where(p => !p.IsSpecialName && IsExplicitMember(p));
 
         /// <summary>
         /// Retrieves the explicit interface events implemented by the type.
         /// </summary>
         /// <returns>An enumeration of <see cref="IEvent"/> objects representing the explicit interface events implemented by the type.</returns>
-        protected virtual IEnumerable<IEvent> GetExplicitInterfaceEvents() => Reflection
-            .GetEvents(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(e => !e.IsSpecialName && IsExplicitMember(e))
-            .Select(Assembly.Repository.GetEventMetadata)
-            .OrderBy(p => p.Name, StringComparer.Ordinal);
+        protected virtual IEnumerable<EventInfo> GetExplicitInterfaceEvents() => Reflection
+            .GetEvents(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+            .Where(e => !e.IsSpecialName && IsExplicitMember(e));
+
+        /// <summary>
+        /// Retrieves the explicit interface operators implemented by the type.
+        /// </summary>
+        /// <returns>An enumeration of <see cref="IOperator"/> objects representing the explicit interface operators implemented by the type.</returns>
+        protected virtual IEnumerable<MethodInfo> GetExplicitInterfaceOperators() => Reflection
+            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+            .Where(m => m.IsPrivate && m.Name.Contains(".op_", StringComparison.Ordinal) && !IsCompilerGeneratedBridgeMethod(m));
 
         /// <summary>
         /// Determines whether a method is visible based on its access modifiers.
@@ -256,40 +302,33 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return member is not null
                 && member.Name.IndexOf('.') > 0
-                && !member.CustomAttributes.Any(attr => attr.AttributeType.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute");
+                && !member.CustomAttributes.Any(attr => attr.AttributeType.FullName == AttributeNames.CompilerGenerated);
         }
 
         /// <summary>
-        /// Determines whether a method is an explicit interface implementation.
+        /// Determines whether an explicit interface implementation is a compiler-generated bridge method.
         /// </summary>
         /// <param name="method">The reflection information of the method to check.</param>
-        /// <returns><see langword="true"/> if the method is an explicit interface implementation; otherwise, <see langword="false"/>.</returns>
-        /// <remarks>
-        /// This method excludes compiler-generated bridge methods for implicit interface implementations with by-ref parameters.
-        /// </remarks>
-        protected virtual bool IsExplicitMethod(MethodInfo method)
+        /// <returns><see langword="true"/> if the method is is a compiler-generated bridge method; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is <see langword="null"/>.</exception>
+        protected virtual bool IsCompilerGeneratedBridgeMethod(MethodInfo method)
         {
-            if (!IsExplicitMember(method) || !(method.IsPrivate && method.IsFinal && method.IsVirtual))
-                return false;
+            if (method is null)
+                throw new ArgumentNullException(nameof(method));
 
-            // Compiler-generated bridge methods are created for implicit interface implementations
-            // that have by-ref parameters (in, ref, out). Check if any parameter is by-ref.
             var parameters = method.GetParameters();
-            if (!parameters.Any(p => p.ParameterType.IsByRef))
-                return true; // No by-ref parameters, so it's a user-written explicit implementation
 
-            // Has by-ref parameters - check if there's a public method with the same signature
-            var publicMethod = Reflection.GetMethod
+            // Compiler-generated bridge methods are created for explicit interface implementations
+            // that have by-ref parameters (in, ref, out). These methods must have a corresponding
+            // public method with the same signature.
+            return parameters.Any(p => p.ParameterType.IsByRef) && Reflection.GetMethod
             (
                 name: method.Name.SubstringAfterLast('.'),
-                bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance,
+                bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance),
                 binder: null,
                 types: [.. parameters.Select(p => p.ParameterType)],
                 modifiers: null
-            );
-
-            // If a public method with the same signature exists, this is a compiler-generated bridge
-            return publicMethod is null;
+            ) is not null;
         }
     }
 }

@@ -52,7 +52,7 @@ namespace Kampute.DocToolkit.Support
 
             var size = text.Length;
             var requiredCapacity = size * 2;
-            Span<char> newTextSpan = requiredCapacity <= MaxStackAllocSize
+            var newTextSpan = requiredCapacity <= MaxStackAllocSize
                 ? stackalloc char[requiredCapacity]
                 : new char[requiredCapacity];
 
@@ -132,7 +132,7 @@ namespace Kampute.DocToolkit.Support
                 throw new ArgumentNullException(nameof(text));
 
             var size = text.Length;
-            Span<char> newTextSpan = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
+            var newTextSpan = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
 
             var index = 0;
             var escaped = false;

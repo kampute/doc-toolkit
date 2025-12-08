@@ -7,10 +7,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Capabilities;
+    using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="MethodInfo"/> representing an operator overload and provides metadata access.
@@ -22,11 +24,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// Language Runtime (CLR) or Metadata Load Context (MLC).
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
-    public class OperatorAdapter : TypeMemberAdapter<MethodInfo>, IOperator
+    public class OperatorAdapter : MethodBaseAdapter, IOperator
     {
-        private readonly Lazy<IReadOnlyList<IParameter>> parameters;
-        private readonly Lazy<IParameter> returnParameter;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="OperatorAdapter"/> class.
         /// </summary>
@@ -37,72 +36,109 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public OperatorAdapter(IType declaringType, MethodInfo method)
             : base(declaringType, method)
         {
-            Name = method.Name[3..];
-            parameters = new(() => [.. GetParameters()]);
-            returnParameter = new(GetReturnParameter);
+            var i = method.Name.IndexOf("op_", StringComparison.Ordinal);
+            if (i == 0)
+                Name = method.Name[3..]; // Standard operator overload
+            else if (i > 0)
+                Name = method.Name.Remove(i, 3); // Explicit interface implementation of operator overload
+            else
+                throw new ArgumentException("The provided method is not an operator overload.", nameof(method));
         }
 
         /// <inheritdoc/>
         public override string Name { get; }
 
         /// <inheritdoc/>
-        public IReadOnlyList<IParameter> Parameters => parameters.Value;
+        public string MethodName => Reflection.Name;
 
         /// <inheritdoc/>
-        public IParameter Return => returnParameter.Value;
-
-        /// <inheritdoc/>
-        public override bool IsSpecialName => true;
-
-        /// <inheritdoc/>
-        public override bool IsStatic => true;
-
-        /// <inheritdoc/>
-        public virtual bool IsConversionOperator => Name is "Implicit" or "Explicit";
+        public virtual bool IsConversionOperator => Name is "Implicit" or "Explicit"; // Note: Conversion operators are not supported in interfaces
 
         /// <inheritdoc/>
         public override bool IsUnsafe => Return.Type.IsUnsafe || Parameters.Any(static p => p.Type.IsUnsafe);
 
         /// <inheritdoc/>
-        public virtual IEnumerable<IMember> Overloads => ((IWithOperators)DeclaringType).Operators.Where(m => m.Name == Name && !ReferenceEquals(m, this));
+        public IOperator? OverriddenOperator => (IOperator?)OverriddenMember;
 
         /// <inheritdoc/>
-        protected override MemberVisibility GetMemberVisibility()
+        public IOperator? ImplementedOperator => (IOperator?)ImplementedMember;
+
+        /// <inheritdoc/>
+        public override IEnumerable<IMember> Overloads => GetOperatorsWithSameName(DeclaringType, preserveOrder: true).Where(m => !ReferenceEquals(m, this));
+
+        /// <inheritdoc/>
+        protected override IVirtualTypeMember? FindImplementedMember()
         {
-            if (Reflection.IsPublic)
-                return MemberVisibility.Public;
-            else if (Reflection.IsFamily)
-                return MemberVisibility.Protected;
-            else if (Reflection.IsAssembly)
-                return MemberVisibility.Internal;
-            else if (Reflection.IsFamilyAndAssembly)
-                return MemberVisibility.PrivateProtected;
-            else if (Reflection.IsFamilyOrAssembly)
-                return MemberVisibility.ProtectedInternal;
-            else
-                return MemberVisibility.Private;
+            if (IsPublic)
+            {
+                return ((IInterfaceCapableType)DeclaringType).Interfaces
+                    .SelectMany(i => i.Operators.WhereName(Name))
+                    .FirstOrDefault(HasMatchingSignature);
+            }
+
+            if (IsExplicitInterfaceImplementation)
+            {
+                var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
+
+                return ((IInterfaceCapableType)DeclaringType)
+                    .Interfaces.FindByFullName(interfaceFullName)?
+                    .Operators.WhereName(memberName).FirstOrDefault(HasMatchingSignature);
+            }
+
+            return null;
+        }
+
+        /// <inheritdoc/>
+        protected override IVirtualTypeMember? FindGenericDefinition()
+        {
+            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
+                ? GetOperatorsWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
+                : (IVirtualTypeMember?)null;
         }
 
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts()
         {
-            var signature = $"op_{Name}({string.Join(',', Parameters.Select(p => p.Type.ParametericSignature))})";
-            if (IsConversionOperator)
-                signature = $"{signature}~{Return.Type.ParametericSignature}";
+            using var reusable = StringBuilderPool.Shared.GetBuilder();
+            var sb = reusable.Builder;
 
-            return ('M', signature);
+            sb.Append(MethodName);
+
+            if (MethodName.Contains('.'))
+                sb.Replace('.', '#').Replace('<', '{').Replace('>', '}');
+
+            if (Parameters.Count > 0)
+            {
+                sb.Append('(');
+                sb.AppendJoin(',', Parameters.Select(p => p.Type.ParametricSignature));
+                sb.Append(')');
+            }
+
+            if (IsConversionOperator)
+            {
+                sb.Append('~');
+                sb.Append(Return.Type.ParametricSignature);
+            }
+
+            return ('M', sb.ToString());
         }
 
         /// <summary>
-        /// Retrieves the parameters of the operator overload.
+        /// Retrieves operators from the specified type that have the same name as this operator.
         /// </summary>
-        /// <returns>An enumerable collection of <see cref="IParameter"/> objects representing the parameters of the operator overload.</returns>
-        protected virtual IEnumerable<IParameter> GetParameters() => Reflection.GetParameters().Select(Assembly.Repository.GetParameterMetadata);
-
-        /// <summary>
-        /// Retrieves the return parameter of the operator overload.
-        /// </summary>
-        /// <returns>An <see cref="IParameter"/> object representing the return parameter of the operator overload.</returns>
-        protected virtual IParameter GetReturnParameter() => Assembly.Repository.GetParameterMetadata(Reflection.ReturnParameter);
+        /// <param name="type">The type to search for similar property names.</param>
+        /// <param name="preserveOrder">Indicates whether to preserve the order of operators as they appear in the type.</param>
+        /// <returns>An enumerable collection of <see cref="IOperator"/> objects with same name as this operator.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected IEnumerable<IOperator> GetOperatorsWithSameName(IType type, bool preserveOrder = false)
+        {
+            return IsExplicitInterfaceImplementation
+                ? type is IWithExplicitInterfaceOperators withExplicitOperators
+                    ? withExplicitOperators.ExplicitInterfaceOperators.WhereName(Name, preserveOrder)
+                    : []
+                : type is IWithOperators withOperators
+                    ? withOperators.Operators.WhereName(Name, preserveOrder)
+                    : [];
+        }
     }
 }
