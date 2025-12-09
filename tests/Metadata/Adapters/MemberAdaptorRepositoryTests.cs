@@ -63,17 +63,6 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void ResolveCanonicalType_WithGenericTypeAsParameter_ReturnsDirectInstance()
-        {
-            var direct = typeof(Acme.SampleGenericClass<>);
-            var viaReflection = typeof(Acme.SampleExtensions)
-                .GetMethod(nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass))!
-                .GetParameters()[0].ParameterType;
-
-            Assert.That(repository.ResolveCanonicalType(viaReflection), Is.SameAs(direct));
-        }
-
-        [Test]
         public void ResolveCanonicalType_WithGenericNestedType_ReturnsDirectInstance()
         {
             var direct = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass);
@@ -127,6 +116,16 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         {
             var type = typeof(Dictionary<,>.KeyCollection.Enumerator).GetInterfaces()
                 .First(static i => i.Name == "IEnumerator`1");
+
+            Assert.That(repository.ResolveCanonicalType(type), Is.SameAs(type));
+        }
+
+        [Test]
+        public void ResolveCanonicalType_WithGenericTypeAsParameter_ReturnsSameInstance()
+        {
+            var type = typeof(Acme.SampleExtensions)
+                .GetMethod(nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass))!
+                .GetParameters()[0].ParameterType;
 
             Assert.That(repository.ResolveCanonicalType(type), Is.SameAs(type));
         }

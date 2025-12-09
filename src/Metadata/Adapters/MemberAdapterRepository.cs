@@ -101,11 +101,32 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             for (var i = 0; i < genericArguments.Length; ++i)
             {
                 var arg = genericArguments[i];
-                if (!arg.IsGenericParameter || arg.Name != genericParameters[i].Name)
+                if (!arg.IsGenericParameter)
+                    return type;
+
+                var par = genericParameters[i];
+                if (arg.Name != par.Name || !SameFullName(arg.DeclaringType.BaseType, par.DeclaringType))
                     return type;
             }
 
             return genericDefinition;
+
+            static bool SameFullName(Type? a, Type? b)
+            {
+                if (ReferenceEquals(a, b))
+                    return true;
+
+                while (a is not null && b is not null)
+                {
+                    if (a.Name != b.Name)
+                        return false;
+
+                    a = a.DeclaringType;
+                    b = b.DeclaringType;
+                }
+
+                return a?.Namespace == b?.Namespace;
+            }
         }
 
         /// <inheritdoc/>
