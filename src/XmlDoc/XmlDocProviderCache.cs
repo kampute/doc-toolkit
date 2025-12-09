@@ -32,23 +32,10 @@ namespace Kampute.DocToolkit.XmlDoc
             innerProvider = provider ?? throw new ArgumentNullException(nameof(provider));
         }
 
-        /// <summary>
-        /// Gets a value indicating whether the XML documentation provider has any documentation available.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if the provider contains documentation; otherwise, <see langword="false"/>.
-        /// </value>
+        /// <inheritdoc/>
         public bool HasDocumentation => innerProvider.HasDocumentation;
 
-        /// <summary>
-        /// Attempts to retrieve the XML documentation for the specified code reference.
-        /// </summary>
-        /// <param name="cref">The code reference to retrieve the documentation for.</param>
-        /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the code reference,
-        /// if the documentation is available; otherwise, <see langword="null"/>.
-        /// </param>
-        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
+        /// <inheritdoc/>
         public bool TryGetDoc(string cref, [NotNullWhen(true)] out XmlDocEntry? doc)
         {
             if (string.IsNullOrWhiteSpace(cref))

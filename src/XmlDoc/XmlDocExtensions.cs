@@ -101,7 +101,12 @@ namespace Kampute.DocToolkit.XmlDoc
         /// <returns>An enumerable of <see cref="XmlDocInspectionIssue"/> instances representing the issues found.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="xmlDocProvider"/> or <paramref name="member"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IEnumerable<XmlDocInspectionIssue> InspectDocumentation(this IXmlDocProvider xmlDocProvider, IMember member, XmlDocInspectionOptions options = XmlDocInspectionOptions.Required)
+        public static IEnumerable<XmlDocInspectionIssue> InspectDocumentation
+        (
+            this IXmlDocProvider xmlDocProvider,
+            IMember member,
+            XmlDocInspectionOptions options = XmlDocInspectionOptions.Required
+        )
         {
             if (xmlDocProvider is null)
                 throw new ArgumentNullException(nameof(xmlDocProvider));

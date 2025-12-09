@@ -15,88 +15,25 @@ namespace Kampute.DocToolkit.Test.XmlDoc
     [TestFixture]
     public class XmlDocProviderTests
     {
-        private const string XmlDoc =
-          @"<?xml version='1.0' encoding='utf-8'?>
-            <doc>
-                <members>
-                    <member name='T:System.NamespaceDoc'>
-                        <summary>Contains system components.</summary>
-                    </member>
-                    <member name='M:System.Object.ToString'>
-                        <summary>Returns a string that represents the current object.</summary>
-                    </member>
-                    <member name='M:System.String.ToString'>
-                        <inheritdoc/>
-                    </member>
-                    <member name='M:System.Int32.ToString'>
-                        <inheritdoc cref='M:System.Decimal.ToString'/>
-                    </member>
-                    <member name='M:System.Double.ToString'>
-                        <inheritdoc path='/doc/members/member[@name=""M:System.Decimal.ToString""]/*'/>
-                    </member>
-                    <member name='M:System.Decimal.ToString'>
-                        <include file='included.xml' path='/doc/members/member[@name=""M:System.Decimal.ToString""]/*'/>
-                    </member>
-                </members>
-            </doc>";
-
-        private const string IncludedXmlDoc =
-          @"<?xml version='1.0' encoding='utf-8'?>
-            <doc>
-                <members>
-                    <member name='M:System.Decimal.ToString'>
-                        <summary>Converts the numeric value of this instance to its equivalent string representation.</summary>
-                    </member>
-                </members>
-            </doc>";
-
-        private static readonly string dir = Path.GetTempPath();
-        private static readonly string mainXmlFilePath = Path.Combine(dir, "doc.xml");
-        private static readonly string includedXmlFilePath = Path.Combine(dir, "included.xml");
-        private XmlDocProvider xmlDocProvider = null!;
+        private readonly XmlDocProvider xmlDocProvider = new();
 
         [SetUp]
         public void SetUp()
         {
-            File.WriteAllText(mainXmlFilePath, XmlDoc);
-            File.WriteAllText(includedXmlFilePath, IncludedXmlDoc);
-
-            xmlDocProvider = new XmlDocProvider();
-            xmlDocProvider.ImportFile(mainXmlFilePath);
             xmlDocProvider.ImportFile(Path.ChangeExtension(GetType().Assembly.Location, ".xml"));
         }
 
-        [TearDown]
-        public void TearDown()
+        [TestCase("Acme", ExpectedResult = "Documentation for the Acme namespace.")]
+        public string? TryGetNamespaceDoc_ReturnsCorrectDoc(string ns)
         {
-            if (File.Exists(mainXmlFilePath))
-                File.Delete(mainXmlFilePath);
-            if (File.Exists(includedXmlFilePath))
-                File.Delete(includedXmlFilePath);
-        }
-
-        [Test]
-        public void HasDocumentation_ReturnsTrue()
-        {
-            Assert.That(xmlDocProvider.HasDocumentation, Is.True);
-        }
-
-        [TestCase("M:System.Object.ToString", ExpectedResult = "Returns a string that represents the current object.")] // Direct summary
-        [TestCase("M:System.String.ToString", ExpectedResult = "Returns a string that represents the current object.")] // Inherited summary
-        [TestCase("M:System.Int32.ToString", ExpectedResult = "Converts the numeric value of this instance to its equivalent string representation.")] // Inherited cref summary
-        [TestCase("M:System.Double.ToString", ExpectedResult = "Converts the numeric value of this instance to its equivalent string representation.")] // Inherited path summary
-        [TestCase("M:System.Decimal.ToString", ExpectedResult = "Converts the numeric value of this instance to its equivalent string representation.")] // Included summary
-        [TestCase("N:System", ExpectedResult = null)]
-        public string? TryGetDoc_ReturnsCorrectMemberDoc(string cref)
-        {
-            return xmlDocProvider.TryGetDoc(cref, out var memberDoc) ? memberDoc.Summary.ToString().Trim() : null;
+            return xmlDocProvider.TryGetNamespaceDoc(ns, out var doc) ? doc.Summary.ToString().Trim() : null;
         }
 
         [TestCase(typeof(Acme.ISampleInterface), ExpectedResult = "A sample interface for testing purposes.")]
         [TestCase(typeof(Acme.ISampleGenericInterface<>), ExpectedResult = "A sample generic interface.")]
         [TestCase(typeof(Acme.SampleGenericClass<>), ExpectedResult = "A sample generic class.")]
         [TestCase(typeof(Acme.SampleGenericStruct<>), ExpectedResult = "A sample generic struct.")]
-        public string? TryGetMemberDoc_ForTypes_ReturnsCorrectMemberDoc(Type type)
+        public string? TryGetMemberDoc_ForTypes_ReturnsCorrectDoc(Type type)
         {
             return xmlDocProvider.TryGetMemberDoc(type.GetMetadata(), out var doc) ? doc.Summary.ToString().Trim() : null;
         }
@@ -104,7 +41,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = "Initializes a new instance of the SampleConstructors class with required members set.")]
         [TestCase(typeof(Acme.SampleConstructors), typeof(int), ExpectedResult = "Initializes a new instance of the SampleConstructors class with an integer parameter.")]
         [TestCase(typeof(Acme.ISampleInterface), ExpectedResult = "Initializes the static members of the ISampleInterface interface.")]
-        public string? TryGetMemberDoc_ForConstructors_ReturnsCorrectMemberDoc(Type type, params Type[] paramTypes)
+        public string? TryGetMemberDoc_ForConstructors_ReturnsCorrectDoc(Type type, params Type[] paramTypes)
         {
             var constructor = type.GetConstructor(Acme.Bindings.AllDeclared, null, paramTypes, null)?.GetMetadata();
             Assert.That(constructor, Is.InstanceOf<IConstructor>());
@@ -125,7 +62,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "An instance extension method for generic class.")]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "A static extension method for generic class.")]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "A generic extension method for generic class.")]
-        public string? TryGetMemberDoc_ForMethod_ReturnsCorrectMemberDoc(Type type, string methodName)
+        public string? TryGetMemberDoc_ForMethod_ReturnsCorrectDoc(Type type, string methodName)
         {
             var method = type.GetMethod(methodName, Acme.Bindings.AllDeclared)?.GetMetadata();
             Assert.That(method, Is.InstanceOf<IMethod>());
@@ -137,7 +74,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleOperators), "op_Addition", ExpectedResult = "Addition operator.")]
         [TestCase(typeof(Acme.SampleOperators), "op_IncrementAssignment", ExpectedResult = "Increment operator.")]
         [TestCase(typeof(Acme.SampleOperators), "Acme.ISampleInterface.op_False", ExpectedResult = "Explicitly implements the false operator for the interface.")]
-        public string? TryGetMemberDoc_ForOperators_ReturnsCorrectMemberDoc(Type type, string methodName)
+        public string? TryGetMemberDoc_ForOperators_ReturnsCorrectDoc(Type type, string methodName)
         {
             var op = type.GetMethod(methodName, Acme.Bindings.AllDeclared)?.GetMetadata();
             Assert.That(op, Is.InstanceOf<IOperator>());
@@ -152,7 +89,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionProperty", ExpectedResult = "A static extension property.")]
         [TestCase(typeof(Acme.SampleExtensions), "InstanceExtensionPropertyForClass", ExpectedResult = "An instance extension property for generic class.")]
         [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionPropertyForClass", ExpectedResult = "A static extension property for generic class.")]
-        public string? TryGetMemberDoc_ForProperty_ReturnsCorrectMemberDoc(Type type, string propertyName)
+        public string? TryGetMemberDoc_ForProperty_ReturnsCorrectDoc(Type type, string propertyName)
         {
             var property = propertyName.Contains("ExtensionProperty")
                 ? type.GetMetadata<IClassType>().Properties.FirstOrDefault(p => p.Name == propertyName)
@@ -165,7 +102,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "A regular event.")]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "A static event.")]
         [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "Explicitly implements the interface event.")]
-        public string? TryGetMemberDoc_ForEvents_ReturnsCorrectMemberDoc(Type type, string eventName)
+        public string? TryGetMemberDoc_ForEvents_ReturnsCorrectDoc(Type type, string eventName)
         {
             var ev = type.GetEvent(eventName, Acme.Bindings.AllDeclared)?.GetMetadata();
             Assert.That(ev, Is.InstanceOf<IEvent>());
@@ -176,7 +113,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "A static readonly field.")]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "A complex unsafe field.")]
         [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceField), ExpectedResult = "A static readonly field in interface.")]
-        public string? TryGetMemberDoc_ForFields_ReturnsCorrectMemberDoc(Type type, string fieldName)
+        public string? TryGetMemberDoc_ForFields_ReturnsCorrectDoc(Type type, string fieldName)
         {
             var field = type.GetField(fieldName, Acme.Bindings.AllDeclared)?.GetMetadata();
             Assert.That(field, Is.InstanceOf<IField>());

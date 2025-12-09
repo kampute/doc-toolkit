@@ -8,22 +8,8 @@ namespace Kampute.DocToolkit.XmlDoc
     using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
-    /// Defines a contract for providing XML documentation for code references, types and type members.
+    /// Defines a contract for providing parsed XML documentation for namespaces, types and type members.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The <see cref="IXmlDocProvider"/> interface defines the core functionality for retrieving documentation
-    /// associated with types and members within an assembly.
-    /// </para>
-    /// Implementations of this interface are responsible for:
-    /// <list type="bullet">
-    ///   <item><description>Loading and parsing XML documentation from various sources</description></item>
-    ///   <item><description>Resolving documentation requests by code reference or reflection member</description></item>
-    ///   <item><description>Managing the internal storage and retrieval of documentation content</description></item>
-    /// </list>
-    /// The <see cref="XmlDocProvider"/> class is a concrete implementation of this interface that loads XML documentation
-    /// from XML files generated during compilation.
-    /// </remarks>
     /// <seealso cref="XmlDocProvider"/>
     public interface IXmlDocProvider
     {
@@ -40,10 +26,10 @@ namespace Kampute.DocToolkit.XmlDoc
         /// </summary>
         /// <param name="cref">The code reference to retrieve the documentation for.</param>
         /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the code reference,
-        /// if the documentation is available; otherwise, <see langword="null"/>.
+        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the code,
+        /// reference if the code reference is valid and documentation is found; otherwise, <see langword="null"/>.
         /// </param>
-        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> if the documentation is found; otherwise, <see langword="false"/>.</returns>
         bool TryGetDoc(string cref, [NotNullWhen(true)] out XmlDocEntry? doc);
     }
 }
