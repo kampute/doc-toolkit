@@ -8,7 +8,6 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
-    using System.Collections.Generic;
     using System.Linq;
 
     [TestFixture]
@@ -399,7 +398,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "P:Acme.SampleProperties.RegularProperty")]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.Int32)")]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(string), typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.String,System.Int32)")]
-        [TestCase(typeof(Dictionary<,>), "System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<TKey,TValue>>.IsReadOnly", ExpectedResult = "P:System.Collections.Generic.Dictionary`2.System#Collections#Generic#ICollection{System#Collections#Generic#KeyValuePair{TKey,TValue}}#IsReadOnly")]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = "P:Acme.SampleProperties.Acme#ISampleInterface#InterfaceProperty")]
         public string CodeReference_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
             var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);

@@ -281,6 +281,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = "M:Acme.SampleMethods.RefParamsMethod(System.Int32@,System.String@,System.Double@)")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceMethod")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceStaticMethod", ExpectedResult = "M:Acme.SampleMethods.Acme#ISampleInterface#InterfaceStaticMethod")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "M:Acme.SampleExtensions.ClassicExtensionMethodForClass``1(Acme.SampleGenericClass{``0})")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "M:Acme.SampleExtensions.InstanceExtensionMethodForClass``1(Acme.SampleGenericClass{``0})")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "M:Acme.SampleExtensions.StaticExtensionMethodForClass``1")]
         public string CodeReference_HasExpectedValue(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
