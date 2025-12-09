@@ -129,14 +129,20 @@ namespace Kampute.DocToolkit.Metadata
         /// Retrieves metadata for a method.
         /// </summary>
         /// <param name="methodInfo">The method to get metadata for.</param>
+        /// <param name="asDeclared">Indicates whether to retrieve extension methods in their declared form rather than their usage form.</param>
         /// <returns>A method or operator metadata abstraction.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="methodInfo"/> is <see langword="null"/>.</exception>
-        public static IMethodBase GetMetadata(this MethodInfo methodInfo)
+        /// <remarks>
+        /// When <paramref name="asDeclared"/> is <see langword="false"/> (the default), extension methods are detected and resolved
+        /// to reflect their usage form rather than their declared form. Otherwise, the metadata is retrieved as declared, without
+        /// extension method detection and resolution.
+        /// </remarks>
+        public static IMethodBase GetMetadata(this MethodInfo methodInfo, bool asDeclared = false)
         {
             if (methodInfo is null)
                 throw new ArgumentNullException(nameof(methodInfo));
 
-            return GetMetadata(methodInfo.DeclaringType!.Assembly).Repository.GetMethodMetadata(methodInfo);
+            return GetMetadata(methodInfo.DeclaringType!.Assembly).Repository.GetMethodMetadata(methodInfo, asDeclared);
         }
 
         /// <summary>
