@@ -92,6 +92,30 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             return xmlDocProvider.TryGetDoc(cref, out var memberDoc) ? memberDoc.Summary.ToString().Trim() : null;
         }
 
+        [TestCase(typeof(Acme.ISampleInterface), ExpectedResult = "A sample interface for testing purposes.")]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), ExpectedResult = "A sample generic interface.")]
+        [TestCase(typeof(Acme.SampleGenericClass<>), ExpectedResult = "A sample generic class.")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), ExpectedResult = "A sample generic struct.")]
+        public string? TryGetMemberDoc_ForTypes_ReturnsCorrectMemberDoc(Type type)
+        {
+            return xmlDocProvider.TryGetMemberDoc(type.GetMetadata(), out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = "Initializes a new instance of the SampleConstructors class with required members set.")]
+        [TestCase(typeof(Acme.SampleConstructors), typeof(int), ExpectedResult = "Initializes a new instance of the SampleConstructors class with an integer parameter.")]
+        [TestCase(typeof(Acme.ISampleInterface), ExpectedResult = "Initializes the static members of the ISampleInterface interface.")]
+        public string? TryGetMemberDoc_ForConstructors_ReturnsCorrectMemberDoc(Type type, params Type[] paramTypes)
+        {
+            var constructor = type.GetConstructor(Acme.Bindings.AllDeclared, null, paramTypes, null)?.GetMetadata();
+            Assert.That(constructor, Is.InstanceOf<IConstructor>());
+
+            return xmlDocProvider.TryGetMemberDoc(constructor, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), ExpectedResult = "A method with params array.")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = "A generic method with a generic parameter.")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithOutParam", ExpectedResult = "Explicitly implements the interface method with out parameter.")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceStaticMethod", ExpectedResult = "Explicitly implements the static interface method.")]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.NonExtensionMethod), ExpectedResult = "A non-extension method to verify correct classification.")]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethod), ExpectedResult = "A classic extension method.")]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethod), ExpectedResult = "An instance extension method.")]
@@ -103,28 +127,61 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "A generic extension method for generic class.")]
         public string? TryGetMemberDoc_ForMethod_ReturnsCorrectMemberDoc(Type type, string methodName)
         {
-            var container = type.GetMetadata<IClassType>();
-            Assert.That(container, Is.Not.Null);
-
-            var method = container.Methods.FirstOrDefault(m => m.Name == methodName);
-            Assert.That(method, Is.Not.Null);
+            var method = type.GetMethod(methodName, Acme.Bindings.AllDeclared)?.GetMetadata();
+            Assert.That(method, Is.InstanceOf<IMethod>());
 
             return xmlDocProvider.TryGetMemberDoc(method, out var doc) ? doc.Summary.ToString().Trim() : null;
         }
 
+        [TestCase(typeof(Acme.SampleOperators), "op_UnaryPlus", ExpectedResult = "Unary plus operator.")]
+        [TestCase(typeof(Acme.SampleOperators), "op_Addition", ExpectedResult = "Addition operator.")]
+        [TestCase(typeof(Acme.SampleOperators), "op_IncrementAssignment", ExpectedResult = "Increment operator.")]
+        [TestCase(typeof(Acme.SampleOperators), "Acme.ISampleInterface.op_False", ExpectedResult = "Explicitly implements the false operator for the interface.")]
+        public string? TryGetMemberDoc_ForOperators_ReturnsCorrectMemberDoc(Type type, string methodName)
+        {
+            var op = type.GetMethod(methodName, Acme.Bindings.AllDeclared)?.GetMetadata();
+            Assert.That(op, Is.InstanceOf<IOperator>());
+
+            return xmlDocProvider.TryGetMemberDoc(op, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "A regular property.")]
+        [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty), ExpectedResult = "A static property.")]
+        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = "Explicitly implements the interface property.")]
         [TestCase(typeof(Acme.SampleExtensions), "InstanceExtensionProperty", ExpectedResult = "An instance extension property.")]
         [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionProperty", ExpectedResult = "A static extension property.")]
         [TestCase(typeof(Acme.SampleExtensions), "InstanceExtensionPropertyForClass", ExpectedResult = "An instance extension property for generic class.")]
         [TestCase(typeof(Acme.SampleExtensions), "StaticExtensionPropertyForClass", ExpectedResult = "A static extension property for generic class.")]
         public string? TryGetMemberDoc_ForProperty_ReturnsCorrectMemberDoc(Type type, string propertyName)
         {
-            var container = type.GetMetadata<IClassType>();
-            Assert.That(container, Is.Not.Null);
-
-            var property = container.Properties.FirstOrDefault(m => m.Name == propertyName);
-            Assert.That(property, Is.Not.Null);
+            var property = propertyName.Contains("ExtensionProperty")
+                ? type.GetMetadata<IClassType>().Properties.FirstOrDefault(p => p.Name == propertyName)
+                : type.GetProperty(propertyName, Acme.Bindings.AllDeclared)?.GetMetadata();
+            Assert.That(property, Is.InstanceOf<IProperty>());
 
             return xmlDocProvider.TryGetMemberDoc(property, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), ExpectedResult = "A regular event.")]
+        [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent), ExpectedResult = "A static event.")]
+        [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent", ExpectedResult = "Explicitly implements the interface event.")]
+        public string? TryGetMemberDoc_ForEvents_ReturnsCorrectMemberDoc(Type type, string eventName)
+        {
+            var ev = type.GetEvent(eventName, Acme.Bindings.AllDeclared)?.GetMetadata();
+            Assert.That(ev, Is.InstanceOf<IEvent>());
+
+            return xmlDocProvider.TryGetMemberDoc(ev, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "A static readonly field.")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "A complex unsafe field.")]
+        [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceField), ExpectedResult = "A static readonly field in interface.")]
+        public string? TryGetMemberDoc_ForFields_ReturnsCorrectMemberDoc(Type type, string fieldName)
+        {
+            var field = type.GetField(fieldName, Acme.Bindings.AllDeclared)?.GetMetadata();
+            Assert.That(field, Is.InstanceOf<IField>());
+
+            return xmlDocProvider.TryGetMemberDoc(field, out var doc) ? doc.Summary.ToString().Trim() : null;
         }
     }
 }
