@@ -1192,19 +1192,19 @@ namespace Acme
         extension(ISampleInterface instance)
         {
             /// <summary>
-            /// An instance extension property for non-generic interface.
+            /// An instance extension property.
             /// </summary>
             /// <value>The value of the instance extension property.</value>
             public int InstanceExtensionProperty => 42;
 
             /// <summary>
-            /// A static extension property for non-generic interface.
+            /// A static extension property.
             /// </summary>
             /// <value>The value of the static extension property.</value>
             public static bool StaticExtensionProperty => true;
 
             /// <summary>
-            /// A full extension property with getter and setter.
+            /// An extension property with both getter and setter.
             /// </summary>
             /// <value>The value of the full extension property.</value>
             public string FullExtensionProperty { get => string.Empty; set { } }
@@ -1232,6 +1232,11 @@ namespace Acme
         /// </summary>
         public static void NonExtensionMethod() { }
     }
+
+    /// <summary>
+    /// Documentation for the Acme namespace.
+    /// </summary>
+    internal static class NamespaceDoc { }
 }
 #pragma warning restore CS0067 // The event is never used
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value null
