@@ -3,10 +3,10 @@
 // Released under the terms of the MIT license.
 // See the LICENSE file in the project root for the full license text.
 
-namespace Kampute.DocToolkit.Metadata.Adapters
+namespace Kampute.DocToolkit.Metadata
 {
     /// <summary>
-    /// Provides constant string values for custom attribute names used in metadata adapters.
+    /// Provides constant string values for common custom attribute names.
     /// </summary>
     public static class AttributeNames
     {

@@ -255,8 +255,8 @@ namespace Kampute.DocToolkit.Languages
             }
             writer.Write('}');
 
-            if (property.IsExtension && property.ExtensionBlock!.IsGenericBlock)
-                WriteGenericConstraints(writer, property.ExtensionBlock.TypeParameters, linker);
+            if (property.ExtensionBlock is IExtensionBlock { IsGenericBlock: true } extBlock)
+                WriteGenericConstraints(writer, extBlock.TypeParameters, linker);
         }
 
         /// <summary>
@@ -323,11 +323,13 @@ namespace Kampute.DocToolkit.Languages
             WriteGenericParameters(writer, method.TypeParameters, linker, declarative: true);
 
             writer.Write('(');
+            if (method.IsClassicExtensionMethod)
+                writer.Write("this ");
             WriteParameters(writer, method.Parameters, linker, declarative: true);
             writer.Write(')');
 
-            if (method.IsExtension && method.ExtensionBlock!.IsGenericBlock)
-                WriteGenericConstraints(writer, method.ExtensionBlock.TypeParameters, linker);
+            if (method.ExtensionBlock is IExtensionBlock { IsGenericBlock: true } extBlock)
+                WriteGenericConstraints(writer, extBlock.TypeParameters, linker);
             if (method.IsGenericMethod)
                 WriteGenericConstraints(writer, method.TypeParameters, linker);
         }
@@ -348,6 +350,8 @@ namespace Kampute.DocToolkit.Languages
                 WriteGenericParameters(writer, method.TypeParameters, linker, declarative);
 
             writer.Write('(');
+            if (method.IsClassicExtensionMethod)
+                writer.Write("this ");
             WriteParameters(writer, method.Parameters, linker, declarative);
             writer.Write(')');
         }

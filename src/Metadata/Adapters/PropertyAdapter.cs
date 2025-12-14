@@ -192,7 +192,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override string ConstructCodeReference()
         {
-            return Reflection is IExtensionPropertyInfo
+            return Reflection is IExtensionBlockPropertyInfo
                 ? AnyAccessor.CodeReference
                 : base.ConstructCodeReference();
         }
@@ -293,8 +293,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Retrieves the extension block associated with the property, if it is an extension property.
         /// </summary>
         /// <returns>An <see cref="IExtensionBlock"/> representing the extension block, or <see langword="null"/> if the property is not an extension property.</returns>
-        protected virtual IExtensionBlock? GetExtensionBlock() => Reflection is IExtensionMemberInfo extensionMember
-            ? Assembly.Repository.GetExtensionBlockMetadata(extensionMember.ExtensionBlock)
+        protected virtual IExtensionBlock? GetExtensionBlock() => Reflection is IExtensionBlockMemberInfo extensionMember
+            ? Assembly.Repository.GetExtensionBlockMetadata(extensionMember.DeclaringBlock)
             : null;
 
         /// <summary>

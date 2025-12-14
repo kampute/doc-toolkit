@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;

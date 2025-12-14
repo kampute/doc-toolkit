@@ -162,7 +162,8 @@ namespace Kampute.DocToolkit.Metadata
         IEnumerable<IProperty> ExtensionProperties => MetadataProvider
             .AvailableAssemblies
             .Where(a => a.IsReflectionOnly || ReferenceEquals(a, Assembly))
-            .SelectMany(a => a.GetExtensionProperties(this));
+            .SelectMany(a => a.ExtensionProperties)
+            .Where(p => p.IsExtensionOf(this));
 
         /// <summary>
         /// Gets extension methods of the type.
@@ -175,7 +176,8 @@ namespace Kampute.DocToolkit.Metadata
         IEnumerable<IMethod> ExtensionMethods => MetadataProvider
             .AvailableAssemblies
             .Where(a => a.IsReflectionOnly || ReferenceEquals(a, Assembly))
-            .SelectMany(a => a.GetExtensionMethods(this));
+            .SelectMany(a => a.ExtensionMethods)
+            .Where(m => m.IsExtensionOf(this));
 
         /// <summary>
         /// Determines whether the instances of the specified type can be assigned to variables of the current type.

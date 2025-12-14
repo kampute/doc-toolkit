@@ -11,15 +11,6 @@ namespace Kampute.DocToolkit.Metadata
     /// <summary>
     /// Defines a contract for accessing method metadata.
     /// </summary>
-    /// <remarks>
-    /// For extension methods, this interface provides a logical view that reflects the extended type rather than the underlying implementation:
-    /// <list type="bullet">
-    ///   <item><see cref="IMember.IsStatic"/> indicates whether the extension method is static or instance-based.</item>
-    ///   <item><see cref="IWithParameters.Parameters"/> excludes the first parameter (the <c>this</c> parameter).</item>
-    ///   <item><see cref="TypeParameters"/> excludes type parameters from the extended type.</item>
-    ///   <item><see cref="IsGenericMethod"/> indicates whether the method declares its own type parameters.</item>
-    /// </list>
-    /// </remarks>
     public interface IMethod : IMethodBase, IWithExtensionBehavior
     {
         /// <summary>

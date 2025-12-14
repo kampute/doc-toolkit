@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Collections;
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
     using System.Linq;

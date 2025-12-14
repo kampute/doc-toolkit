@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Reflection
     using Kampute.DocToolkit.Metadata.Reflection;
     using NUnit.Framework;
     using System;
+    using System.Linq;
 
     [TestFixture]
     public class ExtensionContainerInfoTests
@@ -52,36 +53,45 @@ namespace Kampute.DocToolkit.Test.Metadata.Reflection
             Assert.That(() => new ExtensionContainerInfo(null!), Throws.ArgumentNullException);
         }
 
-        [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 16)]
-        public int DeclaredExtensionMethods_HasExpectedNumberOfMethods(Type containerType)
+        [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 4)]
+        public int ExtensionBlocks_HasExpectedNumberOfBlocks(Type containerType)
         {
             var container = new ExtensionContainerInfo(containerType);
 
-            return container.DeclaredExtensionMethods.Count;
+            return container.ExtensionBlocks.Count;
+        }
+
+        [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 12)]
+        public int ExtensionBlockMethods_HasExpectedNumberOfMethods(Type containerType)
+        {
+            var container = new ExtensionContainerInfo(containerType);
+
+            return container.ExtensionBlockMethods.Count();
         }
 
         [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 9)]
-        public int DeclaredExtensionProperties_HasExpectedNumberOfProperties(Type containerType)
+        public int ExtensionBlockProperties_HasExpectedNumberOfProperties(Type containerType)
         {
             var container = new ExtensionContainerInfo(containerType);
 
-            return container.DeclaredExtensionProperties.Count;
+            return container.ExtensionBlockProperties.Count();
         }
 
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethod))]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethod))]
-        public void GetNormalizedMethodInfo_WithExtensionMethod_ReturnsCanonicalMethod(Type containerType, string methodName)
+        public void GetNormalizedMethodInfo_WithExtensionBlockMethod_ReturnsNormalizedMethodInfo(Type containerType, string methodName)
         {
             var container = new ExtensionContainerInfo(containerType);
             var method = containerType.GetMethod(methodName, Acme.Bindings.AllDeclared)!;
 
             var canonical = container.GetNormalizedMethodInfo(method);
 
-            Assert.That(canonical, Is.InstanceOf<IExtensionMemberInfo>());
+            Assert.That(canonical, Is.InstanceOf<IExtensionBlockMemberInfo>());
         }
 
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.NonExtensionMethod))]
-        public void GetNormalizedMethodInfo_WithNonExtensionMethod_ReturnsOriginalMethod(Type containerType, string methodName)
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethod))]
+        public void GetNormalizedMethodInfo_WithNonExtensionBockMethod_ReturnsOriginalMethodInfo(Type containerType, string methodName)
         {
             var container = new ExtensionContainerInfo(containerType);
             var method = containerType.GetMethod(methodName, Acme.Bindings.AllDeclared)!;
@@ -93,30 +103,35 @@ namespace Kampute.DocToolkit.Test.Metadata.Reflection
 
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethod))]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethod))]
-        public void GetExtensionMemberInfo_WithExtensionMethod_ReturnsMethodInfo(Type containerType, string methodName)
+        public void GetExtensionMemberInfo_WithExtensionBlockMethod_ReturnsNormalizedMethodInfo(Type containerType, string methodName)
         {
             var container = new ExtensionContainerInfo(containerType);
             var method = containerType.GetMethod(methodName, Acme.Bindings.AllDeclared)!;
 
-            var memberInfo = container.GetExtensionMemberInfo(method!);
+            var memberInfo = container.GetExtensionMemberInfo(method);
 
             Assert.That(memberInfo, Is.InstanceOf<System.Reflection.MethodInfo>());
+            Assert.That(memberInfo, Is.InstanceOf<IExtensionBlockMethodInfo>());
+            Assert.That(memberInfo, Is.Not.SameAs(method));
         }
 
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty))]
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty))]
-        public void GetExtensionMemberInfo_WithExtensionPropertyAccessor_ReturnsPropertyInfo(Type containerType, string methodName)
+        public void GetExtensionMemberInfo_WithExtensionBlockPropertyAccessor_ReturnsPropertyInfo(Type containerType, string methodName)
         {
             var container = new ExtensionContainerInfo(containerType);
             var accessor = containerType.GetMethod(methodName, Acme.Bindings.AllDeclared)!;
 
-            var memberInfo = container.GetExtensionMemberInfo(accessor!);
+            var memberInfo = container.GetExtensionMemberInfo(accessor);
 
             Assert.That(memberInfo, Is.InstanceOf<System.Reflection.PropertyInfo>());
+            Assert.That(memberInfo, Is.InstanceOf<IExtensionBlockPropertyInfo>());
+            Assert.That(memberInfo, Is.Not.SameAs(accessor));
         }
 
         [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.NonExtensionMethod))]
-        public void GetExtensionMemberInfo_WithNonExtensionMethod_ReturnsNull(Type containerType, string methodName)
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethod))]
+        public void GetExtensionMemberInfo_WithNonExtensionBlockMethod_ReturnsNull(Type containerType, string methodName)
         {
             var container = new ExtensionContainerInfo(containerType);
             var method = containerType.GetMethod(methodName, Acme.Bindings.AllDeclared)!;

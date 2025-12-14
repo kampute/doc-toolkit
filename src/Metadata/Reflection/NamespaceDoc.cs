@@ -6,7 +6,7 @@
 namespace Kampute.DocToolkit.Metadata.Reflection
 {
     /// <summary>
-    /// Defines interfaces for representing extension members in .NET reflection metadata.
+    /// Defines types and interfaces for representing extension blocks and their members using reflection.
     /// </summary>
     internal static class NamespaceDoc
     {

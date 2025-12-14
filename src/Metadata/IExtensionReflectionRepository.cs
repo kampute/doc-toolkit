@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Collections.Generic;
     using System.Reflection;
@@ -29,24 +30,34 @@ namespace Kampute.DocToolkit.Metadata
         IAssembly Assembly { get; }
 
         /// <summary>
-        /// Retrieves reflection information for all extension methods declared on the given container type.
+        /// Retrieves reflection information for all extension blocks declared on the given container type.
+        /// </summary>
+        /// <param name="containerType">The container type.</param>
+        /// <returns>The extension blocks declared on the container type.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="containerType"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> does not belong to the same assembly as the resolver.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> is not a top-level non-generic static class.</exception>
+        IReadOnlyList<ExtensionBlockInfo> GetDeclaredExtensionBlocks(Type containerType);
+
+        /// <summary>
+        /// Retrieves reflection information for all extension methods declared by the extension blocks on the given container type.
         /// </summary>
         /// <param name="containerType">The container type.</param>
         /// <returns>The extension methods declared on the container type.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="containerType"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> does not belong to the same assembly as the resolver.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> is not a top-level non-generic static class.</exception>
-        IReadOnlyList<MethodInfo> GetDeclaredExtensionMethods(Type containerType);
+        IEnumerable<MethodInfo> GetDeclaredExtensionMethods(Type containerType);
 
         /// <summary>
-        /// Retrieves reflection information for all extension properties declared on the given container type.
+        /// Retrieves reflection information for all extension properties declared by the extension blocks on the given container type.
         /// </summary>
         /// <param name="containerType">The container type.</param>
         /// <returns>The extension properties declared on the container type.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="containerType"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> does not belong to the same assembly as the repository.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> is not a top-level non-generic static class.</exception>
-        IReadOnlyList<PropertyInfo> GetDeclaredExtensionProperties(Type containerType);
+        IEnumerable<PropertyInfo> GetDeclaredExtensionProperties(Type containerType);
 
         /// <summary>
         /// Retrieves the normalized reflection information for the specified method as an extension method or property accessor.

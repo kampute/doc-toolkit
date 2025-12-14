@@ -311,10 +311,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             if (extensionBlock is null)
                 throw new ArgumentNullException(nameof(extensionBlock));
-            if (!Assembly.Represents(extensionBlock.Assembly))
+            if (!Assembly.Represents(extensionBlock.BlockType.Assembly))
                 throw new ArgumentException("The provided extension block does not belong to the assembly of this provider.", nameof(extensionBlock));
 
-            return Factory.CreateExtensionBlockMetadata(Assembly, extensionBlock);
+            var declaringType = (IClassType)GetTypeMetadata(extensionBlock.BlockType.DeclaringType);
+            return Factory.CreateExtensionBlockMetadata(declaringType, extensionBlock);
         }
     }
 }

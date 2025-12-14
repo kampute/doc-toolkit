@@ -42,6 +42,14 @@ namespace Kampute.DocToolkit.Metadata
         bool MayContainExtensionMembers { get; }
 
         /// <summary>
+        /// Gets the collection of extension blocks defined in the class.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of <see cref="IExtensionBlock"/> objects representing the extension blocks defined in the class.
+        /// </value>
+        IReadOnlyCollection<IExtensionBlock> ExtensionBlocks { get; }
+
+        /// <summary>
         /// Gets the types that directly derive from the class in the same assembly.
         /// </summary>
         /// <value>

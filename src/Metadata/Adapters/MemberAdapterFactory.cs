@@ -31,14 +31,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public static MemberAdapterFactory Instance { get; } = new();
 
         /// <inheritdoc/>
-        public virtual IExtensionBlock CreateExtensionBlockMetadata(IAssembly assembly, ExtensionBlockInfo extensionBlock)
+        public virtual IExtensionBlock CreateExtensionBlockMetadata(IClassType declaringType, ExtensionBlockInfo extensionBlock)
         {
-            if (assembly is null)
-                throw new ArgumentNullException(nameof(assembly));
+            if (declaringType is null)
+                throw new ArgumentNullException(nameof(declaringType));
             if (extensionBlock is null)
                 throw new ArgumentNullException(nameof(extensionBlock));
 
-            return new ExtensionBlockAdapter(assembly, extensionBlock);
+            return new ExtensionBlockAdapter(declaringType, extensionBlock);
         }
 
         /// <inheritdoc/>

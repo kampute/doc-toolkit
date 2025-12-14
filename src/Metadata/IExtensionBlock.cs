@@ -5,15 +5,16 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
+    using Kampute.DocToolkit.Metadata.Capabilities;
     using System.Collections.Generic;
 
     /// <summary>
     /// Defines a contract for accessing metadata about extension blocks.
     /// </summary>
     /// <remarks>
-    /// An extension block represents a logical grouping of extension methods that share the same receiver parameter type.
+    /// An extension block represents a logical grouping of extension members that share the same receiver type (the type being extended).
     /// </remarks>
-    public interface IExtensionBlock
+    public interface IExtensionBlock : IWithProperties, IWithMethods
     {
         /// <summary>
         /// Gets the assembly that defines this extension block.
@@ -24,24 +25,20 @@ namespace Kampute.DocToolkit.Metadata
         IAssembly Assembly { get; }
 
         /// <summary>
+        /// Gets the type that declares this extension block.
+        /// </summary>
+        /// <value>
+        /// The declaring type of this extension block.
+        /// </value>
+        IClassType DeclaringType { get; }
+
+        /// <summary>
         /// Gets the receiver parameter information for this extension block.
         /// </summary>
         /// <value>
         /// The receiver parameter information of this extension block.
         /// </value>
         IParameter Receiver { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether this extension block is synthetic.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if this extension block is synthetic; otherwise, <see langword="false"/>.
-        /// </value>
-        /// <remarks>
-        /// A synthetic extension block is one that represents an aggregation of classic (non-block) extension methods
-        /// with the same receiver parameter that have been logically grouped together for organizational purposes.
-        /// </remarks>
-        bool IsSynthetic { get; }
 
         /// <summary>
         /// Gets a value indicating whether this extension block is generic.
@@ -60,12 +57,12 @@ namespace Kampute.DocToolkit.Metadata
         IReadOnlyList<ITypeParameter> TypeParameters { get; }
 
         /// <summary>
-        /// Gets the code reference identifier for this extension block, if not synthetic.
+        /// Gets the code reference identifier for this extension block.
         /// </summary>
         /// <value>
-        /// The code reference identifier of this extension block; otherwise, <see langword="null"/> if synthetic.
+        /// The code reference identifier of this extension block.
         /// </value>
-        string? CodeReference { get; }
+        string CodeReference { get; }
 
         /// <summary>
         /// Determines whether this extension block extends the specified type.

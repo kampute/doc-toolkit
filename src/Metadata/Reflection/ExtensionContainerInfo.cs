@@ -6,36 +6,27 @@
 namespace Kampute.DocToolkit.Metadata.Reflection
 {
     using Kampute.DocToolkit.Collections;
-    using Kampute.DocToolkit.Metadata.Adapters;
+    using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Reflection.Internal;
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Reflection;
     using System.Runtime.CompilerServices;
 
     /// <summary>
-    /// Provides access to the reflection information of extension members defined within an extension container type.
+    /// Provides access to the reflection information of extension blocks and their members defined within a top-level static class container.
     /// </summary>
     /// <remarks>
-    /// This class analyzes a top-level, non-generic static class to collect and expose reflection information about extension methods and properties.
-    /// It supports two categories of extension members:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <term>Classic extension methods</term>
-    ///     <description>Static methods where the first parameter is marked with <see langword="this"/> keyword.</description>
-    ///   </item>
-    ///   <item>
-    ///     <term>Block extension members</term>
-    ///     <description>Methods and properties defined within the <see langword="extension"/> blocks.</description>
-    ///   </item>
-    /// </list>
-    /// The class provides normalized views of extension members, representing them as if they were members of the extended type, and allows retrieval
-    /// of the underlying extension member information.
+    /// This class analyzes a top-level, non-generic static class to collect and expose reflection information about extension methods and properties
+    /// defined within its extension blocks.
+    /// <para>
+    /// The class provides normalized views of extension block members, representing them as if they were members of the extended type, and allows 
+    /// retrieval of the underlying extension member information.
+    /// </para>
     /// </remarks>
     public sealed class ExtensionContainerInfo
     {
-        private readonly List<MethodInfo> extensionMethods = [];
-        private readonly List<PropertyInfo> extensionProperties = [];
         private readonly Dictionary<MethodInfo, MemberInfo> memberMapping = new(ReferenceEqualityComparer<MethodInfo>.Instance);
         private readonly Dictionary<MethodInfo, MethodInfo> normalizedMethodMapping = new(ReferenceEqualityComparer<MethodInfo>.Instance);
 
@@ -53,7 +44,10 @@ namespace Kampute.DocToolkit.Metadata.Reflection
                 throw new ArgumentException("Container type must be a top-level non-generic static class.", nameof(containerType));
 
             ContainerType = containerType;
-            CollectExtensionMembers();
+            ExtensionBlocks = [.. GetExtensionBlocks(containerType)];
+
+            if (ExtensionBlocks.Count > 0)
+                PrepareMemberMappings();
         }
 
         /// <summary>
@@ -65,20 +59,32 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         public Type ContainerType { get; }
 
         /// <summary>
-        /// Gets the reflection information for all extension methods declared on the container type.
+        /// Gets the extension blocks defined within the container type.
         /// </summary>
         /// <value>
-        /// A read-only list of <see cref="MethodInfo"/> instances representing the extension methods declared on the container type.
+        /// A read-only list of <see cref="ExtensionBlockInfo"/> instances representing the extension blocks defined within the container type.
         /// </value>
-        public IReadOnlyList<MethodInfo> DeclaredExtensionMethods => extensionMethods;
+        public IReadOnlyList<ExtensionBlockInfo> ExtensionBlocks { get; }
 
         /// <summary>
-        /// Gets the reflection information for all extension properties declared on the container type.
+        /// Gets all block extension methods defined within the container type.
         /// </summary>
         /// <value>
-        /// A read-only list of <see cref="PropertyInfo"/> instances representing the extension properties declared on the container type.
+        /// An enumerable of <see cref="MethodInfo"/> instances representing all block extension methods defined within the container type.
         /// </value>
-        public IReadOnlyList<PropertyInfo> DeclaredExtensionProperties => extensionProperties;
+        public IEnumerable<MethodInfo> ExtensionBlockMethods => memberMapping.Values
+            .OfType<MethodInfo>()
+            .Distinct(ReferenceEqualityComparer<MethodInfo>.Instance);
+
+        /// <summary>
+        /// Gets all block extension properties defined within the container type.
+        /// </summary>
+        /// <value>
+        /// An enumerable of <see cref="PropertyInfo"/> instances representing all block extension properties defined within the container type.
+        /// </value>
+        public IEnumerable<PropertyInfo> ExtensionBlockProperties => memberMapping.Values
+            .OfType<PropertyInfo>()
+            .Distinct(ReferenceEqualityComparer<PropertyInfo>.Instance);
 
         /// <summary>
         /// Retrieves the normalized reflection information for the specified method.
@@ -114,12 +120,11 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="methodInfo"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="methodInfo"/> does not belong to the container type.</exception>
         /// <remarks>
-        /// This method returns the <see cref="MemberInfo"/> representing the extension member associated with the
-        /// specified <paramref name="methodInfo"/>.
+        /// This method returns the <see cref="MemberInfo"/> representing the extension member associated with the specified <paramref name="methodInfo"/>.
         /// <list type="bullet">
         ///   <item>If the method is an extension method, the returned <see cref="MemberInfo"/> will be a <see cref="MethodInfo"/>.</item>
         ///   <item>If the method is an extension property accessor, the returned <see cref="MemberInfo"/> will be a <see cref="PropertyInfo"/>.</item>
-        ///   <item>If the method is neither, the method returns <see langword="null"/>.</item>
+        ///   <item>If the method is neither or a classic extension method, the method returns <see langword="null"/>.</item>
         /// </list>
         /// </remarks>
         public MemberInfo? GetExtensionMemberInfo(MethodInfo methodInfo)
@@ -134,71 +139,44 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         }
 
         /// <summary>
-        /// Collects all extension members defined within the container type.
+        /// Prepares the mappings between extension members and their normalized representations.
         /// </summary>
-        private void CollectExtensionMembers()
+        private void PrepareMemberMappings()
         {
-            var methods = new List<MethodGroup>(GetStaticMethodGroups(ContainerType));
+            var (methodCandidates, propertyCandidates) = CollectExtensionMemberCandidates(ContainerType);
 
-            // Process block extension members
-            foreach (var stub in GetBlockExtensionStubs(ContainerType))
+            foreach (var block in ExtensionBlocks)
             {
-                var methodGroup = FindAndMarkProcessed(stub);
-                if (methodGroup is null)
-                    continue;
+                var receiver = block.ReceiverParameter;
 
-                switch (stub.Member)
+                foreach (var method in block.Methods)
                 {
-                    case MethodInfo stubMethod:
-                        var method = methodGroup.Method!;
-                        var extensionMethod = new ExtensionMethodInfo(stub.Block, stubMethod, method);
-                        extensionMethods.Add(extensionMethod);
-                        RegisterMapping(method, extensionMethod, extensionMethod);
-                        break;
-                    case PropertyInfo stubProperty:
-                        var getter = methodGroup.Getter;
-                        var setter = methodGroup.Setter;
-                        var extensionProperty = new ExtensionPropertyInfo(stub.Block, stubProperty, getter, setter);
-                        extensionProperties.Add(extensionProperty);
-                        if (getter is not null)
-                            RegisterMapping(getter, extensionProperty.GetMethod!, extensionProperty);
-                        if (setter is not null)
-                            RegisterMapping(setter, extensionProperty.SetMethod!, extensionProperty);
-                        break;
-                }
-            }
+                    var i = methodCandidates.FindIndex(m => m is not null && m.Matches(receiver, method));
+                    if (i == -1)
+                        continue;
 
-            // Process remaining classic extension methods
-            var virtualBlocks = new Dictionary<ParameterInfo, ExtensionBlockInfo>(ParameterInfoComparer.Instance);
-            foreach (var methodGroup in methods)
-            {
-                if (methodGroup?.Method is null || !IsClassisExtensionMethod(methodGroup.Method))
-                    continue;
+                    var candidate = methodCandidates[i]!;
+                    methodCandidates[i] = null!; // Mark as used
 
-                var receiver = methodGroup.Method.GetParameters()[0];
-                if (!virtualBlocks.TryGetValue(receiver, out var block))
-                {
-                    block = new ExtensionBlockInfo(receiver);
-                    virtualBlocks[receiver] = block;
+                    var extensionMethod = new ExtensionBlockMethodInfo(block, method, candidate.Method);
+                    RegisterMapping(candidate.Method, extensionMethod, extensionMethod);
                 }
 
-                var extensionMethod = new ExtensionMethodInfo(block, methodGroup.Method);
-                extensionMethods.Add(extensionMethod);
-                RegisterMapping(methodGroup.Method, extensionMethod, extensionMethod);
-            }
-
-            MethodGroup? FindAndMarkProcessed(ExtensionStub stub)
-            {
-                for (var i = 0; i < methods.Count; i++)
+                foreach (var property in block.Properties)
                 {
-                    var methodGroup = methods[i];
-                    if (methodGroup is not null && stub.Matches(methodGroup))
-                    {
-                        methods[i] = null!; // Mark as processed
-                        return methodGroup;
-                    }
+                    var i = propertyCandidates.FindIndex(p => p is not null && p.Matches(receiver, property));
+                    if (i == -1)
+                        continue;
+
+                    var candidate = propertyCandidates[i]!;
+                    propertyCandidates[i] = null!; // Mark as used
+
+                    var extensionProperty = new ExtensionBlockPropertyInfo(block, property, candidate.Getter, candidate.Setter);
+                    if (candidate.Getter is not null)
+                        RegisterMapping(candidate.Getter, extensionProperty.GetMethod!, extensionProperty);
+                    if (candidate.Setter is not null)
+                        RegisterMapping(candidate.Setter, extensionProperty.SetMethod!, extensionProperty);
                 }
-                return null;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,144 +188,65 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         }
 
         /// <summary>
-        /// Collects all static method groups defined within the container type.
+        /// Collects all members of the container type that can serve as candidates for extension methods and properties.
         /// </summary>
         /// <param name="container">The container type.</param>
-        /// <returns>An enumerable of <see cref="MethodGroup"/> instances.</returns>
-        private static IEnumerable<MethodGroup> GetStaticMethodGroups(Type container)
+        /// <returns>A tuple containing lists of method and property candidates.</returns>
+        private static (List<ExtensionMethodCandidate>, List<ExtensionPropertyCandidate>) CollectExtensionMemberCandidates(Type container)
         {
-            var propertyGroups = new Dictionary<string, MethodGroup>(StringComparer.Ordinal);
+            var methods = new List<ExtensionMethodCandidate>();
+            var properties = new Dictionary<string, ExtensionPropertyCandidate>(StringComparer.Ordinal);
 
             foreach (var method in container.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             {
-                if (method.IsSpecialName)
+                if (method.IsSpecialName || method.IsPrivate)
                     continue;
 
+                // Handle property getters
                 if (method.Name.StartsWith("get_", StringComparison.Ordinal))
                 {
                     var key = method.Name[4..];
-                    if (!propertyGroups.TryGetValue(method.Name[4..], out var group))
+                    if (!properties.TryGetValue(method.Name[4..], out var property))
                     {
-                        group = new MethodGroup();
-                        propertyGroups[key] = group;
+                        property = new ExtensionPropertyCandidate();
+                        properties[key] = property;
                     }
-                    group.Getter = method;
+                    property.Getter = method;
                     continue;
                 }
 
+                // Handle property setters
                 if (method.Name.StartsWith("set_", StringComparison.Ordinal))
                 {
                     var key = method.Name[4..];
-                    if (!propertyGroups.TryGetValue(key, out var group))
+                    if (!properties.TryGetValue(key, out var property))
                     {
-                        group = new MethodGroup();
-                        propertyGroups[key] = group;
+                        property = new ExtensionPropertyCandidate();
+                        properties[key] = property;
                     }
-                    group.Setter = method;
+                    property.Setter = method;
                     continue;
                 }
 
-                yield return new MethodGroup { Method = method };
+                // Handle regular methods
+                methods.Add(new ExtensionMethodCandidate(method));
             }
 
-            foreach (var group in propertyGroups.Values)
-                yield return group;
+            return (methods, properties.Values.ToList());
         }
 
         /// <summary>
-        /// Collects all the extension member stubs defined within the container type.
+        /// Collects the extension blocks defined within the container type.
         /// </summary>
         /// <param name="container">The container type.</param>
-        /// <returns>An enumerable of <see cref="ExtensionStub"/> instances.</returns>
-        private static IEnumerable<ExtensionStub> GetBlockExtensionStubs(Type container)
-        {
-            if (!HasExtensionAttribute(container))
-                yield break;
-
-            foreach (var grouping in GetGroupings(container))
-                foreach (var stub in GetGroupStubs(grouping))
-                    yield return stub;
-        }
-
-        /// <summary>
-        /// Collects the grouping types defined within the container type.
-        /// </summary>
-        /// <param name="container">The container type.</param>
-        /// <returns>An enumerable of grouping types.</returns>
-        private static IEnumerable<Type> GetGroupings(Type container)
+        /// <returns>An enumerable of <see cref="ExtensionBlockInfo"/> instances.</returns>
+        private static IEnumerable<ExtensionBlockInfo> GetExtensionBlocks(Type container)
         {
             foreach (var type in container.GetNestedTypes())
             {
                 if (type.IsSpecialName && HasExtensionAttribute(type))
-                    yield return type;
+                    yield return new ExtensionBlockInfo(type);
             }
-        }
-
-        /// <summary>
-        /// Retrieves the marker method that defines the receiver parameters for the specified grouping type.
-        /// </summary>
-        /// <param name="grouping">The grouping type.</param>
-        /// <returns>The marker method info if found; otherwise, <see langword="null"/>.</returns>
-        private static MethodInfo? GetGroupMarkerMethod(Type grouping)
-        {
-            foreach (var markerType in grouping.GetNestedTypes())
-            {
-                if (!markerType.IsSpecialName)
-                    continue;
-
-                var markerMethod = markerType.GetMethod("<Extension>$", BindingFlags.Public | BindingFlags.Static);
-                if (markerMethod is not null)
-                    return markerMethod;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Retrieves the extension member stubs defined within the specified grouping type.
-        /// </summary>
-        /// <param name="grouping">The grouping type.</param>
-        /// <returns>Ab enumerable of <see cref="ExtensionStub"/> instances.</returns>
-        private static IEnumerable<ExtensionStub> GetGroupStubs(Type grouping)
-        {
-            var markerMethod = GetGroupMarkerMethod(grouping);
-            if (markerMethod is null)
-                yield break;
-
-            var block = new ExtensionBlockInfo(grouping, markerMethod.GetParameters()[0]);
-            var markerName = markerMethod.DeclaringType.Name;
-            foreach (var member in grouping.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-            {
-                if (GetExtensionMarkerName(member) == markerName)
-                    yield return new(block, member);
-            }
-        }
-
-        /// <summary>
-        /// Retrieves the name of the extension marker associated with the specified member.
-        /// </summary>
-        /// <param name="member">The member to inspect.</param>
-        /// <returns>The name of the extension marker if found; otherwise, <see langword="null"/>.</returns>
-        private static string? GetExtensionMarkerName(MemberInfo member)
-        {
-            foreach (var attribute in member.CustomAttributes)
-            {
-                if (attribute.AttributeType.FullName != AttributeNames.ExtensionMarker)
-                    continue;
-
-                if (attribute.ConstructorArguments.Count == 1)
-                    return attribute.ConstructorArguments[0].Value as string;
-
-                foreach (var namedArg in attribute.NamedArguments)
-                {
-                    if (namedArg.MemberName == "Name")
-                        return namedArg.TypedValue.Value as string;
-                }
-
-                break;
-            }
-
-            return null;
         }
 
         /// <summary>
@@ -366,198 +265,132 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         }
 
         /// <summary>
-        /// Determines whether the specified method is a classic extension method.
+        /// Determines whether the signature of the declared method matches that of the extension method stub.
         /// </summary>
-        /// <param name="method">The method to inspect.</param>
-        /// <returns><see langword="true"/> if the method is a classic extension method; otherwise, <see langword="false"/>.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsClassisExtensionMethod(MethodInfo method)
+        /// <param name="declaredMethod">The reflection information of the declared method.</param>
+        /// <param name="receiverParameter">The receiver parameter of the extension method.</param>
+        /// <param name="extensionMethodStub">The reflection information of the extension method stub.</param>
+        /// <returns><see langword="true"/> if the signatures match; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if any of the parameters is <see langword="null"/>.</exception>
+        private static bool ExtensionSignatureMatches(MethodInfo declaredMethod, ParameterInfo receiverParameter, MethodInfo extensionMethodStub)
         {
-            return method.IsStatic
-                && HasExtensionAttribute(method)
-                && method.GetParameters().Length > 0;
+            if (declaredMethod is null)
+                throw new ArgumentNullException(nameof(declaredMethod));
+            if (receiverParameter is null)
+                throw new ArgumentNullException(nameof(receiverParameter));
+            if (extensionMethodStub is null)
+                throw new ArgumentNullException(nameof(extensionMethodStub));
+
+            if (declaredMethod.Name != extensionMethodStub.Name)
+                return false;
+
+            if (declaredMethod.ReturnType.FullName != extensionMethodStub.ReturnType.FullName)
+                return false;
+
+            var methodParameters = declaredMethod.GetParameters();
+            var stubParameters = extensionMethodStub.GetParameters();
+
+            var skipParam = 0;
+            if (!extensionMethodStub.IsStatic)
+            {
+                skipParam = 1;
+                if (methodParameters.Length == 0 || !ShapeEquals(methodParameters[0], receiverParameter))
+                    return false;
+            }
+
+            if (methodParameters.Length != skipParam + stubParameters.Length)
+                return false;
+
+            for (var i = 0; i < stubParameters.Length; i++)
+            {
+                if (!ShapeEquals(methodParameters[skipParam + i], stubParameters[i]))
+                    return false;
+            }
+
+            return true;
+
+            static bool ShapeEquals(ParameterInfo x, ParameterInfo y)
+            {
+                if (x.Name != y.Name || x.IsOut != y.IsOut || x.IsIn != y.IsIn)
+                    return false;
+
+                var xType = x.ParameterType;
+                var yType = y.ParameterType;
+
+                return xType.Name == yType.Name
+                    && xType.Namespace == yType.Namespace
+                    && xType.IsGenericParameter == yType.IsGenericParameter;
+            }
         }
 
         /// <summary>
-        /// Represents a group of methods related to a single member (method or property).
+        /// Represents a candidate method for extension matching.
         /// </summary>
-        private sealed class MethodGroup
+        private sealed class ExtensionMethodCandidate
         {
             /// <summary>
-            /// The method info of the method member.
+            /// The information of the candidate extension method.
             /// </summary>
-            public MethodInfo? Method;
+            public readonly MethodInfo Method;
 
             /// <summary>
-            /// The getter method info of the property member.
+            /// Initializes a new instance of the <see cref="ExtensionMethodCandidate"/> class.
+            /// </summary>
+            /// <param name="method">The candidate extension method.</param>
+            public ExtensionMethodCandidate(MethodInfo method)
+            {
+                Method = method;
+            }
+
+            /// <summary>
+            /// Determines whether the method matches the specified extension method.
+            /// </summary>
+            /// <param name="receiverParameter">The receiver parameter of the extension method.</param>
+            /// <param name="extensionMethodStub">The extension method stub to compare against.</param>
+            /// <returns><see langword="true"/> if the method group matches the extension method; otherwise, <see langword="false"/>.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Matches(ParameterInfo receiverParameter, MethodInfo extensionMethodStub)
+                => ExtensionSignatureMatches(Method, receiverParameter, extensionMethodStub);
+        }
+
+        /// <summary>
+        /// Represents a candidate property for extension matching.
+        /// </summary>
+        private sealed class ExtensionPropertyCandidate
+        {
+            /// <summary>
+            /// The getter method information of the extension property candidate.
             /// </summary>
             public MethodInfo? Getter;
 
             /// <summary>
-            /// The setter method info of the property member.
+            /// The setter method information of the extension property candidate.
             /// </summary>
             public MethodInfo? Setter;
 
             /// <summary>
-            /// Returns a string that represents the current method group.
+            /// Determines whether the property matches the specified extension property.
             /// </summary>
-            /// <returns>A string that represents the current method group.</returns>
-            public override string? ToString() => Method is not null
-                ? $"Method: {Method.Name}"
-                : $"Property: {(Getter ?? Setter)!.Name[4..]}";
-        }
-
-        /// <summary>
-        /// Represents a stub for an extension member used in block extension definitions.
-        /// </summary>
-        private readonly struct ExtensionStub
-        {
-            /// <summary>
-            /// The extension block which the member belongs to.
-            /// </summary>
-            public readonly ExtensionBlockInfo Block;
-
-            /// <summary>
-            /// The reflection information of the extension member.
-            /// </summary>
-            public readonly MemberInfo Member;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ExtensionStub"/> struct.
-            /// </summary>
-            /// <param name="block">The extension block which the member belongs to.</param>
-            /// <param name="member">The reflection information of the extension member.</param>
-            public ExtensionStub(ExtensionBlockInfo block, MemberInfo member)
+            /// <param name="receiverParameter">The receiver parameter of the extension property.</param>
+            /// <param name="extensionPropertyStub">The extension property stub to compare against.</param>
+            /// <returns><see langword="true"/> if the method group matches the extension property; otherwise, <see langword="false"/>.</returns>
+            public bool Matches(ParameterInfo receiverParameter, PropertyInfo extensionPropertyStub)
             {
-                Member = member;
-                Block = block;
-            }
-
-            /// <summary>
-            /// Returns a string that represents the current extension stub.
-            /// </summary>
-            /// <returns>A string that represents the current extension stub.</returns>
-            public override string? ToString()
-            {
-                var kind = Member is MethodInfo ? "Extension Method" : "Extension Property";
-                return $"{kind} {Member.Name} for {Block.Receiver.ParameterType}";
-            }
-
-            /// <summary>
-            /// Determines whether the specified method group matches this stub.
-            /// </summary>
-            /// <param name="methodGroup">The method group to compare.</param>
-            /// <returns><see langword="true"/> if the method group matches this stub; otherwise, <see langword="false"/>.</returns>
-            public bool Matches(MethodGroup methodGroup)
-            {
-                switch (Member)
-                {
-                    case MethodInfo stubMethod when methodGroup.Method is MethodInfo method:
-                        return SignatureMatches(method, stubMethod, Block.Receiver);
-                    case PropertyInfo stubProperty when stubProperty.GetMethod is MethodInfo stubGetter && methodGroup.Getter is MethodInfo getter:
-                        return SignatureMatches(getter, stubGetter, Block.Receiver);
-                    case PropertyInfo stubProperty when stubProperty.SetMethod is MethodInfo stubSetter && methodGroup.Setter is MethodInfo setter:
-                        return SignatureMatches(setter, stubSetter, Block.Receiver);
-                    default:
-                        return false;
-                }
-            }
-
-            /// <summary>
-            /// Determines whether the signature of the method matches the stub method, considering the receiver parameter.
-            /// </summary>
-            /// <param name="method">The method to compare.</param>
-            /// <param name="stub">The stub method to compare against.</param>
-            /// <param name="receiverParameter">The receiver parameter info.</param>
-            /// <returns><see langword="true"/> if the signatures match; otherwise, <see langword="false"/>.</returns>
-            private static bool SignatureMatches(MethodInfo method, MethodInfo stub, ParameterInfo receiverParameter)
-            {
-                if (method.Name != stub.Name)
+                var getter = extensionPropertyStub.GetMethod;
+                if (getter is null != Getter is null)
                     return false;
 
-                if (method.ReturnType.FullName != stub.ReturnType.FullName)
+                if (getter is not null && !ExtensionSignatureMatches(Getter!, receiverParameter, getter))
                     return false;
 
-                var methodParameters = method.GetParameters();
-                var stubParameters = stub.GetParameters();
-
-                var skipParam = 0;
-                if (!stub.IsStatic)
-                {
-                    skipParam = 1;
-                    if (methodParameters.Length == 0 || !ShapeEquals(methodParameters[0], receiverParameter))
-                        return false;
-                }
-
-                if (methodParameters.Length != skipParam + stubParameters.Length)
+                var setter = extensionPropertyStub.SetMethod;
+                if (setter is null != Setter is null)
                     return false;
 
-                for (var i = 0; i < stubParameters.Length; i++)
-                {
-                    if (!ShapeEquals(methodParameters[skipParam + i], stubParameters[i]))
-                        return false;
-                }
+                if (setter is not null && !ExtensionSignatureMatches(Setter!, receiverParameter, setter))
+                    return false;
 
                 return true;
-            }
-
-            /// <summary>
-            /// Determines whether the shapes of two parameters are equal.
-            /// </summary>
-            /// <param name="a">The first parameter to compare.</param>
-            /// <param name="b">The second parameter to compare.</param>
-            /// <returns><see langword="true"/> if the shapes are equal; otherwise, <see langword="false"/>.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool ShapeEquals(ParameterInfo a, ParameterInfo b)
-            {
-                var aTypeName = a.ParameterType.FullName ?? a.ParameterType.Name;
-                var bTypeName = b.ParameterType.FullName ?? b.ParameterType.Name;
-                return aTypeName == bTypeName && a.IsOut == b.IsOut && a.IsIn == b.IsIn;
-            }
-        }
-
-        /// <summary>
-        /// Provides equality comparison for <see cref="ParameterInfo"/> instances based on name, type, and modifiers, ignoring the member.
-        /// </summary>
-        private sealed class ParameterInfoComparer : IEqualityComparer<ParameterInfo>
-        {
-            /// <summary>
-            /// Gets the singleton instance of the comparer.
-            /// </summary>
-            public static readonly ParameterInfoComparer Instance = new();
-
-            /// <summary>
-            /// Determines whether the specified <see cref="ParameterInfo"/> instances are equal.
-            /// </summary>
-            /// <param name="x">The first <see cref="ParameterInfo"/> to compare.</param>
-            /// <param name="y">The second <see cref="ParameterInfo"/> to compare.</param>
-            /// <returns><see langword="true"/> if the instances are equal; otherwise, <see langword="false"/>.</returns>
-            public bool Equals(ParameterInfo? x, ParameterInfo? y)
-            {
-                if (ReferenceEquals(x, y))
-                    return true;
-
-                if (x is null || y is null)
-                    return false;
-
-                return string.Equals(x.Name, y.Name)
-                    && AdapterHelper.HaveSameDeclarationScope(x.ParameterType, y.ParameterType)
-                    && x.IsOut == y.IsOut
-                    && x.IsIn == y.IsIn;
-            }
-
-            /// <summary>
-            /// Returns a hash code for the specified <see cref="ParameterInfo"/>.
-            /// </summary>
-            /// <param name="param">The <see cref="ParameterInfo"/> for which to get a hash code.</param>
-            /// <returns>A hash code for the specified <see cref="ParameterInfo"/>.</returns>
-            public int GetHashCode(ParameterInfo param)
-            {
-                if (param is null)
-                    return 0;
-
-                var typeName = param.ParameterType.FullName ?? param.ParameterType.Name;
-                return HashCode.Combine(param.Name, typeName, param.IsOut, param.IsIn);
             }
         }
     }

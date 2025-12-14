@@ -5,7 +5,6 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
-    using Kampute.DocToolkit.Collections;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
@@ -27,8 +26,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     {
         private readonly Lazy<SortedDictionary<string, IReadOnlyList<IType>>> namespaces;
         private readonly Lazy<SortedDictionary<string, IType>> exportedTypes;
-        private readonly Lazy<IReadOnlyDictionary<IType, IReadOnlyList<IProperty>>> extensionProperties;
-        private readonly Lazy<IReadOnlyDictionary<IType, IReadOnlyList<IMethod>>> extensionMethods;
+        private readonly Lazy<IReadOnlyCollection<IProperty>> extensionProperties;
+        private readonly Lazy<IReadOnlyCollection<IMethod>> extensionMethods;
         private readonly Lazy<IReadOnlyDictionary<string, object?>> attributes;
 
         /// <summary>
@@ -66,28 +65,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return result;
             });
 
-            extensionProperties = new(() =>
-            {
-                var comparer = ReferenceEqualityComparer<IType>.Instance;
-                var result = new Dictionary<IType, IReadOnlyList<IProperty>>(comparer);
-
-                foreach (var group in GetExtensionProperties().GroupBy(p => p.ExtensionBlock!.Receiver.Type, comparer))
-                    result[group.Key] = [.. group];
-
-                return result;
-            });
-
-            extensionMethods = new(() =>
-            {
-                var comparer = ReferenceEqualityComparer<IType>.Instance;
-                var result = new Dictionary<IType, IReadOnlyList<IMethod>>(comparer);
-
-                foreach (var group in GetExtensionMethods().GroupBy(m => m.ExtensionBlock!.Receiver.Type, comparer))
-                    result[group.Key] = [.. group];
-
-                return result;
-            });
-
+            extensionProperties = new(() => [.. GetExtensionProperties()]);
+            extensionMethods = new(() => [.. GetExtensionMethods()]);
             attributes = new(GetMetadataAttributes);
         }
 
@@ -110,6 +89,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual IReadOnlyCollection<AssemblyName> ReferencedAssemblies => Reflection.GetReferencedAssemblies();
 
         /// <inheritdoc/>
+        public IReadOnlyCollection<IProperty> ExtensionProperties => extensionProperties.Value;
+
+        /// <inheritdoc/>
+        public IReadOnlyCollection<IMethod> ExtensionMethods => extensionMethods.Value;
+
+        /// <inheritdoc/>
         public IReadOnlyDictionary<string, object?> Attributes => attributes.Value;
 
         /// <inheritdoc/>
@@ -128,48 +113,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentNullException(nameof(fullName));
 
             return exportedTypes.Value.TryGetValue(NormalizeTypeName(fullName), out type);
-        }
-
-        /// <inheritdoc/>
-        public IEnumerable<IProperty> GetExtensionProperties(IType type)
-        {
-            if (type is null)
-                throw new ArgumentNullException(nameof(type));
-
-            return EnumerateExtensionProperties();
-
-            IEnumerable<IProperty> EnumerateExtensionProperties()
-            {
-                foreach (var entry in extensionProperties.Value)
-                {
-                    if (entry.Key.IsAssignableFrom(type))
-                    {
-                        foreach (var property in entry.Value)
-                            yield return property;
-                    }
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public IEnumerable<IMethod> GetExtensionMethods(IType type)
-        {
-            if (type is null)
-                throw new ArgumentNullException(nameof(type));
-
-            return EnumerateExtensionMethods();
-
-            IEnumerable<IMethod> EnumerateExtensionMethods()
-            {
-                foreach (var entry in extensionMethods.Value)
-                {
-                    if (entry.Key.IsAssignableFrom(type))
-                    {
-                        foreach (var method in entry.Value)
-                            yield return method;
-                    }
-                }
-            }
         }
 
         /// <summary>

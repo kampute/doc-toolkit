@@ -17,24 +17,28 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     {
         private readonly Lazy<IParameter> receiver;
         private readonly Lazy<IReadOnlyList<ITypeParameter>> typeParameters;
+        private readonly Lazy<IReadOnlyList<IProperty>> properties;
+        private readonly Lazy<IReadOnlyList<IMethod>> methods;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionBlockAdapter"/> class.
         /// </summary>
-        /// <param name="assembly">The assembly that contains the extension block.</param>
+        /// <param name="declaringType">The class type that declares the extension block.</param>
         /// <param name="extensionBlock">The extension block information to wrap.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="assembly"/> or <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the specified assembly.</exception>
-        public ExtensionBlockAdapter(IAssembly assembly, ExtensionBlockInfo extensionBlock)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaringType"/> or <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the <paramref name="declaringType"/>.</exception>
+        public ExtensionBlockAdapter(IClassType declaringType, ExtensionBlockInfo extensionBlock)
         {
-            Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
+            DeclaringType = declaringType ?? throw new ArgumentNullException(nameof(declaringType));
             Block = extensionBlock ?? throw new ArgumentNullException(nameof(extensionBlock));
 
-            if (!assembly.Represents(extensionBlock.Assembly))
-                throw new ArgumentException("The provided assembly does not declare the extension block.", nameof(assembly));
+            if (!DeclaringType.Represents(extensionBlock.BlockType.DeclaringType))
+                throw new ArgumentException("The extension block does not belong to the declaring type.", nameof(extensionBlock));
 
-            receiver = new(() => Assembly.Repository.GetParameterMetadata(Block.Receiver));
-            typeParameters = new(() => [.. Block.TypeParameters.Select(Assembly.Repository.GetTypeMetadata<ITypeParameter>)]);
+            receiver = new(() => Assembly.Repository.GetParameterMetadata(Block.ReceiverParameter));
+            typeParameters = new(() => IsGenericBlock ? [.. Block.TypeParameters.Select(MetadataProvider.GetMetadata<ITypeParameter>)] : []);
+            properties = new(() => [.. Block.Properties.Select(Assembly.Repository.GetPropertyMetadata).OrderByName()]);
+            methods = new(() => [.. Block.Methods.Select(Assembly.Repository.GetMethodMetadata<IMethod>).OrderByName()]);
         }
 
         /// <summary>
@@ -46,33 +50,30 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected ExtensionBlockInfo Block { get; }
 
         /// <inheritdoc/>
-        public IAssembly Assembly { get; }
+        public IAssembly Assembly => DeclaringType.Assembly;
+
+        /// <inheritdoc/>
+        public IClassType DeclaringType { get; }
 
         /// <inheritdoc/>
         public IParameter Receiver => receiver.Value;
 
         /// <inheritdoc/>
-        public bool IsSynthetic => Block.IsSynthetic;
-
-        /// <inheritdoc/>
-        public bool IsGenericBlock => Block.IsGenericBlock;
+        public bool IsGenericBlock => Block.BlockType.IsGenericTypeDefinition;
 
         /// <inheritdoc/>
         public IReadOnlyList<ITypeParameter> TypeParameters => typeParameters.Value;
 
         /// <inheritdoc/>
-        public string? CodeReference => Block.BlockType is not null ? $"T:{Block.BlockType.FullName}" : null;
+        public IReadOnlyList<IProperty> Properties => properties.Value;
 
         /// <inheritdoc/>
-        public bool Extends(IType type)
-        {
-            if (Receiver.Type.IsAssignableFrom(type))
-                return true;
+        public IReadOnlyList<IMethod> Methods => methods.Value;
 
-            if (IsGenericBlock && type is IGenericCapableType { IsGenericTypeDefinition: true })
-                return Receiver.Type.IsSubstitutableBy(type);
+        /// <inheritdoc/>
+        public string CodeReference => $"T:{Block.BlockType.FullName}";
 
-            return false;
-        }
+        /// <inheritdoc/>
+        public bool Extends(IType type) => Receiver.Type.IsAssignableFrom(type);
     }
 }

@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -22,6 +23,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class ClassTypeAdapter : CompositeTypeAdapter, IClassType
     {
+        private readonly Lazy<IReadOnlyCollection<IExtensionBlock>> extensionBlocks;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClassTypeAdapter"/> class.
         /// </summary>
@@ -37,6 +40,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             if (!classType.IsClass)
                 throw new ArgumentException("Type must be a class.", nameof(classType));
+
+            extensionBlocks = new(() => [.. GetExtensionBlocks().Select(Assembly.Repository.GetExtensionBlockMetadata)]);
         }
 
         /// <inheritdoc/>
@@ -52,6 +57,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool MayContainExtensionMembers => Reflection.IsSealed && Reflection.IsAbstract && !Reflection.IsNested && !IsGenericType;
 
         /// <inheritdoc/>
+        public IReadOnlyCollection<IExtensionBlock> ExtensionBlocks => extensionBlocks.Value;
+
+        /// <inheritdoc/>
         protected override IEnumerable<MethodInfo> GetMethods()
         {
             var methods = base.GetMethods();
@@ -61,9 +69,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             IEnumerable<MethodInfo> NormalizedMethods(IEnumerable<MethodInfo> methods)
             {
+                var getMemberInfo = Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo;
                 foreach (var method in methods)
                 {
-                    switch (Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo(method))
+                    switch (getMemberInfo(method))
                     {
                         case null:
                             // A regular method
@@ -88,6 +97,17 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             return MayContainExtensionMembers
                 ? properties.Concat(Assembly.Repository.ExtensionReflection.GetDeclaredExtensionProperties(Reflection))
                 : properties;
+        }
+
+        /// <summary>
+        /// Retrieves the extension blocks declared by this class type.
+        /// </summary>
+        /// <returns>An enumerable of <see cref="ExtensionBlockInfo"/> representing the extension blocks.</returns>
+        protected virtual IEnumerable<ExtensionBlockInfo> GetExtensionBlocks()
+        {
+            return MayContainExtensionMembers
+                ? Assembly.Repository.ExtensionReflection.GetDeclaredExtensionBlocks(Reflection)
+                : [];
         }
     }
 }

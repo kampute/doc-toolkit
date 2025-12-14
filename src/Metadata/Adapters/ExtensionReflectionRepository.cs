@@ -13,13 +13,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System.Runtime.CompilerServices;
 
     /// <summary>
-    /// Provides a repository for managing reflection information about extension methods and properties within a 
-    /// specific assembly.
+    /// Provides a repository for managing reflection information about extension blocks and their members within a specified assembly.
     /// </summary>
     /// <remarks>
-    /// This repository caches reflection information about extension methods and and properties grouped per container 
-    /// type to optimize retrieval performance. It allows clients to query for declared extension methods and properties,
-    /// as well as normalize method information to identify extension members.
+    /// This repository caches reflection information about extension blocks and their members for specific container types within the 
+    /// given assembly.
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
     public class ExtensionReflectionRepository : IExtensionReflectionRepository
@@ -40,22 +38,21 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IAssembly Assembly { get; }
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IReadOnlyList<MethodInfo> GetDeclaredExtensionMethods(Type containerType) => GetExtensionContainer(containerType).DeclaredExtensionMethods;
+        public IReadOnlyList<ExtensionBlockInfo> GetDeclaredExtensionBlocks(Type containerType) => GetExtensionContainer(containerType).ExtensionBlocks;
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IReadOnlyList<PropertyInfo> GetDeclaredExtensionProperties(Type containerType) => GetExtensionContainer(containerType).DeclaredExtensionProperties;
+        public IEnumerable<MethodInfo> GetDeclaredExtensionMethods(Type containerType) => GetExtensionContainer(containerType).ExtensionBlockMethods;
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public MethodInfo GetNormalizedMethodInfo(MethodInfo methodInfo) => IsPotentialExtensionMethod(methodInfo) && methodInfo is not IExtensionMemberInfo
+        public IEnumerable<PropertyInfo> GetDeclaredExtensionProperties(Type containerType) => GetExtensionContainer(containerType).ExtensionBlockProperties;
+
+        /// <inheritdoc/>
+        public MethodInfo GetNormalizedMethodInfo(MethodInfo methodInfo) => IsPotentialExtensionMethod(methodInfo) && methodInfo is not IExtensionBlockMemberInfo
             ? GetExtensionContainer(methodInfo.DeclaringType).GetNormalizedMethodInfo(methodInfo)
             : methodInfo;
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public MemberInfo? GetExtensionMemberInfo(MethodInfo methodInfo) => IsPotentialExtensionMethod(methodInfo) && methodInfo is not IExtensionMemberInfo
+        public MemberInfo? GetExtensionMemberInfo(MethodInfo methodInfo) => IsPotentialExtensionMethod(methodInfo) && methodInfo is not IExtensionBlockMemberInfo
             ? GetExtensionContainer(methodInfo.DeclaringType).GetExtensionMemberInfo(methodInfo)
             : null;
 

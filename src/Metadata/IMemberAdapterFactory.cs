@@ -21,12 +21,12 @@ namespace Kampute.DocToolkit.Metadata
         /// <summary>
         /// Creates the extension block metadata for the specified extension block information.
         /// </summary>
-        /// <param name="assembly">The assembly metadata that contains the extension block.</param>
+        /// <param name="declaringType">The class type that declares the extension block.</param>
         /// <param name="extensionBlock">The extension block information to get metadata for.</param>
         /// <returns>A metadata representation of the specified extension block.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the specified assembly.</exception>
-        IExtensionBlock CreateExtensionBlockMetadata(IAssembly assembly, ExtensionBlockInfo extensionBlock);
+        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the specified class.</exception>
+        IExtensionBlock CreateExtensionBlockMetadata(IClassType declaringType, ExtensionBlockInfo extensionBlock);
 
         /// <summary>
         /// Creates the type metadata for the specified type within the given assembly.

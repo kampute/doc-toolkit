@@ -42,10 +42,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             typeParameters = new(() => [.. GetTypeParameters()]);
             extensionBlock = new(GetExtensionBlock);
+            IsClassicExtensionMethod = IsStatic && HasCustomAttribute(AttributeNames.Extension);
         }
-
-        /// <inheritdoc/>
-        public IExtensionBlock? ExtensionBlock => extensionBlock.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<ITypeParameter> TypeParameters => typeParameters.Value;
@@ -54,7 +52,16 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsGenericMethod => Reflection.IsGenericMethod;
 
         /// <inheritdoc/>
-        public virtual bool IsClassicExtensionMethod => Reflection is IExtensionMethodInfo { IsClassic: true };
+        public virtual bool IsExtension => IsClassicExtensionMethod || Reflection is IExtensionBlockMethodInfo;
+
+        /// <inheritdoc/>
+        public virtual bool IsClassicExtensionMethod { get; }
+
+        /// <inheritdoc/>
+        public virtual IParameter? ExtensionReceiver => IsClassicExtensionMethod ? Parameters[0] : ExtensionBlock?.Receiver;
+
+        /// <inheritdoc/>
+        public IExtensionBlock? ExtensionBlock => extensionBlock.Value;
 
         /// <inheritdoc/>
         public IMethod? OverriddenMethod => (IMethod?)OverriddenMember;
@@ -123,7 +130,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override string ConstructCodeReference()
         {
-            return Reflection is IExtensionMethodInfo extension
+            return Reflection is IExtensionBlockMethodInfo extension
                 ? Assembly.Repository.GetMethodMetadata(extension.DeclaredMethod, asDeclared: true).CodeReference
                 : base.ConstructCodeReference();
         }
@@ -149,8 +156,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Retrieves the extension block associated with the method, if it is an extension method.
         /// </summary>
         /// <returns>An <see cref="IExtensionBlock"/> representing the extension block, or <see langword="null"/> if the method is not an extension method.</returns>
-        protected virtual IExtensionBlock? GetExtensionBlock() => Reflection is IExtensionMemberInfo extensionMember
-            ? Assembly.Repository.GetExtensionBlockMetadata(extensionMember.ExtensionBlock)
+        protected virtual IExtensionBlock? GetExtensionBlock() => Reflection is IExtensionBlockMemberInfo extensionMember
+            ? Assembly.Repository.GetExtensionBlockMetadata(extensionMember.DeclaringBlock)
             : null;
 
         /// <summary>
