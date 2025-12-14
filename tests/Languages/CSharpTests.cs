@@ -396,10 +396,14 @@ namespace Kampute.DocToolkit.Test.Languages
             return cs.FormatDefinition(methodInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).ClassicExtensionMethodForClass()")]
-        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).InstanceExtensionMethodForClass()")]
-        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "public static void extension<T>(SampleGenericClass<T>).StaticExtensionMethodForClass()")]
-        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).GenericExtensionMethodForClass<U>(U value)\n\twhere U : struct")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethod), ExpectedResult = "public void extension(ISampleInterface).ClassicExtensionMethod()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethod), ExpectedResult = "public void extension(ISampleInterface).InstanceExtensionMethod()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethod), ExpectedResult = "public static void extension(ISampleInterface).StaticExtensionMethod()")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethod), ExpectedResult = "public void extension(ISampleInterface).GenericExtensionMethod<U>(U value)\n\twhere U : struct")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).ClassicExtensionMethodForClass()\n\twhere T : class")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).InstanceExtensionMethodForClass()\n\twhere T : class")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.StaticExtensionMethodForClass), ExpectedResult = "public static void extension<T>(SampleGenericClass<T>).StaticExtensionMethodForClass()\n\twhere T : class")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.GenericExtensionMethodForClass), ExpectedResult = "public void extension<T>(SampleGenericClass<T>).GenericExtensionMethodForClass<U>(U value)\n\twhere T : class\n\twhere U : struct")]
         public string FormatDefinition_ForExtensionMethods_ReturnsExpectedString(Type type, string methodName, Type[]? paramTypes = null)
         {
             var methodInfo = paramTypes is null ? type.GetMethod(methodName, Acme.Bindings.AllDeclared) : type.GetMethod(methodName, Acme.Bindings.AllDeclared, paramTypes);
@@ -444,10 +448,12 @@ namespace Kampute.DocToolkit.Test.Languages
             return cs.FormatDefinition(propertyInfo!.GetMetadata()).Replace("\r", string.Empty);
         }
 
-        [TestCase(NameQualifier.None, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), ExpectedResult = "public int extension(ISampleInterface).InstanceExtensionProperty { get; }")]
-        [TestCase(NameQualifier.DeclaringType, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty), ExpectedResult = "public static bool extension(ISampleInterface).StaticExtensionProperty { get; }")]
-        [TestCase(NameQualifier.Full, typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_FullExtensionProperty), ExpectedResult = "public string extension(ISampleInterface).FullExtensionProperty { get; set; }")]
-        public string FormatDefinition_ForExtensionProperties_ReturnsExpectedString(NameQualifier qualifier, Type type, string accessorName)
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), ExpectedResult = "public int extension(ISampleInterface).InstanceExtensionProperty { get; }")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionProperty), ExpectedResult = "public static bool extension(ISampleInterface).StaticExtensionProperty { get; }")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_FullExtensionProperty), ExpectedResult = "public string extension(ISampleInterface).FullExtensionProperty { get; set; }")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_InstanceExtensionPropertyForClass), ExpectedResult = "public int extension<T>(SampleGenericClass<T>).InstanceExtensionPropertyForClass { get; }\n\twhere T : class")]
+        [TestCase(typeof(Acme.SampleExtensions), nameof(Acme.SampleExtensions.get_StaticExtensionPropertyForClass), ExpectedResult = "public static bool extension<T>(SampleGenericClass<T>).StaticExtensionPropertyForClass { get; }\n\twhere T : class")]
+        public string FormatDefinition_ForExtensionProperties_ReturnsExpectedString(Type type, string accessorName)
         {
             MemberInfo accessorInfo = type.GetMethod(accessorName, Acme.Bindings.AllDeclared)!;
 

@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Reflection;
 
@@ -28,6 +29,17 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// The singleton instance of the <see cref="MemberAdapterFactory"/>.
         /// </value>
         public static MemberAdapterFactory Instance { get; } = new();
+
+        /// <inheritdoc/>
+        public virtual IExtensionBlock CreateExtensionBlockMetadata(IAssembly assembly, ExtensionBlockInfo extensionBlock)
+        {
+            if (assembly is null)
+                throw new ArgumentNullException(nameof(assembly));
+            if (extensionBlock is null)
+                throw new ArgumentNullException(nameof(extensionBlock));
+
+            return new ExtensionBlockAdapter(assembly, extensionBlock);
+        }
 
         /// <inheritdoc/>
         public virtual IType CreateTypeMetadata(IAssembly assembly, Type type)

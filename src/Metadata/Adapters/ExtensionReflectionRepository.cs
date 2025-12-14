@@ -24,7 +24,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class ExtensionReflectionRepository : IExtensionReflectionRepository
     {
-        private readonly ConcurrentDictionary<Type, ExtensionContainer> cache = [];
+        private readonly ConcurrentDictionary<Type, ExtensionContainerInfo> cache = [];
 
         /// <summary>
         /// Initialize a new instance of <see cref="ExtensionReflectionRepository"/> class.
@@ -60,14 +60,14 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             : null;
 
         /// <summary>
-        /// Gets the cached <see cref="ExtensionContainer"/> for the given container type.
+        /// Gets the cached <see cref="ExtensionContainerInfo"/> for the given container type.
         /// </summary>
         /// <param name="containerType">The container type.</param>
-        /// <returns>A <see cref="ExtensionContainer"/> instance.</returns>
+        /// <returns>A <see cref="ExtensionContainerInfo"/> instance.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="containerType"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> is not a top-level non-generic static class.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="containerType"/> does not belong to the same assembly as the resolver.</exception>
-        protected virtual ExtensionContainer GetExtensionContainer(Type containerType)
+        protected virtual ExtensionContainerInfo GetExtensionContainer(Type containerType)
         {
             if (containerType is null)
                 throw new ArgumentNullException(nameof(containerType));
@@ -75,7 +75,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (!Assembly.Represents(containerType.Assembly))
                 throw new ArgumentException("Container type must belong to the same assembly as the repository.", nameof(containerType));
 
-            return cache.GetOrAdd(containerType, static type => new ExtensionContainer(type));
+            return cache.GetOrAdd(containerType, static type => new ExtensionContainerInfo(type));
         }
 
         /// <summary>

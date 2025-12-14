@@ -17,25 +17,25 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
     {
         private readonly Lazy<Type[]> ownedGenericArguments;
 
-        public ExtensionMethodInfo(MethodInfo classicMethod)
+        public ExtensionMethodInfo(ExtensionBlockInfo virtualBlock, MethodInfo classicMethod)
         {
+            ExtensionBlock = virtualBlock ?? throw new ArgumentNullException(nameof(virtualBlock));
             DeclaredMethod = classicMethod ?? throw new ArgumentNullException(nameof(classicMethod));
-            ReceiverParameter = classicMethod.GetParameters()[0];
             ownedGenericArguments = new(GetOwnedGenericArguments);
         }
 
-        public ExtensionMethodInfo(MethodInfo method, ParameterInfo receiver, MethodInfo stub)
+        public ExtensionMethodInfo(ExtensionBlockInfo block, MethodInfo stub, MethodInfo method)
         {
-            DeclaredMethod = method ?? throw new ArgumentNullException(nameof(method));
-            ReceiverParameter = receiver ?? throw new ArgumentNullException(nameof(receiver));
+            ExtensionBlock = block ?? throw new ArgumentNullException(nameof(block));
             ReceiverMethod = stub ?? throw new ArgumentNullException(nameof(stub));
+            DeclaredMethod = method ?? throw new ArgumentNullException(nameof(method));
             ownedGenericArguments = new(ReceiverMethod.GetGenericArguments);
         }
 
+        public ExtensionBlockInfo ExtensionBlock { get; }
         public MethodInfo DeclaredMethod { get; }
         public MethodInfo? ReceiverMethod { get; }
         public MethodInfo? MarkerMethod { get; }
-        public ParameterInfo ReceiverParameter { get; }
 
         #region MethodInfo Members
 
@@ -77,19 +77,17 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
 
         private Type[] GetOwnedGenericArguments()
         {
-            if (!DeclaredMethod.IsGenericMethodDefinition)
+            if (!DeclaredMethod.IsGenericMethod)
                 return [];
 
-            var genericArgs = DeclaredMethod.GetGenericArguments();
-            if (!ReceiverParameter.ParameterType.IsGenericType)
-                return genericArgs;
+            var methodGenericArgs = DeclaredMethod.GetGenericArguments();
+            var receiverGenericArgs = ExtensionBlock.TypeParameters;
 
-            var receiverGenericArgs = ReceiverParameter.ParameterType.GetGenericArguments();
             if (receiverGenericArgs.Length == 0)
-                return genericArgs;
+                return methodGenericArgs;
 
             // Remove receiver generic arguments for classic extension methods
-            return genericArgs.Length > receiverGenericArgs.Length ? genericArgs[receiverGenericArgs.Length..] : [];
+            return methodGenericArgs.Length > receiverGenericArgs.Length ? methodGenericArgs[receiverGenericArgs.Length..] : [];
         }
 
         public override MethodImplAttributes GetMethodImplementationFlags() => DeclaredMethod.GetMethodImplementationFlags();
@@ -119,8 +117,8 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         public override bool IsDefined(Type attributeType, bool inherit) => throw new NotImplementedException();
         public override bool HasSameMetadataDefinitionAs(MemberInfo other) => throw new NotImplementedException();
         public override bool Equals(object obj) => obj is ExtensionMethodInfo other && DeclaredMethod.Equals(other.DeclaredMethod);
-        public override int GetHashCode() => HashCode.Combine(DeclaredMethod, ReceiverParameter);
-        public override string ToString() => $"Extension method for {ReceiverParameter.ParameterType}: {ReceiverMethod ?? DeclaredMethod}";
+        public override int GetHashCode() => HashCode.Combine(ExtensionBlock, DeclaredMethod);
+        public override string ToString() => $"Extension method for {ExtensionBlock.Receiver.ParameterType}: {ReceiverMethod ?? DeclaredMethod}";
 
         #endregion
     }

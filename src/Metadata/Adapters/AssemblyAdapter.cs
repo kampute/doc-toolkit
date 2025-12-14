@@ -71,7 +71,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 var comparer = ReferenceEqualityComparer<IType>.Instance;
                 var result = new Dictionary<IType, IReadOnlyList<IProperty>>(comparer);
 
-                foreach (var group in GetExtensionProperties().GroupBy(p => p.ReceiverParameter!.Type, comparer))
+                foreach (var group in GetExtensionProperties().GroupBy(p => p.ExtensionBlock!.Receiver.Type, comparer))
                     result[group.Key] = [.. group];
 
                 return result;
@@ -82,7 +82,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 var comparer = ReferenceEqualityComparer<IType>.Instance;
                 var result = new Dictionary<IType, IReadOnlyList<IMethod>>(comparer);
 
-                foreach (var group in GetExtensionMethods().GroupBy(m => m.ReceiverParameter!.Type, comparer))
+                foreach (var group in GetExtensionMethods().GroupBy(m => m.ExtensionBlock!.Receiver.Type, comparer))
                     result[group.Key] = [.. group];
 
                 return result;

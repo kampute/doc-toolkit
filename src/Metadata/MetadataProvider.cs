@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Metadata
     using System.Linq;
     using System.Reflection;
     using System.Runtime.CompilerServices;
+    using System.Threading;
 
     /// <summary>
     /// Provides extension methods to retrieve metadata abstraction objects from reflection objects.
@@ -28,6 +29,7 @@ namespace Kampute.DocToolkit.Metadata
     public static class MetadataProvider
     {
         private static readonly ConditionalWeakTable<Assembly, IAssembly> assemblyCache = [];
+        private static Func<Assembly, IAssembly> assemblyFactory = asm => new AssemblyAdapter(asm);
 
         /// <summary>
         /// Gets the assemblies for which metadata has been created.
@@ -47,6 +49,27 @@ namespace Kampute.DocToolkit.Metadata
         public static IEnumerable<IAssembly> AvailableAssemblies => assemblyCache.Select(static kv => kv.Value);
 
         /// <summary>
+        /// Uses a custom factory for creating assembly metadata objects.
+        /// </summary>
+        /// <param name="factory">The factory function to create assembly metadata objects.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="factory"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// This method replaces the default factory used to create <see cref="IAssembly"/> instances for assemblies.
+        /// It allows for custom implementations of assembly metadata, such as for testing or specialized scenarios.
+        /// <para>
+        /// The change affects only assemblies for which metadata has not yet been created. Existing cached metadata remains unchanged.
+        /// If this is not the intended behavior, consider clearing the cache using <see cref="ClearCache"/> before setting a new factory.
+        /// </para>
+        /// </remarks>
+        public static void UseAssemblyFactory(Func<Assembly, IAssembly> factory)
+        {
+            if (factory is null)
+                throw new ArgumentNullException(nameof(factory));
+
+            Interlocked.Exchange(ref assemblyFactory, factory);
+        }
+
+        /// <summary>
         /// Registers all assemblies currently loaded in the application domain.
         /// </summary>
         /// <remarks>
@@ -60,7 +83,7 @@ namespace Kampute.DocToolkit.Metadata
         public static void RegisterRuntimeAssemblies()
         {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                assemblyCache.GetValue(assembly, _ => new AssemblyAdapter(assembly));
+                assemblyCache.GetValue(assembly, CreateAssemblyMetadata);
         }
 
         /// <summary>
@@ -84,7 +107,7 @@ namespace Kampute.DocToolkit.Metadata
             if (assembly is null)
                 throw new ArgumentNullException(nameof(assembly));
 
-            return assemblyCache.GetValue(assembly, _ => new AssemblyAdapter(assembly));
+            return assemblyCache.GetValue(assembly, CreateAssemblyMetadata);
         }
 
         /// <summary>
@@ -218,20 +241,28 @@ namespace Kampute.DocToolkit.Metadata
             if (fullName is null)
                 throw new ArgumentNullException(nameof(fullName));
 
-            var anyAssembly = false;
+            var noAssemblies = true;
             foreach (var assembly in AvailableAssemblies)
             {
                 if (assembly.TryGetType(fullName, out var type))
                     return type;
 
-                anyAssembly = true;
+                noAssemblies = false;
             }
 
             // No assemblies registered yet - fallback to searching in mscorlib / System.Private.CoreLib
-            if (!anyAssembly && GetMetadata(typeof(object).Assembly).TryGetType(fullName, out var coreType))
+            if (noAssemblies && GetMetadata(typeof(object).Assembly).TryGetType(fullName, out var coreType))
                 return coreType;
 
             return null;
         }
+
+        /// <summary>
+        /// Creates assembly metadata using the appropriate factory.
+        /// </summary>
+        /// <param name="assembly">The assembly to create metadata for.</param>
+        /// <returns>An assembly metadata abstraction.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IAssembly CreateAssemblyMetadata(Assembly assembly) => assemblyFactory(assembly);
     }
 }

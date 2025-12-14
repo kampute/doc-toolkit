@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Reflection;
 
@@ -51,6 +52,16 @@ namespace Kampute.DocToolkit.Metadata
         /// </para>
         /// </remarks>
         Type ResolveCanonicalType(Type type);
+
+        /// <summary>
+        /// Gets the extension block metadata for the specified extension block within the assembly.
+        /// </summary>
+        /// <param name="extensionBlock">The extension block information to get metadata for.</param>
+        /// <returns>A metadata representation of the specified extension block.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the specified assembly.</exception>
+        IExtensionBlock GetExtensionBlockMetadata(ExtensionBlockInfo extensionBlock);
 
         /// <summary>
         /// Gets the type metadata for the specified type within the assembly.
@@ -112,7 +123,7 @@ namespace Kampute.DocToolkit.Metadata
         /// </remarks>
         IMethodBase GetMethodMetadata(MethodInfo methodInfo, bool asDeclared = false);
 
-       /// <summary>
+        /// <summary>
         /// Gets the method metadata for the specified method within the assembly, with a specific return type.
         /// </summary>
         /// <typeparam name="T">The specific type of method metadata to retrieve.</typeparam>
@@ -155,6 +166,23 @@ namespace Kampute.DocToolkit.Metadata
         IField GetFieldMetadata(FieldInfo fieldInfo);
 
         /// <summary>
+        /// Gets the parameter metadata for the specified parameter within the assembly.
+        /// </summary>
+        /// <param name="parameterInfo">The reflection parameter to get metadata for.</param>
+        /// <returns>A metadata representation of the specified parameter.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameterInfo"/> is <see langword="null"/>.</exception>
+        IParameter GetParameterMetadata(ParameterInfo parameterInfo);
+
+        /// <summary>
+        /// Gets the custom attribute metadata for the specified attribute data within the assembly.
+        /// </summary>
+        /// <param name="attributeData">The reflection custom attribute data to get metadata for.</param>
+        /// <param name="target">The target of the attribute.</param>
+        /// <returns>A metadata representation of the specified custom attribute.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="attributeData"/> is <see langword="null"/>.</exception>
+        ICustomAttribute GetCustomAttributeMetadata(CustomAttributeData attributeData, AttributeTarget target);
+
+        /// <summary>
         /// Gets the member metadata for the specified member within the assembly.
         /// </summary>
         /// <param name="memberInfo">The reflection member to get metadata for.</param>
@@ -183,22 +211,5 @@ namespace Kampute.DocToolkit.Metadata
             FieldInfo fieldInfo => GetFieldMetadata(fieldInfo),
             _ => throw new NotSupportedException($"Member '{memberInfo}' is not supported."),
         };
-
-        /// <summary>
-        /// Gets the parameter metadata for the specified parameter within the assembly.
-        /// </summary>
-        /// <param name="parameterInfo">The reflection parameter to get metadata for.</param>
-        /// <returns>A metadata representation of the specified parameter.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameterInfo"/> is <see langword="null"/>.</exception>
-        IParameter GetParameterMetadata(ParameterInfo parameterInfo);
-
-        /// <summary>
-        /// Gets the custom attribute metadata for the specified attribute data within the assembly.
-        /// </summary>
-        /// <param name="attributeData">The reflection custom attribute data to get metadata for.</param>
-        /// <param name="target">The target of the attribute.</param>
-        /// <returns>A metadata representation of the specified custom attribute.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="attributeData"/> is <see langword="null"/>.</exception>
-        ICustomAttribute GetCustomAttributeMetadata(CustomAttributeData attributeData, AttributeTarget target);
     }
 }

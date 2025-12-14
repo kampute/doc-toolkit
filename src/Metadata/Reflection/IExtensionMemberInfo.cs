@@ -5,19 +5,18 @@
 
 namespace Kampute.DocToolkit.Metadata.Reflection
 {
-    using System.Reflection;
-
     /// <summary>
     /// Provides an interface for reflection member info objects that represent extension members.
     /// </summary>
     public interface IExtensionMemberInfo
     {
         /// <summary>
-        /// Gets the parameter information for the receiver of the extension member.
+        /// Gets the extension block information associated with the extension member.
         /// </summary>
         /// <value>
-        /// An instance of <see cref="ParameterInfo"/> representing the receiver parameter of the extension member.
+        /// An instance of <see cref="ExtensionBlockInfo"/> representing the extension block information
+        /// associated with the extension member.
         /// </value>
-        ParameterInfo ReceiverParameter { get; }
+        ExtensionBlockInfo ExtensionBlock { get; }
     }
 }

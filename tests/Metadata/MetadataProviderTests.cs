@@ -147,7 +147,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 Assert.That(metadata.IsStatic, Is.False);
                 Assert.That(metadata.IsExtension, Is.True);
-                Assert.That(metadata.ReceiverParameter?.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
                 Assert.That(metadata.Parameters, Is.Empty);
                 Assert.That(metadata.IsGenericMethod, Is.False);
                 Assert.That(metadata.TypeParameters, Is.Empty);
@@ -168,7 +168,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 Assert.That(metadata.IsStatic, Is.True);
                 Assert.That(metadata.IsExtension, Is.True);
-                Assert.That(metadata.ReceiverParameter?.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
                 Assert.That(metadata.Parameters, Is.Empty);
                 Assert.That(metadata.IsGenericMethod, Is.False);
                 Assert.That(metadata.TypeParameters, Is.Empty);
@@ -188,7 +188,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(metadata.IsExtension, Is.True);
-                Assert.That(metadata.ReceiverParameter?.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
                 Assert.That(metadata.Parameters, Has.Count.EqualTo(1));
                 Assert.That(metadata.IsGenericMethod, Is.True);
                 Assert.That(metadata.TypeParameters.Select(tp => tp.Name), Is.EquivalentTo(["U"]));
@@ -209,7 +209,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 Assert.That(metadata.IsStatic, Is.False);
                 Assert.That(metadata.IsExtension, Is.True);
-                Assert.That(metadata.ReceiverParameter?.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
                 Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
             }
         }
@@ -227,7 +227,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 Assert.That(metadata.IsStatic, Is.True);
                 Assert.That(metadata.IsExtension, Is.True);
-                Assert.That(metadata.ReceiverParameter?.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
                 Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
             }
         }

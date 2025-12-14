@@ -18,22 +18,22 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         private readonly MethodInfo? getter;
         private readonly MethodInfo? setter;
 
-        public ExtensionPropertyInfo(MethodInfo? getter, MethodInfo? setter, ParameterInfo receiver, PropertyInfo stub)
+        public ExtensionPropertyInfo(ExtensionBlockInfo block, PropertyInfo stub, MethodInfo? getter, MethodInfo? setter)
         {
             if (getter is null && setter is null)
                 throw new ArgumentException("At least one of getter or setter must be provided.", nameof(getter));
 
-            ReceiverParameter = receiver ?? throw new ArgumentNullException(nameof(receiver));
+            ExtensionBlock = block ?? throw new ArgumentNullException(nameof(block));
             ReceiverProperty = stub ?? throw new ArgumentNullException(nameof(stub));
 
             if (getter is not null)
-                this.getter = new ExtensionMethodInfo(getter, receiver, stub.GetMethod);
+                this.getter = new ExtensionMethodInfo(block, stub.GetMethod, getter);
             if (setter is not null)
-                this.setter = new ExtensionMethodInfo(setter, receiver, stub.SetMethod);
+                this.setter = new ExtensionMethodInfo(block, stub.SetMethod, setter);
         }
 
+        public ExtensionBlockInfo ExtensionBlock { get; }
         public PropertyInfo ReceiverProperty { get; }
-        public ParameterInfo ReceiverParameter { get; }
 
         #region PropertyInfo Members
 
@@ -69,8 +69,8 @@ namespace Kampute.DocToolkit.Metadata.Reflection.Internal
         public override bool HasSameMetadataDefinitionAs(MemberInfo other) => throw new NotSupportedException();
         public override bool IsDefined(Type attributeType, bool inherit) => throw new NotSupportedException();
         public override bool Equals(object obj) => obj is ExtensionPropertyInfo other && ReceiverProperty.Equals(other.ReceiverProperty);
-        public override int GetHashCode() => HashCode.Combine(ReceiverProperty, ReceiverParameter);
-        public override string ToString() => $"Extension property for {ReceiverParameter.ParameterType}: {ReceiverProperty}";
+        public override int GetHashCode() => HashCode.Combine(ExtensionBlock, ReceiverProperty);
+        public override string ToString() => $"Extension property for {ExtensionBlock.Receiver.ParameterType}: {ReceiverProperty}";
 
         #endregion
     }

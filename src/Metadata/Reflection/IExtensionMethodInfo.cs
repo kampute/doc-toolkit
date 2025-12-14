@@ -30,5 +30,13 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// extension method.
         /// </value>
         MethodInfo? ReceiverMethod { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the extension method is a classic (non-block) extension method.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the extension method is a classic (non-block) extension method; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsClassic => ReceiverMethod is null;
     }
 }

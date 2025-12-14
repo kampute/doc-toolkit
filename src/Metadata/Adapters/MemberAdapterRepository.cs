@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
@@ -22,7 +23,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class MemberAdapterRepository : IMemberAdapterRepository
     {
-        private readonly ConcurrentDictionary<MemberInfo, IMember> cache;
+        private readonly ConcurrentDictionary<ExtensionBlockInfo, IExtensionBlock> extensionBlockCache = [];
+        private readonly ConcurrentDictionary<MemberInfo, IMember> memberCache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MemberAdapterRepository"/> class with the default factory and comparer.
@@ -67,7 +69,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
             Factory = factory ?? throw new ArgumentNullException(nameof(factory));
-            cache = new(comparer ?? throw new ArgumentNullException(nameof(comparer)));
+            memberCache = new(comparer ?? throw new ArgumentNullException(nameof(comparer)));
             ExtensionReflection = new ExtensionReflectionRepository(assembly);
         }
 
@@ -105,28 +107,20 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                     return type;
 
                 var par = genericParameters[i];
-                if (arg.Name != par.Name || !SameFullName(arg.DeclaringType.BaseType, par.DeclaringType))
+                if (arg.Name != par.Name || !AdapterHelper.HaveSameDeclarationScope(arg.DeclaringType.BaseType, par.DeclaringType))
                     return type;
             }
 
             return genericDefinition;
+        }
 
-            static bool SameFullName(Type? a, Type? b)
-            {
-                if (ReferenceEquals(a, b))
-                    return true;
+        /// <inheritdoc/>
+        public virtual IExtensionBlock GetExtensionBlockMetadata(ExtensionBlockInfo extensionBlock)
+        {
+            if (extensionBlock is null)
+                throw new ArgumentNullException(nameof(extensionBlock));
 
-                while (a is not null && b is not null)
-                {
-                    if (a.Name != b.Name)
-                        return false;
-
-                    a = a.DeclaringType;
-                    b = b.DeclaringType;
-                }
-
-                return a?.Namespace == b?.Namespace;
-            }
+            return extensionBlockCache.GetOrAdd(extensionBlock, CreateExtensionBlockMetadata);
         }
 
         /// <inheritdoc/>
@@ -136,7 +130,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentNullException(nameof(type));
 
             var canonicalType = ResolveCanonicalType(type);
-            return (IType)cache.GetOrAdd(canonicalType, _ => CreateTypeMetadata(canonicalType));
+            return (IType)memberCache.GetOrAdd(canonicalType, _ => CreateTypeMetadata(canonicalType));
         }
 
         /// <inheritdoc/>
@@ -145,7 +139,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (constructorInfo is null)
                 throw new ArgumentNullException(nameof(constructorInfo));
 
-            return (IConstructor)cache.GetOrAdd(constructorInfo, _ => CreateConstructorMetadata(constructorInfo));
+            return (IConstructor)memberCache.GetOrAdd(constructorInfo, _ => CreateConstructorMetadata(constructorInfo));
         }
 
         /// <inheritdoc/>
@@ -157,7 +151,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (!asDeclared)
                 methodInfo = ExtensionReflection.GetNormalizedMethodInfo(methodInfo);
 
-            return (IMethodBase)cache.GetOrAdd(methodInfo, _ => CreateMethodMetadata(methodInfo));
+            return (IMethodBase)memberCache.GetOrAdd(methodInfo, _ => CreateMethodMetadata(methodInfo));
         }
 
         /// <inheritdoc/>
@@ -166,7 +160,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (propertyInfo is null)
                 throw new ArgumentNullException(nameof(propertyInfo));
 
-            return (IProperty)cache.GetOrAdd(propertyInfo, _ => CreatePropertyMetadata(propertyInfo));
+            return (IProperty)memberCache.GetOrAdd(propertyInfo, _ => CreatePropertyMetadata(propertyInfo));
         }
 
         /// <inheritdoc/>
@@ -175,7 +169,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (eventInfo is null)
                 throw new ArgumentNullException(nameof(eventInfo));
 
-            return (IEvent)cache.GetOrAdd(eventInfo, _ => CreateEventMetadata(eventInfo));
+            return (IEvent)memberCache.GetOrAdd(eventInfo, _ => CreateEventMetadata(eventInfo));
         }
 
         /// <inheritdoc/>
@@ -184,7 +178,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (fieldInfo is null)
                 throw new ArgumentNullException(nameof(fieldInfo));
 
-            return (IField)cache.GetOrAdd(fieldInfo, _ => CreateFieldMetadata(fieldInfo));
+            return (IField)memberCache.GetOrAdd(fieldInfo, _ => CreateFieldMetadata(fieldInfo));
         }
 
         /// <inheritdoc/>
@@ -197,12 +191,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             return Factory.CreateParameterMetadata(member, parameterInfo);
         }
 
-        /// <summary>
-        /// Gets the custom attribute metadata for the specified attribute data within the assembly.
-        /// </summary>
-        /// <param name="attributeData">The reflection custom attribute data to get metadata for.</param>
-        /// <param name="target">The target of the attribute.</param>
-        /// <returns>A metadata representation of the specified custom attribute.</returns>
+        /// <inheritdoc/>
         public virtual ICustomAttribute GetCustomAttributeMetadata(CustomAttributeData attributeData, AttributeTarget target)
         {
             if (attributeData is null)
@@ -309,6 +298,23 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             var declaringType = GetTypeMetadata(fieldInfo.DeclaringType);
             return Factory.CreateFieldMetadata(declaringType, fieldInfo);
+        }
+
+        /// <summary>
+        /// Creates extension block metadata for the specified extension block information.
+        /// </summary>
+        /// <param name="extensionBlock">The extension block information to create metadata for.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when the provided extension block does not belong to the assembly of this provider.</exception>
+        protected virtual IExtensionBlock CreateExtensionBlockMetadata(ExtensionBlockInfo extensionBlock)
+        {
+            if (extensionBlock is null)
+                throw new ArgumentNullException(nameof(extensionBlock));
+            if (!Assembly.Represents(extensionBlock.Assembly))
+                throw new ArgumentException("The provided extension block does not belong to the assembly of this provider.", nameof(extensionBlock));
+
+            return Factory.CreateExtensionBlockMetadata(Assembly, extensionBlock);
         }
     }
 }

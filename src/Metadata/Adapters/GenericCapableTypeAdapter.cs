@@ -69,6 +69,18 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public override bool IsDirectDeclaration => !IsGenericType || IsGenericTypeDefinition;
 
         /// <inheritdoc/>
+        public override bool IsSubstitutableBy(IType source)
+        {
+            if (IsGenericTypeDefinition && source is IGenericCapableType { IsConstructedGenericType: true } genericSource)
+            {
+                return Equals(genericSource.GenericTypeDefinition)
+                    && AdapterHelper.AreValidTypeArguments(TypeParameters, genericSource.TypeArguments);
+            }
+
+            return base.IsSubstitutableBy(source);
+        }
+
+        /// <inheritdoc/>
         protected override string ConstructSignature(bool useParameterNotation)
         {
             if (!IsGenericType || (!useParameterNotation && IsGenericTypeDefinition))

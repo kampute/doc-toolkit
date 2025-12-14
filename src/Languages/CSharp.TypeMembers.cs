@@ -66,9 +66,9 @@ namespace Kampute.DocToolkit.Languages
                 writer.Write(Type.Delimiter);
             }
 
-            if (member is IWithExtensionBehavior { ReceiverParameter: IParameter receiverParameter })
+            if (member is IWithExtensionBehavior { ExtensionBlock: IExtensionBlock extensionBlock })
             {
-                WriteExtensionMemberReceiver(writer, receiverParameter, linker);
+                WriteExtensionReceiver(writer, extensionBlock, linker);
                 writer.Write(Type.Delimiter);
             }
 
@@ -79,16 +79,16 @@ namespace Kampute.DocToolkit.Languages
         /// Writes the extension receiver parameter to the <see cref="TextWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
-        /// <param name="receiverParameter">The receiver parameter to write.</param>
+        /// <param name="extensionBlock">The extension block whose receiver is to be written.</param>
         /// <param name="linker">The delegate for linking to the documentation of a type or type's member.</param>
-        private void WriteExtensionMemberReceiver(TextWriter writer, IParameter receiverParameter, MemberDocLinker linker)
+        private void WriteExtensionReceiver(TextWriter writer, IExtensionBlock extensionBlock, MemberDocLinker linker)
         {
             writer.Write("extension");
-            if (receiverParameter.Type is IGenericCapableType { IsGenericTypeDefinition: true } extendedGenericType)
-                WriteGenericParameters(writer, extendedGenericType.TypeParameters, linker, declarative: false);
+            if (extensionBlock.IsGenericBlock)
+                WriteGenericParameters(writer, extensionBlock.TypeParameters, linker, declarative: false);
 
             writer.Write('(');
-            WriteParameter(writer, receiverParameter, linker, declarative: false);
+            WriteParameter(writer, extensionBlock.Receiver, linker, declarative: false);
             writer.Write(')');
         }
 
@@ -254,6 +254,9 @@ namespace Kampute.DocToolkit.Languages
                 writer.Write(property.IsInitOnly ? "init; " : "set; ");
             }
             writer.Write('}');
+
+            if (property.IsExtension && property.ExtensionBlock!.IsGenericBlock)
+                WriteGenericConstraints(writer, property.ExtensionBlock.TypeParameters, linker);
         }
 
         /// <summary>
@@ -323,6 +326,8 @@ namespace Kampute.DocToolkit.Languages
             WriteParameters(writer, method.Parameters, linker, declarative: true);
             writer.Write(')');
 
+            if (method.IsExtension && method.ExtensionBlock!.IsGenericBlock)
+                WriteGenericConstraints(writer, method.ExtensionBlock.TypeParameters, linker);
             if (method.IsGenericMethod)
                 WriteGenericConstraints(writer, method.TypeParameters, linker);
         }

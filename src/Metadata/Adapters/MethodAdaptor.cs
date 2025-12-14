@@ -27,8 +27,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class MethodAdapter : MethodBaseAdapter, IMethod
     {
-        private readonly Lazy<IParameter?> receiverParameter;
         private readonly Lazy<IReadOnlyList<ITypeParameter>> typeParameters;
+        private readonly Lazy<IExtensionBlock?> extensionBlock;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodAdapter"/> class.
@@ -40,12 +40,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public MethodAdapter(IType declaringType, MethodInfo method)
             : base(declaringType, method)
         {
-            receiverParameter = new(GetReceiverParameter);
             typeParameters = new(() => [.. GetTypeParameters()]);
+            extensionBlock = new(GetExtensionBlock);
         }
 
         /// <inheritdoc/>
-        public IParameter? ReceiverParameter => receiverParameter.Value;
+        public IExtensionBlock? ExtensionBlock => extensionBlock.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<ITypeParameter> TypeParameters => typeParameters.Value;
@@ -54,7 +54,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsGenericMethod => Reflection.IsGenericMethod;
 
         /// <inheritdoc/>
-        public virtual bool IsClassicExtensionMethod => Reflection is IExtensionMethodInfo { ReceiverParameter: null };
+        public virtual bool IsClassicExtensionMethod => Reflection is IExtensionMethodInfo { IsClassic: true };
 
         /// <inheritdoc/>
         public IMethod? OverriddenMethod => (IMethod?)OverriddenMember;
@@ -146,11 +146,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <summary>
-        /// Retrieves the receiver parameter if the method is an extension method.
+        /// Retrieves the extension block associated with the method, if it is an extension method.
         /// </summary>
-        /// <returns>The <see cref="IParameter"/> representing the receiver parameter; or <see langword="null"/> if the method is not an extension method.</returns>
-        protected virtual IParameter? GetReceiverParameter() => Reflection is IExtensionMemberInfo extensionMember
-            ? Assembly.Repository.GetParameterMetadata(extensionMember.ReceiverParameter)
+        /// <returns>An <see cref="IExtensionBlock"/> representing the extension block, or <see langword="null"/> if the method is not an extension method.</returns>
+        protected virtual IExtensionBlock? GetExtensionBlock() => Reflection is IExtensionMemberInfo extensionMember
+            ? Assembly.Repository.GetExtensionBlockMetadata(extensionMember.ExtensionBlock)
             : null;
 
         /// <summary>
