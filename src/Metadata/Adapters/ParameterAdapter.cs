@@ -88,10 +88,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public virtual bool IsSatisfiableBy(IParameter other)
         {
-            return other is not null
-                && Position == other.Position
-                && ReferenceKind == other.ReferenceKind
-                && Type.IsSubstitutableBy(other.Type);
+            if (other is null || Position != other.Position || ReferenceKind != other.ReferenceKind)
+                return false;
+
+            if (Type.IsSubstitutableBy(other.Type))
+                return true;
+
+            return IsReturnParameter && Member.DeclaringType is not IInterfaceType && Type.IsAssignableFrom(other.Type);
         }
 
         /// <inheritdoc/>
