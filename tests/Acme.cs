@@ -1047,17 +1047,17 @@ namespace Acme
         /// <summary>
         /// A classic extension method for generic class.
         /// </summary>
-        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <typeparam name="W">The type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        public static void ClassicExtensionMethodForClass<T>(this SampleGenericClass<T> instance) where T : class { }
+        public static void ClassicExtensionMethodForClass<W>(this SampleGenericClass<W> instance) where W : class { }
 
         /// <summary>
         /// Extension members for generic class.
         /// </summary>
-        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        extension<T>(SampleGenericClass<T> instance)
-            where T : class
+        extension<W>(SampleGenericClass<W> instance)
+            where W : class
         {
             /// <summary>
             /// An instance extension property for generic class.
@@ -1092,17 +1092,17 @@ namespace Acme
         /// <summary>
         /// A classic extension method for generic struct.
         /// </summary>
-        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <typeparam name="W">The type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        public static void ClassicExtensionMethodForStruct<T>(this SampleGenericStruct<T> instance) where T : class, IDisposable { }
+        public static void ClassicExtensionMethodForStruct<W>(this SampleGenericStruct<W> instance) where W : class, IDisposable { }
 
         /// <summary>
         /// Extension members for generic struct.
         /// </summary>
-        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        extension<T>(SampleGenericStruct<T> instance)
-            where T : class, IDisposable
+        extension<W>(SampleGenericStruct<W> instance)
+            where W : class, IDisposable
         {
             /// <summary>
             /// An instance extension property for generic struct.
@@ -1137,17 +1137,17 @@ namespace Acme
         /// <summary>
         /// A classic extension method for generic interface.
         /// </summary>
-        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <typeparam name="W">The type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        public static void ClassicExtensionMethodForInterface<T>(this ISampleGenericInterface<T> instance) where T : class, new() { }
+        public static void ClassicExtensionMethodForInterface<W>(this ISampleGenericInterface<W> instance) where W : class, new() { }
 
         /// <summary>
         /// Extension members for generic interface.
         /// </summary>
-        /// <typeparam name="T">The receiver type parameter.</typeparam>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
         /// <param name="instance">The instance.</param>
-        extension<T>(ISampleGenericInterface<T> instance)
-            where T : class, new()
+        extension<W>(ISampleGenericInterface<W> instance)
+            where W : class, new()
         {
             /// <summary>
             /// An instance extension property for generic interface.
