@@ -149,7 +149,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
             {
                 var receiver = block.ReceiverParameter;
 
-                foreach (var method in block.Methods)
+                foreach (var method in block.ExtensionMethods)
                 {
                     var i = methodCandidates.FindIndex(m => m is not null && m.Matches(receiver, method));
                     if (i == -1)
@@ -162,7 +162,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
                     RegisterMapping(candidate.Method, extensionMethod, extensionMethod);
                 }
 
-                foreach (var property in block.Properties)
+                foreach (var property in block.ExtensionProperties)
                 {
                     var i = propertyCandidates.FindIndex(p => p is not null && p.Matches(receiver, property));
                     if (i == -1)

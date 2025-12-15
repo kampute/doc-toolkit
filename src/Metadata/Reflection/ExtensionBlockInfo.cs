@@ -7,12 +7,13 @@ namespace Kampute.DocToolkit.Metadata.Reflection
 {
     using Kampute.DocToolkit.Metadata;
     using System;
+    using System.Collections.Generic;
     using System.Reflection;
 
     /// <summary>
     /// Represents reflection information about an extension block.
     /// </summary>
-    public sealed class ExtensionBlockInfo : IEquatable<ExtensionBlockInfo>
+    public sealed class ExtensionBlockInfo : MemberInfo, IEquatable<ExtensionBlockInfo>
     {
         private const BindingFlags AllDeclaredMembers =
             BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
@@ -32,8 +33,8 @@ namespace Kampute.DocToolkit.Metadata.Reflection
 
             var markerName = ReceiverParameter.Member.DeclaringType.Name;
 
-            Methods = GetExtensionMethods(blockType, markerName);
-            Properties = GetExtensionProperties(blockType, markerName);
+            ExtensionMethods = GetExtensionMethods(blockType, markerName);
+            ExtensionProperties = GetExtensionProperties(blockType, markerName);
 
             if (blockType.IsGenericType)
                 TypeParameters = ReceiverParameter.ParameterType.GetGenericArguments();
@@ -69,7 +70,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// <value>
         /// The extension methods defined within the extension block.
         /// </value>
-        public MethodInfo[] Methods { get; }
+        public MethodInfo[] ExtensionMethods { get; }
 
         /// <summary>
         /// Gets the extension properties defined within the extension block.
@@ -77,7 +78,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// <value>
         /// The extension properties defined within the extension block.
         /// </value>
-        public PropertyInfo[] Properties { get; }
+        public PropertyInfo[] ExtensionProperties { get; }
 
         /// <summary>
         /// Determines whether the current instance is equal to the specified <see cref="ExtensionBlockInfo"/> object.
@@ -97,7 +98,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// Returns a hash code for the current instance.
         /// </summary>
         /// <returns>A hash code for the current instance.</returns>
-        public override int GetHashCode() => BlockType.GetHashCode();
+        public override int GetHashCode() => HashCode.Combine(BlockType, ReceiverParameter);
 
         /// <summary>
         /// Determines whether two <see cref="ExtensionBlockInfo"/> instances are equal.
@@ -211,5 +212,101 @@ namespace Kampute.DocToolkit.Metadata.Reflection
 
             return null;
         }
+
+        #region MemberInfo Members
+
+        /// <summary>
+        /// Gets the name of the extension block.
+        /// </summary>
+        /// <value>
+        /// The name of the extension block.
+        /// </value>
+        public override string Name => BlockType.FullName!;
+
+        /// <summary>
+        /// Gets the module in which the extension block is defined.
+        /// </summary>
+        /// <value>
+        /// The module in which the extension block is defined.
+        /// </value>
+        public override Module Module => BlockType.Module;
+
+        /// <summary>
+        /// Gets the metadata token for the extension block.
+        /// </summary>
+        /// <value>
+        /// The metadata token for the extension block.
+        /// </value>
+        public override int MetadataToken => BlockType.MetadataToken;
+
+        /// <summary>
+        /// Gets the member type of the extension block.
+        /// </summary>
+        /// <value>
+        /// The member type of the extension block.
+        /// </value>
+        public override MemberTypes MemberType => BlockType.MemberType;
+
+        /// <summary>
+        /// Gets the type that declares the extension block.
+        /// </summary>
+        /// <value>
+        /// The type that declares the extension block.
+        /// </value>
+        public override Type DeclaringType => BlockType.DeclaringType;
+
+        /// <summary>
+        /// Gets the type that was used to obtain the extension block.
+        /// </summary>
+        /// <value>
+        /// The type that was used to obtain the extension block.
+        /// </value>
+        public override Type? ReflectedType => BlockType.DeclaringType;
+
+        /// <summary>
+        /// Gets the custom attributes applied to the extension block.
+        /// </summary>
+        /// <value>
+        /// The custom attributes applied to the extension block.
+        /// </value>
+        public override IEnumerable<CustomAttributeData> CustomAttributes => BlockType.CustomAttributes;
+
+        /// <summary>
+        /// Returns custom attributes of the specified type applied to the extension block.
+        /// </summary>
+        /// <param name="attributeType">The type of attributes to retrieve.</param>
+        /// <param name="inherit"><see langword="true"/> to search the inheritance chain; otherwise, <see langword="false"/>.</param>
+        /// <returns>An array of custom attributes applied to the extension block.</returns>
+        public override object[] GetCustomAttributes(Type attributeType, bool inherit) => BlockType.GetCustomAttributes(attributeType, inherit);
+
+        /// <summary>
+        /// Returns all custom attributes applied to the extension block.
+        /// </summary>
+        /// <param name="inherit"><see langword="true"/> to search the inheritance chain; otherwise, <see langword="false"/>.</param>
+        /// <returns>An array of custom attributes applied to the extension block.</returns>
+        public override object[] GetCustomAttributes(bool inherit) => BlockType.GetCustomAttributes(inherit);
+
+        /// <summary>
+        /// Returns custom attribute data for the extension block.
+        /// </summary>
+        /// <returns>A list of custom attribute data for the extension block.</returns>
+        public override IList<CustomAttributeData> GetCustomAttributesData() => BlockType.GetCustomAttributesData();
+
+        /// <summary>
+        /// Determines whether the extension block has the same metadata definition as the specified member.
+        /// </summary>
+        /// <param name="other">The member to compare.</param>
+        /// <returns><see langword="true"/> if the extension block has the same metadata definition as <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
+        public override bool HasSameMetadataDefinitionAs(MemberInfo other) => BlockType.HasSameMetadataDefinitionAs(other);
+
+        /// <summary>
+        /// Determines whether the specified attribute type is applied to the extension block.
+        /// </summary>
+        /// <param name="attributeType">The type of attribute to check.</param>
+        /// <param name="inherit"><see langword="true"/> to search the inheritance chain; otherwise, <see langword="false"/>.</param>
+        /// <returns><see langword="true"/> if the attribute is applied to the extension block; otherwise, <see langword="false"/>.</returns>
+        public override bool IsDefined(Type attributeType, bool inherit) => BlockType.IsDefined(attributeType, inherit);
+
+        #endregion
     }
 }

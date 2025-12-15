@@ -14,24 +14,8 @@ namespace Kampute.DocToolkit.Metadata
     /// <remarks>
     /// An extension block represents a logical grouping of extension members that share the same receiver type (the type being extended).
     /// </remarks>
-    public interface IExtensionBlock : IWithProperties, IWithMethods
+    public interface IExtensionBlock : ITypeMember, IWithProperties, IWithMethods
     {
-        /// <summary>
-        /// Gets the assembly that defines this extension block.
-        /// </summary>
-        /// <value>
-        /// The assembly defining this extension block.
-        /// </value>
-        IAssembly Assembly { get; }
-
-        /// <summary>
-        /// Gets the type that declares this extension block.
-        /// </summary>
-        /// <value>
-        /// The declaring type of this extension block.
-        /// </value>
-        IClassType DeclaringType { get; }
-
         /// <summary>
         /// Gets the receiver parameter information for this extension block.
         /// </summary>
@@ -55,14 +39,6 @@ namespace Kampute.DocToolkit.Metadata
         /// A read-only list of <see cref="IType"/> representing the generic type parameters of this extension block.
         /// </value>
         IReadOnlyList<ITypeParameter> TypeParameters { get; }
-
-        /// <summary>
-        /// Gets the code reference identifier for this extension block.
-        /// </summary>
-        /// <value>
-        /// The code reference identifier of this extension block.
-        /// </value>
-        string CodeReference { get; }
 
         /// <summary>
         /// Determines whether this extension block extends the specified type.

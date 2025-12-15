@@ -23,7 +23,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class MemberAdapterRepository : IMemberAdapterRepository
     {
-        private readonly ConcurrentDictionary<ExtensionBlockInfo, IExtensionBlock> extensionBlockCache = [];
         private readonly ConcurrentDictionary<MemberInfo, IMember> memberCache;
 
         /// <summary>
@@ -120,7 +119,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (extensionBlock is null)
                 throw new ArgumentNullException(nameof(extensionBlock));
 
-            return extensionBlockCache.GetOrAdd(extensionBlock, CreateExtensionBlockMetadata);
+            return (IExtensionBlock)memberCache.GetOrAdd(extensionBlock, _ => CreateExtensionBlockMetadata(extensionBlock));
         }
 
         /// <inheritdoc/>
