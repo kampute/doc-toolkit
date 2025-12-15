@@ -66,6 +66,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return other is ITypeDecorator otherDecorator
                 && Modifier == otherDecorator.Modifier
+                && ArrayRank == otherDecorator.ArrayRank
                 && ElementType.IsSubstitutableBy(otherDecorator.ElementType);
         }
 

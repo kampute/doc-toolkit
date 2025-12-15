@@ -296,8 +296,12 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(int?), typeof(int), ExpectedResult = true)]
         [TestCase(typeof(int?), typeof(bool), ExpectedResult = false)]
         [TestCase(typeof(int[]), typeof(int[]), ExpectedResult = true)]
+        [TestCase(typeof(int[]), typeof(int[,]), ExpectedResult = false)]
+        [TestCase(typeof(int[,]), typeof(int[]), ExpectedResult = false)]
         [TestCase(typeof(int[]), typeof(bool[]), ExpectedResult = false)]
         [TestCase(typeof(int*), typeof(int*), ExpectedResult = true)]
+        [TestCase(typeof(int**), typeof(int*), ExpectedResult = false)]
+        [TestCase(typeof(int*), typeof(int**), ExpectedResult = false)]
         [TestCase(typeof(int*), typeof(bool*), ExpectedResult = false)]
         [TestCase(typeof(void*), typeof(void*), ExpectedResult = true)]
         [TestCase(typeof(void*), typeof(bool*), ExpectedResult = false)]
@@ -307,6 +311,37 @@ namespace Kampute.DocToolkit.Test.Metadata
             var sourceMetadata = sourceType.GetMetadata();
 
             return targetMetadata.IsAssignableFrom(sourceMetadata);
+        }
+
+        [TestCase(typeof(int?), typeof(int?), ExpectedResult = true)]
+        [TestCase(typeof(int?), typeof(bool?), ExpectedResult = false)]
+        [TestCase(typeof(int?), typeof(int), ExpectedResult = false)]
+        [TestCase(typeof(int), typeof(int?), ExpectedResult = false)]
+        [TestCase(typeof(int[]), typeof(int[]), ExpectedResult = true)]
+        [TestCase(typeof(int[]), typeof(bool[]), ExpectedResult = false)]
+        [TestCase(typeof(int[]), typeof(int[,]), ExpectedResult = false)]
+        [TestCase(typeof(int[,]), typeof(int[,]), ExpectedResult = true)]
+        [TestCase(typeof(int[,]), typeof(int[,,]), ExpectedResult = false)]
+        [TestCase(typeof(int[,,]), typeof(int[,,]), ExpectedResult = true)]
+        [TestCase(typeof(int[][]), typeof(int[][]), ExpectedResult = true)]
+        [TestCase(typeof(int[][]), typeof(int[,]), ExpectedResult = false)]
+        [TestCase(typeof(int*), typeof(int*), ExpectedResult = true)]
+        [TestCase(typeof(int*), typeof(bool*), ExpectedResult = false)]
+        [TestCase(typeof(int**), typeof(int**), ExpectedResult = true)]
+        [TestCase(typeof(int*), typeof(int**), ExpectedResult = false)]
+        [TestCase(typeof(void*), typeof(void*), ExpectedResult = true)]
+        [TestCase(typeof(void*), typeof(bool*), ExpectedResult = false)]
+        [TestCase(typeof(string), typeof(string), ExpectedResult = true)]
+        [TestCase(typeof(int), typeof(int), ExpectedResult = true)]
+        [TestCase(typeof(int), typeof(bool), ExpectedResult = false)]
+        [TestCase(typeof(int[]), typeof(int), ExpectedResult = false)]
+        [TestCase(typeof(int), typeof(int[]), ExpectedResult = false)]
+        public bool IsSubstitutableBy_ReturnsExpectedResults(Type targetType, Type sourceType)
+        {
+            var targetMetadata = targetType.GetMetadata();
+            var sourceMetadata = sourceType.GetMetadata();
+
+            return targetMetadata.IsSubstitutableBy(sourceMetadata);
         }
     }
 }

@@ -347,15 +347,35 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<>), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<string>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
         public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
         {
             var targetMetadata = targetType.GetMetadata<IClassType>();
             var sourceMetadata = sourceType.GetMetadata();
 
             return targetMetadata.IsAssignableFrom(sourceMetadata);
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<string>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericStruct<>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = false)]
+        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
+        {
+            var targetMetadata = targetType.GetMetadata<IClassType>();
+            var sourceMetadata = sourceType.GetMetadata();
+
+            return targetMetadata.IsSubstitutableBy(sourceMetadata);
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>),

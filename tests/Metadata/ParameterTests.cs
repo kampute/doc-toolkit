@@ -18,7 +18,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), "i", "s")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), "args")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), "s", "day", "values")]
-        public void Parameter_Name_HasExpectedValue(Type declaringType, string methodName, params string[] expectedNames)
+        public void Name_HasExpectedValue(Type declaringType, string methodName, params string[] expectedNames)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -33,7 +33,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod))]
-        public void Parameter_Position_HasExpectedValue(Type declaringType, string methodName)
+        public void Position_HasExpectedValue(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -50,7 +50,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = ParameterReferenceKind.None)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = ParameterReferenceKind.In)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = ParameterReferenceKind.None)]
-        public ParameterReferenceKind Parameter_ReferenceKind_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
+        public ParameterReferenceKind ReferenceKind_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -68,7 +68,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = false)]
-        public bool Parameter_IsByRef_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
+        public bool IsByRef_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -84,7 +84,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
-        public bool Parameter_IsOptional_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
+        public bool IsOptional_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -100,7 +100,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 0, ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
-        public bool Parameter_IsParams_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
+        public bool IsParams_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -116,7 +116,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
-        public bool Parameter_HasDefaultValue_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
+        public bool HasDefaultValue_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -130,7 +130,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2)]
-        public void Parameter_DefaultValue_WithoutDefault_ReturnsDBNull(Type declaringType, string methodName, int parameterIndex)
+        public void DefaultValue_WithoutDefault_ReturnsDBNull(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -145,7 +145,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = 42)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = "default")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = (int)DayOfWeek.Monday)]
-        public object? Parameter_DefaultValue_WithDefault_ReturnsDefaultValue(Type declaringType, string methodName, int parameterIndex)
+        public object? DefaultValue_WithDefault_ReturnsDefaultValue(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -160,7 +160,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = nameof(Int32))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = nameof(String))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = nameof(String))]
-        public string Parameter_ParameterType_HasExpectedName(Type declaringType, string methodName, int parameterIndex)
+        public string ParameterType_HasExpectedName(Type declaringType, string methodName, int parameterIndex)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -173,7 +173,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), 0, typeof(System.Diagnostics.CodeAnalysis.NotNullAttribute))]
-        public void Parameter_CustomAttributes_ReturnsExpectedAttributes(Type declaringType, string methodName, int parameterIndex, Type expectedAttribute)
+        public void CustomAttributes_ReturnsExpectedAttributes(Type declaringType, string methodName, int parameterIndex, Type expectedAttribute)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -186,7 +186,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForSameParameter()
+        public void IsSatisfiableBy_ReturnsTrueForSameParameter()
         {
             var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RefParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -199,7 +199,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForMatchingParameters()
+        public void IsSatisfiableBy_ReturnsTrueForMatchingParameters()
         {
             var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
 
@@ -222,7 +222,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForDifferentParameterDirections()
+        public void IsSatisfiableBy_ReturnsFalseForDifferentParameterDirections()
         {
             var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
 
@@ -245,7 +245,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForParametersWithDifferentTypes()
+        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentTypes()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -263,7 +263,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForParametersWithDifferentModifiers()
+        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentModifiers()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -281,7 +281,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForParametersWithDifferentPositions()
+        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentPositions()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -299,7 +299,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForOpenAndClosedMethodParameters()
+        public void IsSatisfiableBy_ReturnsTrueForOpenAndClosedMethodParameters()
         {
             var methodName = nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod);
 

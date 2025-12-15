@@ -145,5 +145,16 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             return targetMetadata.IsAssignableFrom(sourceMetadata);
         }
+
+        [TestCase(typeof(DayOfWeek), typeof(DayOfWeek), ExpectedResult = true)]
+        [TestCase(typeof(DayOfWeek), typeof(AttributeTargets), ExpectedResult = false)]
+        [TestCase(typeof(DayOfWeek), typeof(int), ExpectedResult = false)]
+        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
+        {
+            var targetMetadata = targetType.GetMetadata<IEnumType>();
+            var sourceMetadata = sourceType.GetMetadata();
+
+            return targetMetadata.IsSubstitutableBy(sourceMetadata);
+        }
     }
 }

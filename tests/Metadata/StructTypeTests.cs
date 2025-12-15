@@ -282,16 +282,22 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.ImplementedInterfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
+        [TestCase(typeof(DateTime), typeof(DateTime), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericStruct<>), typeof(Acme.SampleGenericStruct<>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), typeof(Acme.SampleGenericStruct<System.IO.Stream>), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>), typeof(Acme.SampleGenericStruct<>), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>), typeof(Acme.SampleGenericStruct<System.IO.Stream>), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>), typeof(Acme.SampleGenericStruct<System.IO.TextWriter>), ExpectedResult = false)]
-        public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>), typeof(Acme.SampleGenericClass<System.IO.Stream>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), typeof(Acme.SampleGenericStruct<System.IO.Stream>.InnerGenericStruct<int, string>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>.InnerGenericStruct<int, string>), typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), ExpectedResult = false)]
+        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
         {
             var targetMetadata = targetType.GetMetadata<IStructType>();
             var sourceMetadata = sourceType.GetMetadata();
 
-            return targetMetadata.IsAssignableFrom(sourceMetadata);
+            return targetMetadata.IsSubstitutableBy(sourceMetadata);
         }
 
         [TestCase(typeof(Acme.SampleGenericStruct<>),

@@ -647,7 +647,8 @@ namespace Acme
                 /// <param name="t">The t parameter.</param>
                 /// <param name="u">The u parameter.</param>
                 /// <param name="v">The v parameter.</param>
-                public abstract void Method(T t, U u, V v);
+                /// <returns>An object.</returns>
+                public abstract object Method(T t, U u, V v);
 
                 /// <summary>
                 /// A virtual generic method.
@@ -774,10 +775,11 @@ namespace Acme
         public sealed override object? Property { get; set; }
 
         /// <summary>
-        /// Overrides the abstract method.
+        /// Overrides the abstract method with a string return type.
         /// </summary>
+        /// <returns>A string, instead of an object.</returns>
         /// <inheritdoc/>
-        public override void Method(object t, int u, string v) { }
+        public override string Method(object t, int u, string v) => string.Empty;
 
         /// <summary>
         /// Overrides the generic method.
@@ -801,7 +803,7 @@ namespace Acme
         /// Overrides the abstract method.
         /// </summary>
         /// <inheritdoc/>
-        public sealed override void Method(object t, int u, string v) { }
+        public sealed override object Method(object t, int u, string v) => new();
     }
 
     /// <summary>

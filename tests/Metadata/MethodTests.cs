@@ -200,6 +200,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.Virtuality;
         }
 
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Method), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass))]
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.GenericMethod), typeof(Acme.SampleDerivedGenericClass<,,>))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), null)]
         public void OverriddenMethod_HasExpectedValue(Type declaringType, string methodName, Type? expectedBaseType)

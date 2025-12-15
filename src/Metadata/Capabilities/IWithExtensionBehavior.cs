@@ -52,6 +52,6 @@ namespace Kampute.DocToolkit.Metadata.Capabilities
         /// </summary>
         /// <param name="type">The type to check.</param>
         /// <returns><see langword="true"/> if this member is an extension of the specified type; otherwise, <see langword="false"/>.</returns>
-        bool IsExtensionOf(IType type) => ExtensionReceiver is not null && ExtensionReceiver.Type.IsAssignableFrom(type);
+        bool Extends(IType type) => ExtensionReceiver is not null && ExtensionReceiver.Type.IsAssignableFrom(type);
     }
 }

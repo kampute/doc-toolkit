@@ -118,7 +118,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && other.IsValueType && other is IStructType { IsRefLike: true })
                 return false;
 
-            // Check default constructor constraint (only applies to reference types)
+            // Check default constructor constraint, disallow types without a default constructor
             if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !other.IsValueType)
             {
                 // Must have constructors
