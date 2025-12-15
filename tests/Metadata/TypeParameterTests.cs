@@ -195,13 +195,13 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(int), ExpectedResult = true)]
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(ReadOnlySpan<int>), ExpectedResult = false)]
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(string), ExpectedResult = true)]
-        public bool IsSubstitutableBy_ChecksConstraintSatisfaction(Type declaringType, int parameterIndex, Type candidateType)
+        public bool IsSatisfiableBy_ChecksConstraintSatisfaction(Type declaringType, int parameterIndex, Type candidateType)
         {
             var declaringTypeMetadata = declaringType.GetMetadata<IGenericCapableType>();
             var typeParameter = declaringTypeMetadata.TypeParameters[parameterIndex];
             var candidateMetadata = candidateType.GetMetadata();
 
-            return typeParameter.IsSubstitutableBy(candidateMetadata);
+            return typeParameter.IsSatisfiableBy(candidateMetadata);
         }
     }
 }

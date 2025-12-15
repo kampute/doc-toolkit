@@ -88,31 +88,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <summary>
-        /// Determines whether the provided type arguments are valid for the given type parameters.
-        /// </summary>
-        /// <param name="typeParameters">The type parameters to validate against.</param>
-        /// <param name="typeArguments">The type arguments to validate.</param>
-        /// <returns><see langword="true"/> if the type arguments are valid for the type parameters; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="typeParameters"/> or <paramref name="typeArguments"/> is <see langword="null"/>.</exception>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool AreValidTypeArguments(IReadOnlyList<ITypeParameter> typeParameters, IReadOnlyList<IType> typeArguments)
-        {
-            if (typeParameters is null)
-                throw new ArgumentNullException(nameof(typeParameters));
-            if (typeArguments is null)
-                throw new ArgumentNullException(nameof(typeArguments));
-
-            if (typeParameters.Count != typeArguments.Count)
-                return false;
-
-            for (var i = 0; i < typeParameters.Count; ++i)
-                if (!typeParameters[i].IsSubstitutableBy(typeArguments[i]))
-                    return false;
-
-            return true;
-        }
-
-        /// <summary>
         /// Determines whether two types originate from the same declaring type hierarchy.
         /// </summary>
         /// <param name="a">The first type to compare.</param>
@@ -138,6 +113,91 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             }
 
             return a?.Namespace == b?.Namespace;
+        }
+
+        /// <summary>
+        /// Determines whether a target type is a valid substitution for a source type in the context of method overriding or interface implementation.
+        /// </summary>
+        /// <param name="baseMember">The base declaration of the member.</param>
+        /// <param name="sourceType">The type used by the base declaration that may be substituted.</param>
+        /// <param name="derivedMember">The derived or implementing declaration of the member.</param>
+        /// <param name="targetType">The type used by the derived or implementing declaration that may substitute <paramref name="sourceType"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="targetType"/> is a valid substitution for <paramref name="sourceType"/>; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when any argument is <see langword="null"/>.</exception>
+        public static bool IsValidTypeSubstitution(IMember baseMember, IType sourceType, IMember derivedMember, IType targetType)
+        {
+            if (baseMember is null)
+                throw new ArgumentNullException(nameof(baseMember));
+            if (sourceType is null)
+                throw new ArgumentNullException(nameof(sourceType));
+            if (derivedMember is null)
+                throw new ArgumentNullException(nameof(derivedMember));
+            if (targetType is null)
+                throw new ArgumentNullException(nameof(targetType));
+
+            if (sourceType.Equals(targetType))
+                return true;
+
+            if (sourceType is not ITypeParameter { IsGenericTypeParameter: true } sourceTypeParameter || targetType is ITypeParameter)
+                return false;
+
+            var baseType = (baseMember as IType) ?? baseMember.DeclaringType;
+            if (baseType is null)
+                return false;
+
+            var derivedType = (derivedMember as IType) ?? derivedMember.DeclaringType;
+            if (derivedType is null)
+                return false;
+
+            var constructedDerivedType = FindConstructedTypeForBase(derivedType, baseType);
+
+            return constructedDerivedType is not null
+                && constructedDerivedType.TypeArguments.Count > sourceTypeParameter.Position
+                && constructedDerivedType.TypeArguments[sourceTypeParameter.Position].Equals(targetType);
+        }
+
+        /// <summary>
+        /// Finds the constructed generic type in the derived type's hierarchy that corresponds to the specified base type context.
+        /// </summary>
+        /// <param name="derivedType">The derived type to search.</param>
+        /// <param name="baseTypeContext">The base type context to match.</param>
+        /// <returns>A constructed generic type if found; otherwise, <see langword="null"/>.</returns>
+        private static IGenericCapableType? FindConstructedTypeForBase(IType derivedType, IType baseTypeContext)
+        {
+            // Check if the derived type itself is the base type (as a constructed generic)
+            if (derivedType is IGenericCapableType { IsConstructedGenericType: true } constructed)
+            {
+                if (baseTypeContext.Equals(constructed.GenericTypeDefinition!))
+                    return constructed;
+            }
+
+            // Walk up the base type hierarchy
+            for (var baseType = derivedType.BaseType; baseType is not null; baseType = baseType.BaseType)
+            {
+                if (baseTypeContext.Equals(baseType))
+                    return null;
+
+                if (baseType is not IGenericCapableType { IsConstructedGenericType: true } constructedBase)
+                    continue;
+
+                if (baseTypeContext.Equals(constructedBase.GenericTypeDefinition!))
+                    return constructedBase;
+            }
+
+            // Walk up the declaring type hierarchy
+            for (var declaringType = derivedType.DeclaringType; declaringType is not null; declaringType = declaringType.DeclaringType)
+            {
+                if (baseTypeContext.Equals(declaringType))
+                    return null;
+
+                if (declaringType is not IGenericCapableType { IsConstructedGenericType: true } constructedDeclaring)
+                    continue;
+
+                if (baseTypeContext.Equals(constructedDeclaring.GenericTypeDefinition!))
+                    return constructedDeclaring;
+            }
+
+            return null;
         }
     }
 }

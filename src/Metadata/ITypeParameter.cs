@@ -77,14 +77,25 @@ namespace Kampute.DocToolkit.Metadata
         bool IsGenericMethodParameter { get; }
 
         /// <summary>
-        /// Determines whether the specified type can be used in place of the current type parameter.
+        /// Determines whether the constraints of this type parameter can be satisfied by the specified type.
         /// </summary>
-        /// <param name="candidate">The type to check for conformance.</param>
-        /// <returns><see langword="true"/> if the specified type can be used in place of the current type parameter; otherwise, <see langword="false"/>.</returns>
+        /// <param name="type">The type to check against this type parameter's constraints.</param>
+        /// <returns><see langword="true"/> if this type parameter can be satisfied by the type; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// This method checks if the provided type satisfies all the constraints defined for the type parameter.
-        /// If the type meets all constraints, it is considered substitutable; otherwise, it is not.
+        /// This type parameter is considered satisfiable by the specified type if all constraints defined on this type parameter are 
+        /// met by the provided type.
         /// </remarks>
-        bool IsSubstitutableBy(IType candidate);
+        bool IsSatisfiableBy(IType type);
+
+        /// <summary>
+        /// Determines whether the constraints of this type parameter can be satisfied by the specified type parameter.
+        /// </summary>
+        /// <param name="other">The type parameter to check against this type parameter's constraints.</param>
+        /// <returns><see langword="true"/> if this type parameter can be satisfied by the other; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// This type parameter is considered satisfiable by the specified type parameter if all constraints defined on this type parameter 
+        /// are met by the provided type parameter.
+        /// </remarks>
+        bool IsSatisfiableBy(ITypeParameter other);
     }
 }

@@ -5,7 +5,6 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
-    using Kampute.DocToolkit.Collections;
     using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
@@ -95,34 +94,31 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public override bool IsAssignableFrom(IType source) => false;
 
         /// <inheritdoc/>
-        public virtual bool IsSubstitutableBy(IType candidate)
+        public virtual bool IsSatisfiableBy(IType type)
         {
-            if (candidate is null)
+            if (type is null)
                 return false;
 
-            if (ReferenceEquals(this, candidate))
-                return true;
-
-            if (candidate is ITypeParameter otherTypeParameter)
-                return IsDeclarationOriginOf(otherTypeParameter);
+            if (type is ITypeParameter typeParameter)
+                return IsSatisfiableBy(typeParameter);
 
             // Check reference type constraint, disallow value and by-ref-like types
-            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && candidate.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && type.IsValueType)
                 return false;
 
             // Check not-nullable value type constraint, disallow reference types
-            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !candidate.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !type.IsValueType)
                 return false;
 
             // Check by-ref-like constraint, disallow by-ref-like types if not allowed
-            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && candidate.IsValueType && candidate is IStructType { IsRefLike: true })
+            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && type.IsValueType && type is IStructType { IsRefLike: true })
                 return false;
 
             // Check default constructor constraint, disallow types without a default constructor
-            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !candidate.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !type.IsValueType)
             {
                 // Must have constructors
-                if (candidate is not IWithConstructors sourceWithConstructors)
+                if (type is not IWithConstructors sourceWithConstructors)
                     return false;
 
                 // Must one of the constructors be a default constructor
@@ -131,19 +127,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             }
 
             // Check type constraints
-            return TypeConstraints.All(tc => tc.IsAssignableFrom(candidate));
+            return TypeConstraints.All(tc => tc.IsAssignableFrom(type));
         }
 
-        /// <summary>
-        /// Determines whether this type parameter is the origin declaration of the specified type parameter.
-        /// </summary>
-        /// <param name="other">The type parameter to compare with this instance.</param>
-        /// <returns><see langword="true"/> if this type parameter is the origin declaration of the other; otherwise, <see langword="false"/>.</returns>
-        /// <remarks>
-        /// This type parameter is considered the origin of the other if they occupy the same position in related generic declarations
-        /// where this is the base declaration connected through inheritance, method overrides, interface implementations, or type nesting.
-        /// </remarks>
-        protected virtual bool IsDeclarationOriginOf(ITypeParameter other)
+        /// <inheritdoc/>
+        public virtual bool IsSatisfiableBy(ITypeParameter other)
         {
             if (other is null)
                 return false;
@@ -151,62 +139,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (Position != other.Position || IsGenericMethodParameter != other.IsGenericMethodParameter)
+            if (Variance != other.Variance || !other.Constraints.HasFlag(Constraints))
                 return false;
 
-            var thisMember = DeclaringMember;
-            var otherMember = other.DeclaringMember;
-
-            if (ReferenceEquals(thisMember, otherMember))
-                return true;
-
-            // Walk up the inheritance chain
-            // Overridden methods and base types can access base type parameters
-            try
-            {
-                var inheritedMember = otherMember.GetInheritedMember();
-                while (inheritedMember is not null)
-                {
-                    if (ReferenceEquals(thisMember, inheritedMember))
-                        return true;
-
-                    inheritedMember = inheritedMember.GetInheritedMember();
-                }
-            }
-            catch (InvalidOperationException) when (IsGenericMethodParameter)
-            {
-                // A recursive call chain may occur if this function is called
-                // as part of resolving the base declaration of a generic method.
-                // In such case, this exception indicates that the source type
-                // parameter and this type parameter are declared on the same
-                // generic method definition.
-                return true;
-            }
-
-            if (!IsGenericTypeParameter)
-                return false;
-
-            // Check nesting relationships
-            // Nested types can access outer type parameters
-            var declaringType = otherMember.DeclaringType;
-            while (declaringType is not null)
-            {
-                if (ReferenceEquals(thisMember, declaringType))
-                    return true;
-
-                declaringType = declaringType.DeclaringType;
-            }
-
-            // Check implemented interfaces
-            // Types can access type parameters declared on their interfaces
-            if (otherMember is IWithInterfaces typeWithInterfaces)
-            {
-                return typeWithInterfaces.Interfaces
-                    .Select(i => i.IsConstructedGenericType ? (IInterfaceType)i.GenericTypeDefinition! : i)
-                    .Contains(thisMember, ReferenceEqualityComparer<IMember>.Instance);
-            }
-
-            return false;
+            return TypeConstraints.All(tc => other.TypeConstraints.Any(cct => tc.IsAssignableFrom(cct)));
         }
 
         /// <inheritdoc/>

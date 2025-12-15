@@ -139,5 +139,163 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
 
             Assert.That(result, Is.True);
         }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithSameConcreteTypes_ReturnsTrue()
+        {
+            var method = typeof(Acme.SampleMethods)
+                .GetMethod(nameof(Acme.SampleMethods.RegularMethod))!
+                .GetMetadata();
+
+            var intType = typeof(int).GetMetadata();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(method, intType, method, intType);
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithParameterComparisonAcrossInheritance_ReturnsTrue()
+        {
+            var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
+
+            var baseMethod = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass)
+                .GetMethod(methodName, Acme.Bindings.AllDeclared)!
+                .GetMetadata();
+            var derivedMethod = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetMethod(methodName, Acme.Bindings.AllDeclared)!
+                .GetMetadata();
+
+            for (var i = 0; i < baseMethod.Parameters.Count; i++)
+            {
+                var baseParam = baseMethod.Parameters[i];
+                var derivedParam = derivedMethod.Parameters[i];
+
+                Assert.That(baseParam.IsSatisfiableBy(derivedParam), Is.True);
+            }
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithMismatchedConcreteType_ReturnsFalse()
+        {
+            var baseMethod = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetMethod(nameof(Acme.SampleDerivedGenericClass<,,>.Method))!
+                .GetMetadata();
+            var derivedMethod = typeof(Acme.SampleDerivedConstructedGenericClass)
+                .GetMethod(nameof(Acme.SampleDerivedConstructedGenericClass.Method))!
+                .GetMetadata();
+
+            var baseReturnType = baseMethod.Return.Type;
+            var wrongType = typeof(string).GetMetadata();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseMethod, baseReturnType, derivedMethod, wrongType);
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithMatchedConcreteType_ReturnsTrue()
+        {
+            var baseMethod = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetMethod(nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod))!
+                .GetMetadata();
+            var derivedMethod = typeof(Acme.SampleDerivedConstructedGenericClass)
+                .GetMethod(nameof(Acme.SampleDerivedConstructedGenericClass.GenericMethod))!
+                .GetMetadata();
+
+            var baseParam = baseMethod.Parameters[0];
+            var derivedParam = derivedMethod.Parameters[0];
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseMethod, baseParam.Type, derivedMethod, derivedParam.Type);
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithDifferentNonTypeParameterTypes_ReturnsFalse()
+        {
+            var method = typeof(Acme.SampleMethods)
+                .GetMethod(nameof(Acme.SampleMethods.RegularMethod))!
+                .GetMetadata();
+
+            var intType = typeof(int).GetMetadata();
+            var stringType = typeof(string).GetMetadata();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(method, intType, method, stringType);
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithUnrelatedTypeContext_ReturnsFalse()
+        {
+            var baseMethod = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetMethod(nameof(Acme.SampleDerivedGenericClass<,,>.Method))!
+                .GetMetadata();
+            var unrelatedMethod = typeof(Acme.SampleMethods)
+                .GetMethod(nameof(Acme.SampleMethods.RegularMethod))!
+                .GetMetadata();
+
+            var baseReturnType = baseMethod.Return.Type;
+            var targetType = typeof(string).GetMetadata();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseMethod, baseReturnType, unrelatedMethod, targetType);
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithPropertyTypeSubstitution_ReturnsTrue()
+        {
+            var baseProperty = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetProperty(nameof(Acme.SampleDerivedGenericClass<,,>.Property))!
+                .GetMetadata();
+            var derivedProperty = typeof(Acme.SampleDerivedConstructedGenericClass)
+                .GetProperty(nameof(Acme.SampleDerivedConstructedGenericClass.Property))!
+                .GetMetadata();
+
+            var basePropertyType = baseProperty.Type;
+            var derivedPropertyType = derivedProperty.Type;
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseProperty, basePropertyType, derivedProperty, derivedPropertyType);
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithEventTypeSubstitution_ReturnsTrue()
+        {
+            var baseEvent = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetEvent(nameof(Acme.SampleDerivedGenericClass<,,>.Event))!
+                .GetMetadata();
+            var derivedEvent = typeof(Acme.SampleDerivedConstructedGenericClass)
+                .GetEvent(nameof(Acme.SampleDerivedConstructedGenericClass.Event))!
+                .GetMetadata();
+
+            var baseEventType = baseEvent.Type;
+            var derivedEventType = derivedEvent.Type;
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseEvent, baseEventType, derivedEvent, derivedEventType);
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithNestedGenericHierarchy_ReturnsTrue()
+        {
+            var baseMethod = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass)
+                .GetMethod(nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method))!
+                .GetMetadata();
+            var derivedMethod = typeof(Acme.SampleDerivedGenericClass<,,>)
+                .GetMethod(nameof(Acme.SampleDerivedGenericClass<,,>.Method))!
+                .GetMetadata();
+
+            var baseReturnType = baseMethod.Return.Type;
+            var derivedReturnType = derivedMethod.Return.Type;
+
+            var result = AdapterHelper.IsValidTypeSubstitution(baseMethod, baseReturnType, derivedMethod, derivedReturnType);
+
+            Assert.That(result, Is.True);
+        }
     }
 }

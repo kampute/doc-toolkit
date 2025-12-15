@@ -186,7 +186,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsTrueForSameParameter()
+        public void IsSatisfiableBy_ForSameParameter_ReturnsTrue()
         {
             var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RefParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -199,7 +199,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsTrueForMatchingParameters()
+        public void IsSatisfiableBy_ForMatchingParameters_ReturnsTrue()
         {
             var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
 
@@ -222,30 +222,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsFalseForDifferentParameterDirections()
-        {
-            var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
-
-            var baseMethodInfo = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetMethod(methodName, Acme.Bindings.AllDeclared);
-            Assert.That(baseMethodInfo, Is.Not.Null);
-
-            var derivedMethodInfo = typeof(Acme.SampleDerivedGenericClass<,,>).GetMethod(methodName, Acme.Bindings.AllDeclared);
-            Assert.That(derivedMethodInfo, Is.Not.Null);
-
-            var baseMethod = baseMethodInfo.GetMetadata();
-            var derivedMethod = derivedMethodInfo.GetMetadata();
-
-            for (var i = 0; i < baseMethod.Parameters.Count; i++)
-            {
-                var baseParam = baseMethod.Parameters[i];
-                var derivedParam = derivedMethod.Parameters[i];
-
-                Assert.That(derivedParam.IsSatisfiableBy(baseParam), Is.False);
-            }
-        }
-
-        [Test]
-        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentTypes()
+        public void IsSatisfiableBy_ForParametersWithDifferentTypes_ReturnsFalse()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -263,7 +240,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentModifiers()
+        public void IsSatisfiableBy_ForParametersWithDifferentModifiers_ReturnsFalse()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -281,7 +258,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsFalseForParametersWithDifferentPositions()
+        public void IsSatisfiableBy_ForParametersWithDifferentPositions_ReturnsFalse()
         {
             var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(firstMethodInfo, Is.Not.Null);
@@ -299,7 +276,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsSatisfiableBy_ReturnsTrueForOpenAndClosedMethodParameters()
+        public void IsSatisfiableBy_ForOpenAndClosedMethodParameters_ReturnsTrue()
         {
             var methodName = nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod);
 
@@ -317,7 +294,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 var baseParam = baseMethod.Parameters[i];
                 var derivedParam = derivedMethod.Parameters[i];
 
-                Assert.That(derivedParam.IsSatisfiableBy(baseParam), Is.False);
+                Assert.That(baseParam.IsSatisfiableBy(derivedParam), Is.True);
             }
         }
 

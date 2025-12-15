@@ -66,7 +66,105 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public (int Offset, int Count) OwnGenericParameterRange => ownGenericArity ??= GetOwnGenericParameterRange();
 
         /// <inheritdoc/>
-        public override bool IsDirectDeclaration => !IsGenericType || IsGenericTypeDefinition;
+        public override bool IsAssignableFrom(IType source)
+        {
+            // First, check standard inheritance assignability
+            if (base.IsAssignableFrom(source))
+                return true;
+
+            if (!IsGenericType || !source.IsGenericType)
+                return false;
+
+            var genericSource = (IGenericCapableType)source;
+
+            if (IsGenericTypeDefinition)
+            {
+                // Current is a generic type definition
+                // If source is also a generic type definition, their assignability already checked by base
+                if (genericSource.IsGenericTypeDefinition)
+                    return false;
+
+                // Source is a constructed generic type, its definition must match current
+                var srcDefinition = genericSource.GenericTypeDefinition!;
+                if (!Equals(srcDefinition))
+                    return false;
+
+                // TODO: Check if all type arguments of source are generic parameters satisfying the type parameter constraints
+                var assignable = true;
+                var defTypeParams = TypeParameters;
+                for (var i = 0; i < defTypeParams.Count; i++)
+                {
+                    var sourceArg = genericSource.TypeArguments[i];
+                    if (sourceArg is not ITypeParameter sourceParam)
+                    {
+                        assignable = false;
+                        break;
+                    }
+                    var thisParam = defTypeParams[i];
+                    if (!sourceParam.IsSatisfiableBy(thisParam))
+                    {
+                        assignable = false;
+                        break;
+                    }
+                }
+                return assignable;
+            }
+
+            if (genericSource.IsGenericTypeDefinition)
+            {
+                // Current is a constructed generic type and source is a generic type definition, both definitions must match
+                var currDefinition = GenericTypeDefinition!;
+                if (!currDefinition.Equals(genericSource))
+                    return false;
+
+                // TODO: Check if all type parameters of this are generic parameters and source satisfies the type parameter constraints
+                var assignable = true;
+                var defTypeParams = genericSource.TypeParameters;
+                for (var i = 0; i < defTypeParams.Count; i++)
+                {
+                    var thisArg = TypeArguments[i];
+                    if (thisArg is not ITypeParameter thisParam)
+                    {
+                        assignable = false;
+                        break;
+                    }
+                    var sourceParam = defTypeParams[i];
+                    if (!thisParam.IsSatisfiableBy(sourceParam))
+                    {
+                        assignable = false;
+                        break;
+                    }
+                }
+                return assignable;
+            }
+
+            // Both are constructed generic types, their definitions must match
+            var thisDefinition = GenericTypeDefinition!;
+            var sourceDefinition = genericSource.GenericTypeDefinition!;
+            if (!thisDefinition.Equals(sourceDefinition))
+                return false;
+
+            // Check type argument assignability according to type parameter variance
+            var typeParams = thisDefinition.TypeParameters;
+            for (var i = 0; i < typeParams.Count; i++)
+            {
+                var param = typeParams[i];
+                var thisArg = TypeArguments[i];
+                var sourceArg = genericSource.TypeArguments[i];
+
+                var assignable = param.Variance switch
+                {
+                    TypeParameterVariance.Covariant => thisArg.IsAssignableFrom(sourceArg),
+                    TypeParameterVariance.Contravariant => sourceArg.IsAssignableFrom(thisArg),
+                    _ => thisArg.Equals(sourceArg),
+                };
+
+                if (!assignable)
+                    return false;
+            }
+
+            return true;
+        }
 
         /// <inheritdoc/>
         protected override string ConstructSignature(bool useParameterNotation)

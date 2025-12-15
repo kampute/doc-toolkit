@@ -261,7 +261,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.IsStatic == IsStatic
-                && baseCandidate.Type.IsSatisfiableBy(Type)
+                && AdapterHelper.IsValidTypeSubstitution(baseCandidate, baseCandidate.Type, this, Type)
                 && (!IsIndexer || AdapterHelper.EquivalentParameters(baseCandidate.Parameters, Parameters));
         }
 
