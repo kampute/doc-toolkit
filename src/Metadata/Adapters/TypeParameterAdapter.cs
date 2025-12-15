@@ -104,7 +104,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return true;
 
             if (candidate is ITypeParameter otherTypeParameter)
-                return Accepts(otherTypeParameter);
+                return IsDeclarationOriginOf(otherTypeParameter);
 
             // Check reference type constraint, disallow value and by-ref-like types
             if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && candidate.IsValueType)
@@ -135,45 +135,39 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <summary>
-        /// Determines whether this type parameter accepts the specified type parameter as a valid substitution.
+        /// Determines whether this type parameter is the origin declaration of the specified type parameter.
         /// </summary>
-        /// <param name="source">The type parameter to evaluate for substitution compatibility.</param>
-        /// <returns>
-        /// <see langword="true"/> if this type parameter accepts the specified type parameter; otherwise, <see langword="false"/>.
-        /// </returns>
+        /// <param name="other">The type parameter to compare with this instance.</param>
+        /// <returns><see langword="true"/> if this type parameter is the origin declaration of the other; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// A type parameter is accepted if it represents the same parameter position in the generic hierarchy,
-        /// accounting for inheritance chains, method overrides, interface implementations, and type nesting.
-        /// <para>
-        /// This method is used to match type parameters across method overrides, interface implementations,
-        /// and nested type declarations accessing outer type parameters.
-        /// </para>
+        /// This type parameter is considered the origin of the other if they occupy the same position in related generic declarations
+        /// where this is the base declaration connected through inheritance, method overrides, interface implementations, or type nesting.
         /// </remarks>
-        protected virtual bool Accepts(ITypeParameter source)
+        protected virtual bool IsDeclarationOriginOf(ITypeParameter other)
         {
-            if (source is null)
+            if (other is null)
                 return false;
 
-            if (ReferenceEquals(this, source))
+            if (ReferenceEquals(this, other))
                 return true;
 
-            if (Position != source.Position || IsGenericMethodParameter != source.IsGenericMethodParameter)
+            if (Position != other.Position || IsGenericMethodParameter != other.IsGenericMethodParameter)
                 return false;
 
-            var targetMember = DeclaringMember;
-            var sourceMember = source.DeclaringMember;
+            var thisMember = DeclaringMember;
+            var otherMember = other.DeclaringMember;
 
-            if (ReferenceEquals(targetMember, sourceMember))
+            if (ReferenceEquals(thisMember, otherMember))
                 return true;
 
             // Walk up the inheritance chain
             // Overridden methods and base types can access base type parameters
             try
             {
-                var inheritedMember = sourceMember.GetInheritedMember();
+                var inheritedMember = otherMember.GetInheritedMember();
                 while (inheritedMember is not null)
                 {
-                    if (ReferenceEquals(targetMember, inheritedMember))
+                    if (ReferenceEquals(thisMember, inheritedMember))
                         return true;
 
                     inheritedMember = inheritedMember.GetInheritedMember();
@@ -189,27 +183,27 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return true;
             }
 
-            if (IsGenericTypeParameter)
+            if (!IsGenericTypeParameter)
+                return false;
+
+            // Check nesting relationships
+            // Nested types can access outer type parameters
+            var declaringType = otherMember.DeclaringType;
+            while (declaringType is not null)
             {
-                // Check nesting relationships
-                // Nested types can access outer type parameters
-                var declaringType = sourceMember.DeclaringType;
-                while (declaringType is not null)
-                {
-                    if (ReferenceEquals(targetMember, declaringType))
-                        return true;
+                if (ReferenceEquals(thisMember, declaringType))
+                    return true;
 
-                    declaringType = declaringType.DeclaringType;
-                }
+                declaringType = declaringType.DeclaringType;
+            }
 
-                // Check implemented interfaces
-                // Types can access type parameters declared on their interfaces
-                if (sourceMember is IWithInterfaces typeWithInterfaces)
-                {
-                    return typeWithInterfaces.Interfaces
-                        .Select(i => i.IsConstructedGenericType ? (IInterfaceType)i.GenericTypeDefinition! : i)
-                        .Contains(targetMember, ReferenceEqualityComparer<IMember>.Instance);
-                }
+            // Check implemented interfaces
+            // Types can access type parameters declared on their interfaces
+            if (otherMember is IWithInterfaces typeWithInterfaces)
+            {
+                return typeWithInterfaces.Interfaces
+                    .Select(i => i.IsConstructedGenericType ? (IInterfaceType)i.GenericTypeDefinition! : i)
+                    .Contains(thisMember, ReferenceEqualityComparer<IMember>.Instance);
             }
 
             return false;
