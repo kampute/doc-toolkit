@@ -195,13 +195,56 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(int), ExpectedResult = true)]
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(ReadOnlySpan<int>), ExpectedResult = false)]
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(string), ExpectedResult = true)]
-        public bool IsSatisfiableBy_ChecksConstraintSatisfaction(Type declaringType, int parameterIndex, Type candidateType)
+        public bool IsSatisfiableBy_ForTypes_ChecksConstraintSatisfaction(Type declaringType, int parameterIndex, Type candidateType)
         {
             var declaringTypeMetadata = declaringType.GetMetadata<IGenericCapableType>();
             var typeParameter = declaringTypeMetadata.TypeParameters[parameterIndex];
             var candidateMetadata = candidateType.GetMetadata();
 
             return typeParameter.IsSatisfiableBy(candidateMetadata);
+        }
+
+        // Same type parameter satisfies itself
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(Acme.SampleGenericClass<>), 0, ExpectedResult = true)]
+        // where T: class satisfies where T: class, new()
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(Acme.ISampleGenericInterface<>), 0, ExpectedResult = true)]
+        // where T: class, new() cannot be satisfied by where T: class
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), 0, typeof(Acme.SampleGenericClass<>), 0, ExpectedResult = false)]
+        // where U: struct satisfies where U: struct, allows ref struct
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 1, ExpectedResult = true)]
+        // where U: struct, allows ref struct cannot be satisfied by where U: struct
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 1, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, ExpectedResult = false)]
+        // where V: allows ref struct satisfies where U: struct, allows ref struct
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 2, typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 1, ExpectedResult = true)]
+        // where U: struct, allows ref struct cannot be satisfied by where V: allows ref struct
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 1, typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 2, ExpectedResult = false)]
+        // where T: class cannot be satisfied by no constraints
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, ExpectedResult = false)]
+        // where U: struct cannot be satisfied by no constraints
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, ExpectedResult = false)]
+        // where T: class, new() cannot be satisfied by no constraints
+        [TestCase(typeof(Acme.ISampleGenericInterface<>), 0, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, ExpectedResult = false)]
+        // No constraints satisfied by where T: class
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, typeof(Acme.SampleGenericClass<>), 0, ExpectedResult = true)]
+        // No constraints satisfied by where U: struct
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, ExpectedResult = true)]
+        // No constraints satisfied by where T: class, new()
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 2, typeof(Acme.ISampleGenericInterface<>), 0, ExpectedResult = true)]
+        // Variance doesn't affect satisfaction: T(class+new) vs U(none)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 0, typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, ExpectedResult = false)]
+        // Variance doesn't affect satisfaction: U(none) vs V(none)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 1, typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 2, ExpectedResult = true)]
+        // Variance doesn't affect satisfaction: V(none) vs T(class+new)
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 2, typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 0, ExpectedResult = true)]
+        public bool IsSatisfiableBy_ForTypeParameters_ChecksConstraintSatisfaction(Type declaringType, int parameterIndex, Type candidateDeclaringType, int candidateParameterIndex)
+        {
+            var declaringTypeMetadata = declaringType.GetMetadata<IGenericCapableType>();
+            var typeParameter = declaringTypeMetadata.TypeParameters[parameterIndex];
+
+            var candidateDeclaringTypeMetadata = candidateDeclaringType.GetMetadata<IGenericCapableType>();
+            var candidateTypeParameter = candidateDeclaringTypeMetadata.TypeParameters[candidateParameterIndex];
+
+            return typeParameter.IsSatisfiableBy(candidateTypeParameter);
         }
     }
 }

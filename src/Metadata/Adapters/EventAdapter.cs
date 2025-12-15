@@ -145,7 +145,15 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.IsStatic == IsStatic
-                && AdapterHelper.IsValidTypeSubstitution(baseCandidate, baseCandidate.Type, this, Type);
+                && TypesAreCompatible(baseCandidate.Type, Type);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool TypesAreCompatible(IType expectedType, IType actualType)
+            {
+                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
+                    ? typeParameter.IsSatisfiableBy(actualType)
+                    : expectedType.Equals(actualType);
+            }
         }
 
         /// <summary>
