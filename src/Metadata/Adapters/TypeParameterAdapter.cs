@@ -95,34 +95,34 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public override bool IsAssignableFrom(IType source) => false;
 
         /// <inheritdoc/>
-        public override bool IsSubstitutableBy(IType other)
+        public virtual bool IsSubstitutableBy(IType candidate)
         {
-            if (other is null)
+            if (candidate is null)
                 return false;
 
-            if (ReferenceEquals(this, other))
+            if (ReferenceEquals(this, candidate))
                 return true;
 
-            if (other is ITypeParameter otherTypeParameter)
+            if (candidate is ITypeParameter otherTypeParameter)
                 return Accepts(otherTypeParameter);
 
             // Check reference type constraint, disallow value and by-ref-like types
-            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && other.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && candidate.IsValueType)
                 return false;
 
             // Check not-nullable value type constraint, disallow reference types
-            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !other.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !candidate.IsValueType)
                 return false;
 
             // Check by-ref-like constraint, disallow by-ref-like types if not allowed
-            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && other.IsValueType && other is IStructType { IsRefLike: true })
+            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && candidate.IsValueType && candidate is IStructType { IsRefLike: true })
                 return false;
 
             // Check default constructor constraint, disallow types without a default constructor
-            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !other.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !candidate.IsValueType)
             {
                 // Must have constructors
-                if (other is not IWithConstructors sourceWithConstructors)
+                if (candidate is not IWithConstructors sourceWithConstructors)
                     return false;
 
                 // Must one of the constructors be a default constructor
@@ -131,7 +131,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             }
 
             // Check type constraints
-            return TypeConstraints.All(tc => tc.IsAssignableFrom(other));
+            return TypeConstraints.All(tc => tc.IsAssignableFrom(candidate));
         }
 
         /// <summary>

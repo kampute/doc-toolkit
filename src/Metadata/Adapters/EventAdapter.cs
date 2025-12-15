@@ -145,7 +145,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.IsStatic == IsStatic
-                && baseCandidate.Type.IsSubstitutableBy(Type);
+                && baseCandidate.Type.IsSatisfiableBy(Type);
         }
 
         /// <summary>

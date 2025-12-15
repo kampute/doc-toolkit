@@ -91,10 +91,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (other is null || Position != other.Position || ReferenceKind != other.ReferenceKind)
                 return false;
 
-            if (Type.IsSubstitutableBy(other.Type))
+            if (Type.IsSatisfiableBy(other.Type))
                 return true;
 
-            return IsReturnParameter && Member.DeclaringType is not IInterfaceType && Type.IsAssignableFrom(other.Type);
+            return IsReturnParameter
+                && Member.DeclaringType is not IInterfaceType
+                && Type.IsAssignableFrom(other.Type);
         }
 
         /// <inheritdoc/>

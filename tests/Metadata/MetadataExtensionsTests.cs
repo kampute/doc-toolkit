@@ -8,11 +8,72 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
+    using System;
     using System.Linq;
 
     [TestFixture]
     public class MetadataExtensionsTests
     {
+        // Same type - exact equality
+        [TestCase(typeof(System.Collections.IEnumerable), typeof(System.Collections.IEnumerable), ExpectedResult = true)]
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<int>), ExpectedResult = true)]
+        [TestCase(typeof(DateTime), typeof(DateTime), ExpectedResult = true)]
+        [TestCase(typeof(string), typeof(string), ExpectedResult = true)]
+        [TestCase(typeof(int), typeof(int), ExpectedResult = true)]
+        // Different non-generic types
+        [TestCase(typeof(System.Collections.IEnumerable), typeof(System.Collections.Generic.IEnumerator<>), ExpectedResult = false)]
+        [TestCase(typeof(DayOfWeek), typeof(AttributeTargets), ExpectedResult = false)]
+        [TestCase(typeof(DayOfWeek), typeof(int), ExpectedResult = false)]
+        [TestCase(typeof(int), typeof(bool), ExpectedResult = false)]
+        // Generic type definition vs constructed type - NOT equal
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<>), typeof(System.Collections.Generic.IEnumerable<int>), ExpectedResult = false)]
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<>), ExpectedResult = false)]
+        // Same generic type definition
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<>), typeof(System.Collections.Generic.IEnumerable<>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
+        [TestCase(typeof(Action<>), typeof(Action<>), ExpectedResult = true)]
+        // Different constructed generic types with different type arguments
+        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<string>), ExpectedResult = false)]
+        [TestCase(typeof(Action<int, string>), typeof(Action<,>), ExpectedResult = false)]
+        // Different generic types
+        [TestCase(typeof(Func<>), typeof(Action), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericStruct<>), ExpectedResult = false)]
+        // Nested generic types - same definition
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = true)]
+        // Nested generic types - definition vs constructed
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = false)]
+        // Type decorators - nullable
+        [TestCase(typeof(int?), typeof(int?), ExpectedResult = true)]
+        [TestCase(typeof(int?), typeof(bool?), ExpectedResult = false)]
+        [TestCase(typeof(int?), typeof(int), ExpectedResult = false)]
+        [TestCase(typeof(int), typeof(int?), ExpectedResult = false)]
+        // Type decorators - arrays (1D)
+        [TestCase(typeof(int[]), typeof(int[]), ExpectedResult = true)]
+        [TestCase(typeof(int[]), typeof(bool[]), ExpectedResult = false)]
+        [TestCase(typeof(int[]), typeof(int), ExpectedResult = false)]
+        [TestCase(typeof(int), typeof(int[]), ExpectedResult = false)]
+        // Type decorators - arrays (multi-dimensional)
+        [TestCase(typeof(int[]), typeof(int[,]), ExpectedResult = false)]
+        [TestCase(typeof(int[,]), typeof(int[,]), ExpectedResult = true)]
+        [TestCase(typeof(int[,]), typeof(int[,,]), ExpectedResult = false)]
+        [TestCase(typeof(int[][]), typeof(int[][]), ExpectedResult = true)]
+        [TestCase(typeof(int[][]), typeof(int[,]), ExpectedResult = false)]
+        // Type decorators - pointers
+        [TestCase(typeof(int*), typeof(int*), ExpectedResult = true)]
+        [TestCase(typeof(int*), typeof(bool*), ExpectedResult = false)]
+        [TestCase(typeof(int*), typeof(int**), ExpectedResult = false)]
+        [TestCase(typeof(int**), typeof(int**), ExpectedResult = true)]
+        [TestCase(typeof(void*), typeof(void*), ExpectedResult = true)]
+        public bool IsSatisfiableBy_ReturnsExpectedResult(Type type, Type candidate)
+        {
+            return type.GetMetadata().IsSatisfiableBy(candidate.GetMetadata());
+        }
+
         [Test]
         public void GetInheritedMember_WithNullMember_ThrowsArgumentNullException()
         {

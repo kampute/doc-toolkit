@@ -252,29 +252,6 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.ImplementingTypes, Is.EquivalentTo(expectedImplementingTypes));
         }
 
-        [TestCase(typeof(System.Collections.IEnumerable), typeof(System.Collections.Generic.IEnumerable<>), ExpectedResult = false)]
-        [TestCase(typeof(System.Collections.IEnumerable), typeof(System.Collections.Generic.IEnumerable<int>), ExpectedResult = false)]
-        [TestCase(typeof(System.Collections.IEnumerable), typeof(System.Collections.Generic.IEnumerator<>), ExpectedResult = false)]
-        [TestCase(typeof(System.Collections.Generic.IEnumerable<>), typeof(System.Collections.Generic.IEnumerable<int>), ExpectedResult = true)]
-        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<>), ExpectedResult = false)]
-        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<int>), ExpectedResult = true)]
-        [TestCase(typeof(System.Collections.Generic.IEnumerable<int>), typeof(System.Collections.Generic.IEnumerable<string>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.ISampleInterface), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>.IDeepInnerGenericInterface), ExpectedResult = false)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<object>), typeof(Acme.ISampleGenericInterface<System.IO.MemoryStream>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<>), typeof(Acme.ISampleGenericInterface<System.IO.MemoryStream>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<System.IO.MemoryStream>), typeof(Acme.ISampleGenericInterface<object>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<>), typeof(Acme.ISampleGenericInterface<>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), typeof(Acme.ISampleGenericInterface<object>.IInnerGenericInterface<int, string>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.ISampleGenericInterface<object>.IInnerGenericInterface<int, string>), typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), ExpectedResult = false)]
-        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
-        {
-            var targetMetadata = targetType.GetMetadata<IInterfaceType>();
-            var sourceMetadata = sourceType.GetMetadata();
-
-            return targetMetadata.IsSubstitutableBy(sourceMetadata);
-        }
-
         [TestCase(typeof(Acme.ISampleGenericInterface<>),
             "InstanceExtensionPropertyForInterface",
             "StaticExtensionPropertyForInterface"

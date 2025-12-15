@@ -137,20 +137,5 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             return targetMetadata.IsAssignableFrom(sourceMetadata);
         }
-
-        [TestCase(typeof(Func<>), typeof(Action), ExpectedResult = false)]
-        [TestCase(typeof(Action<>), typeof(Action), ExpectedResult = false)]
-        [TestCase(typeof(Action<>), typeof(Action<>), ExpectedResult = true)]
-        [TestCase(typeof(Func<int, string>), typeof(Func<,>), ExpectedResult = false)]
-        [TestCase(typeof(Action<int, string>), typeof(Action<int, string>), ExpectedResult = true)]
-        [TestCase(typeof(Action<,>), typeof(Action<int, string>), ExpectedResult = true)]
-        [TestCase(typeof(Action<int, string>), typeof(Action<,>), ExpectedResult = false)]
-        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
-        {
-            var targetMetadata = targetType.GetMetadata<IDelegateType>();
-            var sourceMetadata = sourceType.GetMetadata();
-
-            return targetMetadata.IsSubstitutableBy(sourceMetadata);
-        }
     }
 }

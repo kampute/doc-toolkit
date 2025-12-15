@@ -197,58 +197,6 @@ namespace Kampute.DocToolkit.Metadata
         bool IsAssignableFrom(IType source);
 
         /// <summary>
-        /// Determines whether the specified type can be used in place of the current type in parameter or return type positions.
-        /// </summary>
-        /// <param name="other">The type to check against the current type.</param>
-        /// <returns><see langword="true"/> if the specified type is parametrically compatible with the current type; otherwise, <see langword="false"/>.</returns>
-        /// <remarks>
-        /// This method determines whether two types are compatible when used as parameter or return types in member signatures,
-        /// such as in method overrides, interface implementations, or delegate compatibility checks.
-        /// <para>
-        /// The specified type is parametrically compatible with the current type if any of the following conditions are met:
-        /// </para>
-        /// <list type="bullet">
-        ///   <item>
-        ///     <term>Identical types</term>
-        ///     <description>Both types represent the same type with identical signatures.</description>
-        ///   </item>
-        ///   <item>
-        ///     <term>Decorated types with matching structure</term>
-        ///     <description>
-        ///     Both types are decorated types (array, pointer, by-ref, or nullable) with identical decoration. For arrays, dimensions and bounds must match
-        ///     (e.g., both single-dimensional, or both multi-dimensional with the same rank). The underlying element types must also be parametrically compatible.
-        ///     </description>
-        ///   </item>
-        ///   <item>
-        ///     <term>Equivalent generic type parameters</term>
-        ///     <description>
-        ///     Both types are generic type parameters that represent the same parameter in the generic hierarchy. This includes:
-        ///     <list type="bullet">
-        ///       <item>Same parameter in the same generic member</item>
-        ///       <item>Corresponding parameters in override/interface implementation relationships</item>
-        ///       <item>Type parameters accessible through nesting</item>
-        ///     </list>
-        ///     </description>
-        ///   </item>
-        ///   <item>
-        ///     <term>Generic parameter satisfied by concrete type</term>
-        ///     <description>
-        ///     The current type is a generic type parameter, and the specified type is a concrete type (or constructed generic type) that satisfies
-        ///     all of the parameter's constraints. This allows an open generic type like <c>List&lt;T&gt;</c> to be satisfied by a closed type
-        ///     like <c>List&lt;int&gt;</c> when <c>T</c>'s constraints are met by <c>int</c>.
-        ///     </description>
-        ///   </item>
-        /// </list>
-        /// For all other type combinations, the types are considered not parametrically compatible.
-        /// <note type="important" title="Important">
-        /// This method enforces strict parametric compatibility for signature matching and does not consider variance or assignability.
-        /// Use <see cref="IsAssignableFrom(IType)"/> for inheritance-based compatibility checks.
-        /// </note>
-        /// </remarks>
-        /// <seealso cref="IsAssignableFrom(IType)"/>
-        bool IsSubstitutableBy(IType other);
-
-        /// <summary>
         /// Resolves a type member based on the specified XML documentation cref string.
         /// </summary>
         /// <param name="cref">The code reference that identifies the member to resolve.</param>

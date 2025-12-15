@@ -75,5 +75,16 @@ namespace Kampute.DocToolkit.Metadata
         /// <see langword="true"/> if the type parameter is from a generic method; otherwise, <see langword="false"/>.
         /// </value>
         bool IsGenericMethodParameter { get; }
+
+        /// <summary>
+        /// Determines whether the specified type can be used in place of the current type parameter.
+        /// </summary>
+        /// <param name="candidate">The type to check for conformance.</param>
+        /// <returns><see langword="true"/> if the specified type can be used in place of the current type parameter; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// This method checks if the provided type satisfies all the constraints defined for the type parameter.
+        /// If the type meets all constraints, it is considered substitutable; otherwise, it is not.
+        /// </remarks>
+        bool IsSubstitutableBy(IType candidate);
     }
 }

@@ -17,6 +17,36 @@ namespace Kampute.DocToolkit.Metadata
     public static class MetadataExtensions
     {
         /// <summary>
+        /// Determines whether the type's requirements can be satisfied by the specified candidate type.
+        /// </summary>
+        /// <param name="type">The type whose requirements must be satisfied.</param>
+        /// <param name="candidate">The candidate type to check for satisfaction.</param>
+        /// <returns><see langword="true"/> if the candidate type satisfies the requirements of the target type; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// This method evaluates whether a candidate type can be used in place of another type in contexts such as method overrides
+        /// and interface implementations.
+        /// <note type="caution" title="Important">
+        /// This method is designed specifically for signature matching in override and implementation scenarios. It does not perform
+        /// general type compatibility checks such as inheritance or interface implementation. Use <see cref="IType.IsAssignableFrom(IType)"/>
+        /// for general type compatibility checks.
+        /// </note>
+        /// </remarks>
+        /// <seealso cref="IType.IsAssignableFrom(IType)"/>
+        /// <seealso cref="ITypeParameter.IsSubstitutableBy(IType)"/>
+        /// <seealso cref="IParameter.IsSatisfiableBy(IParameter)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSatisfiableBy(this IType type, IType candidate)
+        {
+            if (type is null)
+                throw new ArgumentNullException(nameof(type));
+
+            return type is ITypeParameter typeParameter
+                ? typeParameter.IsSubstitutableBy(candidate)
+                : type.Equals(candidate);
+        }
+
+        /// <summary>
         /// Retrieves the member that this member directly inherits from.
         /// </summary>
         /// <param name="member">The member whose inherited member is to be retrieved.</param>

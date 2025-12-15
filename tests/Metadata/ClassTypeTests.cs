@@ -360,22 +360,19 @@ namespace Kampute.DocToolkit.Test.Metadata
             return targetMetadata.IsAssignableFrom(sourceMetadata);
         }
 
-        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<string>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.SampleGenericClass<string>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericStruct<>), ExpectedResult = false)]
-        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), ExpectedResult = true)]
-        [TestCase(typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = false)]
-        public bool IsSubstitutableBy_ReturnsExpectedResult(Type targetType, Type sourceType)
+        [Test]
+        public void IsAssignableFrom_ForSameTypeDefinitionButDifferentContexts_ReturnsTrue()
         {
-            var targetMetadata = targetType.GetMetadata<IClassType>();
-            var sourceMetadata = sourceType.GetMetadata();
+            var direct = typeof(Acme.SampleGenericClass<>).GetMetadata<IClassType>();
+            var indirect = typeof(Acme.SampleExtensions)
+                .GetMethod(nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass))!
+                .GetParameters()[0].ParameterType.GetMetadata<IClassType>();
 
-            return targetMetadata.IsSubstitutableBy(sourceMetadata);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(direct.IsAssignableFrom(indirect), Is.True, "Direct should be assignable from Indirect");
+                Assert.That(indirect.IsAssignableFrom(direct), Is.True, "Indirect should be assignable from Direct");
+            }
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>),

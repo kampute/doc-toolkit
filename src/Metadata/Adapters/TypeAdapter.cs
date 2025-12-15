@@ -138,9 +138,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public virtual bool IsSubstitutableBy(IType other) => Equals(other);
-
-        /// <inheritdoc/>
         public virtual IMember? ResolveMember(string cref)
         {
             if (cref is null)

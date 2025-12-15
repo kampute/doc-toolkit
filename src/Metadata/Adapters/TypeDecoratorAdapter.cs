@@ -61,15 +61,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 || (Modifier is TypeModifier.Nullable && ElementType.IsAssignableFrom(source));
         }
 
-        /// <inheritdoc/>
-        public override bool IsSubstitutableBy(IType other)
-        {
-            return other is ITypeDecorator otherDecorator
-                && Modifier == otherDecorator.Modifier
-                && ArrayRank == otherDecorator.ArrayRank
-                && ElementType.IsSubstitutableBy(otherDecorator.ElementType);
-        }
-
         /// <summary>
         /// Determines the kind of decoration applied to the specified type.
         /// </summary>
