@@ -124,6 +124,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <param name="targetType">The type used by the derived or implementing declaration that may substitute <paramref name="sourceType"/>.</param>
         /// <returns><see langword="true"/> if <paramref name="targetType"/> is a valid substitution for <paramref name="sourceType"/>; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when any argument is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsValidTypeSubstitution(IMember baseMember, IType sourceType, IMember derivedMember, IType targetType)
         {
             if (baseMember is null)
@@ -135,69 +136,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (targetType is null)
                 throw new ArgumentNullException(nameof(targetType));
 
-            if (sourceType.Equals(targetType))
-                return true;
-
-            if (sourceType is not ITypeParameter { IsGenericTypeParameter: true } sourceTypeParameter || targetType is ITypeParameter)
-                return false;
-
-            var baseType = (baseMember as IType) ?? baseMember.DeclaringType;
-            if (baseType is null)
-                return false;
-
-            var derivedType = (derivedMember as IType) ?? derivedMember.DeclaringType;
-            if (derivedType is null)
-                return false;
-
-            var constructedDerivedType = FindConstructedTypeForBase(derivedType, baseType);
-
-            return constructedDerivedType is not null
-                && constructedDerivedType.TypeArguments.Count > sourceTypeParameter.Position
-                && constructedDerivedType.TypeArguments[sourceTypeParameter.Position].Equals(targetType);
-        }
-
-        /// <summary>
-        /// Finds the constructed generic type in the derived type's hierarchy that corresponds to the specified base type context.
-        /// </summary>
-        /// <param name="derivedType">The derived type to search.</param>
-        /// <param name="baseTypeContext">The base type context to match.</param>
-        /// <returns>A constructed generic type if found; otherwise, <see langword="null"/>.</returns>
-        private static IGenericCapableType? FindConstructedTypeForBase(IType derivedType, IType baseTypeContext)
-        {
-            // Check if the derived type itself is the base type (as a constructed generic)
-            if (derivedType is IGenericCapableType { IsConstructedGenericType: true } constructed)
-            {
-                if (baseTypeContext.Equals(constructed.GenericTypeDefinition!))
-                    return constructed;
-            }
-
-            // Walk up the base type hierarchy
-            for (var baseType = derivedType.BaseType; baseType is not null; baseType = baseType.BaseType)
-            {
-                if (baseTypeContext.Equals(baseType))
-                    return null;
-
-                if (baseType is not IGenericCapableType { IsConstructedGenericType: true } constructedBase)
-                    continue;
-
-                if (baseTypeContext.Equals(constructedBase.GenericTypeDefinition!))
-                    return constructedBase;
-            }
-
-            // Walk up the declaring type hierarchy
-            for (var declaringType = derivedType.DeclaringType; declaringType is not null; declaringType = declaringType.DeclaringType)
-            {
-                if (baseTypeContext.Equals(declaringType))
-                    return null;
-
-                if (declaringType is not IGenericCapableType { IsConstructedGenericType: true } constructedDeclaring)
-                    continue;
-
-                if (baseTypeContext.Equals(constructedDeclaring.GenericTypeDefinition!))
-                    return constructedDeclaring;
-            }
-
-            return null;
+            return sourceType is ITypeParameter { IsGenericTypeParameter: true } sourceTypeParameter
+                ? sourceTypeParameter.IsSatisfiableBy(targetType)
+                : sourceType.Equals(targetType);
         }
     }
 }

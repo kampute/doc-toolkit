@@ -24,9 +24,9 @@ namespace Kampute.DocToolkit.Metadata.Capabilities
         /// Gets all the interfaces that the type extends, implements, or inherits.
         /// </summary>
         /// <value>
-        /// A read-only list of <see cref="IInterfaceType"/> instances representing the interfaces.
-        /// For interface types, this includes extended interfaces; for class and struct types, this includes
-        /// implemented and inherited interfaces. The interfaces in the list are ordered by full name.
+        /// A read-only list of <see cref="IInterfaceType"/> instances representing the interfaces that apply to the type.
+        /// For interface types, this contains the interfaces they extend; for classes and structs, this contains the
+        /// interfaces they implement or inherit. The list is ordered by each interface's full name.
         /// </value>
         IReadOnlyList<IInterfaceType> Interfaces { get; }
     }

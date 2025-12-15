@@ -10,6 +10,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="Type"/> representing a generic type parameter and provides metadata access.
@@ -103,7 +104,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return IsSatisfiableBy(typeParameter);
 
             // Check reference type constraint, disallow value and by-ref-like types
-            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && type.IsValueType)
+            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && type is not IClassType)
                 return false;
 
             // Check not-nullable value type constraint, disallow reference types
@@ -111,20 +112,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return false;
 
             // Check by-ref-like constraint, disallow by-ref-like types if not allowed
-            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && type.IsValueType && type is IStructType { IsRefLike: true })
+            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && type is IStructType { IsRefLike: true })
                 return false;
 
             // Check default constructor constraint, disallow types without a default constructor
-            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !type.IsValueType)
-            {
-                // Must have constructors
-                if (type is not IWithConstructors sourceWithConstructors)
-                    return false;
-
-                // Must one of the constructors be a default constructor
-                if (!sourceWithConstructors.Constructors.Any(c => c.IsDefaultConstructor))
-                    return false;
-            }
+            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !HasDefaultConstructor(type))
+                return false;
 
             // Check type constraints
             return TypeConstraints.All(tc => tc.IsAssignableFrom(type));
@@ -133,16 +126,59 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public virtual bool IsSatisfiableBy(ITypeParameter other)
         {
-            if (other is null)
-                return false;
-
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (Variance != other.Variance || !other.Constraints.HasFlag(Constraints))
+            if (other is null)
                 return false;
 
+            // Check reference type constraint matching
+            if (IsConstraintMissing(TypeParameterConstraints.NotNullableValueType))
+                return false;
+
+            // Check by-ref-like constraint matching
+            if (IsConstraintMissing(TypeParameterConstraints.AllowByRefLike))
+                return false;
+
+            // Check not-nullable value type constraint matching
+            if (IsConstraintMissing(TypeParameterConstraints.ReferenceType))
+            {
+                // If the other missing the not-nullable value type constraint,
+                // it must have type constraints that are all reference types
+                if (other.TypeConstraints.Count == 0 || !other.TypeConstraints.All(static tc => tc is IClassType))
+                    return false;
+            }
+
+            // Check default constructor constraint matching
+            if (IsConstraintMissing(TypeParameterConstraints.DefaultConstructor))
+            {
+                // If the other is missing the default constructor constraint,
+                // it must have type constraints that all have default constructors
+                if (other.TypeConstraints.Count == 0 || !other.TypeConstraints.All(HasDefaultConstructor))
+                    return false;
+            }
+
             return TypeConstraints.All(tc => other.TypeConstraints.Any(cct => tc.IsAssignableFrom(cct)));
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsConstraintMissing(TypeParameterConstraints flag)
+                => Constraints.HasFlag(flag) && !other.Constraints.HasFlag(flag);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(IType? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return other is ITypeParameter otherParam
+                && other.Name == Name
+                && otherParam.Position == Position
+                && otherParam.Variance == Variance
+                && otherParam.Constraints == Constraints
+                && otherParam.IsGenericMethodParameter == IsGenericMethodParameter
+                && otherParam.IsGenericTypeParameter == IsGenericTypeParameter
+                && otherParam.TypeConstraints.SequenceEqual(TypeConstraints);
         }
 
         /// <inheritdoc/>
@@ -192,5 +228,20 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override ICustomAttribute CreateAttributeMetadata(CustomAttributeData attribute)
             => Assembly.Repository.GetCustomAttributeMetadata(attribute, AttributeTarget.TypeParameter);
+
+        /// <summary>
+        /// Determines whether the specified type has a default constructor.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns><see langword="true"/> if the type has a default constructor; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasDefaultConstructor(IType type)
+        {
+            if (type.IsValueType)
+                return true;
+
+            return type is IWithConstructors { HasConstructors: true } withConstructors
+                && withConstructors.Constructors.Any(static c => c.IsDefaultConstructor);
+        }
     }
 }

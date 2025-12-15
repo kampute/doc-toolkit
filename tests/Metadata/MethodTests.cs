@@ -180,7 +180,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.DeclaringType.Name, Is.EqualTo(declaringType.Name));
         }
 
-        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedConstructedGenericClass.GenericMethod), ExpectedResult = MemberVirtuality.Override)]
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod), ExpectedResult = MemberVirtuality.Override)]
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.GenericMethod), ExpectedResult = MemberVirtuality.SealedOverride)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.AbstractMethod), ExpectedResult = MemberVirtuality.Abstract)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = MemberVirtuality.Virtual)]

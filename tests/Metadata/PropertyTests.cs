@@ -318,7 +318,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.DeclaringType.Name, Is.EqualTo(nameof(Acme.SampleProperties)));
         }
 
-        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = MemberVirtuality.Override)]
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedGenericClass<,,>.Property), ExpectedResult = MemberVirtuality.Override)]
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = MemberVirtuality.SealedOverride)]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.AbstractProperty), ExpectedResult = MemberVirtuality.Abstract)]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty), ExpectedResult = MemberVirtuality.Virtual)]
