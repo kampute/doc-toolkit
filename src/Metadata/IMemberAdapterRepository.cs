@@ -207,8 +207,9 @@ namespace Kampute.DocToolkit.Metadata
                 _ => GetMethodMetadata(methodInfo, asDeclared: true),
             },
             PropertyInfo propertyInfo => GetPropertyMetadata(propertyInfo),
-            EventInfo eventInfo => GetEventMetadata(eventInfo),
             FieldInfo fieldInfo => GetFieldMetadata(fieldInfo),
+            EventInfo eventInfo => GetEventMetadata(eventInfo),
+            ExtensionBlockInfo extensionBlockInfo => GetExtensionBlockMetadata(extensionBlockInfo),
             _ => throw new NotSupportedException($"Member '{memberInfo}' is not supported."),
         };
     }
