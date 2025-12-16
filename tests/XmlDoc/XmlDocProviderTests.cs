@@ -114,6 +114,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
 
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "A static readonly field.")]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "A complex unsafe field.")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "A fixed buffer field.")]
         [TestCase(typeof(Acme.ISampleInterface), nameof(Acme.ISampleInterface.InterfaceField), ExpectedResult = "A static readonly field in interface.")]
         public string? TryGetMemberDoc_ForFields_ReturnsCorrectDoc(Type type, string fieldName)
         {
