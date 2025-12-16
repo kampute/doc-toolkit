@@ -48,6 +48,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public string UnqualifiedName => Name.SubstringBeforeLastOrSelf('`');
 
         /// <inheritdoc/>
+        public sealed override bool IsDirectDeclaration => !IsConstructedGenericType;
+
+        /// <inheritdoc/>
         public virtual bool IsGenericTypeDefinition => Reflection.IsGenericTypeDefinition;
 
         /// <inheritdoc/>

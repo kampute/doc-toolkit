@@ -80,6 +80,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IReadOnlyList<IType> TypeConstraints => typeConstraints.Value;
 
         /// <inheritdoc/>
+        public sealed override bool IsDirectDeclaration => false;
+
+        /// <inheritdoc/>
         public virtual bool IsGenericMethodParameter => Reflection.IsGenericMethodParameter;
 
         /// <inheritdoc/>
@@ -87,9 +90,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         public bool HasConstraints => Constraints != TypeParameterConstraints.None || TypeConstraints.Count > 0;
-
-        /// <inheritdoc/>
-        public sealed override bool IsDirectDeclaration => false;
 
         /// <inheritdoc/>
         public override bool IsAssignableFrom(IType source) => false;
