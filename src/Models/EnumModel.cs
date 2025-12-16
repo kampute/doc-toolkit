@@ -29,7 +29,7 @@ namespace Kampute.DocToolkit.Models
         protected EnumModel(object declaringEntity, IEnumType type)
             : base(declaringEntity, type)
         {
-            values = new(() => [.. type.Fields.Select(field => new FieldModel(this, field))]);
+            values = new(() => [.. Metadata.Fields.Select(field => new FieldModel(this, field))]);
         }
 
         /// <summary>

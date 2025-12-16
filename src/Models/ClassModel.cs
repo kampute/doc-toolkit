@@ -8,6 +8,8 @@ namespace Kampute.DocToolkit.Models
     using Kampute.DocToolkit;
     using Kampute.DocToolkit.Metadata;
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Represents a documentation model for a .NET class.
@@ -15,6 +17,8 @@ namespace Kampute.DocToolkit.Models
     /// <threadsafety static="true" instance="true"/>
     public class ClassModel : CompositeTypeModel<IClassType>
     {
+        private readonly Lazy<IReadOnlyCollection<ExtensionBlockModel>> extensionBlocks;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClassModel"/> class.
         /// </summary>
@@ -25,6 +29,7 @@ namespace Kampute.DocToolkit.Models
         protected ClassModel(object declaringEntity, IClassType type)
             : base(declaringEntity, type)
         {
+            extensionBlocks = new(() => [.. Metadata.ExtensionBlocks.Select(b => new ExtensionBlockModel(this, b))]);
         }
 
         /// <summary>

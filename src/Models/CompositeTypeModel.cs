@@ -40,23 +40,21 @@ namespace Kampute.DocToolkit.Models
         protected CompositeTypeModel(object declaringEntity, ICompositeType type)
             : base(declaringEntity, type)
         {
-            fields = new(() => [.. type.Fields.Select(f => new FieldModel(this, f))]);
-            constructors = new(() => [.. type.Constructors.Select(c => new ConstructorModel(this, c))]);
-            properties = new(() => [.. type.Properties.Select(p => new PropertyModel(this, p))]);
-            methods = new(() => [.. type.Methods.Select(m => new MethodModel(this, m))]);
-            events = new(() => [.. type.Events.Select(e => new EventModel(this, e))]);
-            operators = new(() => [.. type.Operators.Select(o => new OperatorModel(this, o))]);
+            fields = new(() => [.. Metadata.Fields.Select(f => new FieldModel(this, f))]);
+            constructors = new(() => [.. Metadata.Constructors.Select(c => new ConstructorModel(this, c))]);
+            properties = new(() => [.. Metadata.Properties.Select(p => new PropertyModel(this, p))]);
+            methods = new(() => [.. Metadata.Methods.Select(m => new MethodModel(this, m))]);
+            events = new(() => [.. Metadata.Events.Select(e => new EventModel(this, e))]);
+            operators = new(() => [.. Metadata.Operators.Select(o => new OperatorModel(this, o))]);
 
-            explicitInterfaceMembers = new(() => [.. type.ExplicitInterfaceMembers.Select(member => member switch
-            {
-                IProperty p => new PropertyModel(this, p),
-                IMethod m => new MethodModel(this, m),
-                IEvent e => new EventModel(this, e),
-                _ => default(TypeMemberModel)!
-            }).Where(m => m is not null)]);
+            explicitInterfaceMembers = new(() => [
+                .. Metadata.ExplicitInterfaceProperties.Select(p => new PropertyModel(this, p)),
+                .. Metadata.ExplicitInterfaceMethods.Select(m => new MethodModel(this, m)),
+                .. Metadata.ExplicitInterfaceEvents.Select(e => new EventModel(this, e))
+            ]);
 
             nestedTypes = new(() => type.HasNestedTypes
-                ? new(type.NestedTypes.Select(Assembly.FindMember).OfType<TypeModel>())
+                ? new(Metadata.NestedTypes.Select(Assembly.FindMember).OfType<TypeModel>())
                 : TypeCollection.Empty);
         }
 
