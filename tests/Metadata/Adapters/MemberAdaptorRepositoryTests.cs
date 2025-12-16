@@ -45,10 +45,6 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void Assembly_ReturnsProvidedAssembly()
         {
-            var assemblyMock = new Mock<IAssembly>();
-            var factoryMock = new Mock<IMemberAdapterFactory>();
-            var repository = new MemberAdapterRepository(assemblyMock.Object, factoryMock.Object);
-
             Assert.That(repository.Assembly, Is.SameAs(assemblyMock.Object));
         }
 

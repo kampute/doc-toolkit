@@ -200,22 +200,22 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>A <see cref="TypeParameterConstraints"/> value representing the constraints.</returns>
         protected virtual TypeParameterConstraints GetConstraints()
         {
-            var attributes = Reflection.GenericParameterAttributes;
-            var constraints = TypeParameterConstraints.None;
+            var parameterAttributes = Reflection.GenericParameterAttributes;
+            var parameterConstraints = TypeParameterConstraints.None;
 
-            if (attributes.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint))
-                constraints |= TypeParameterConstraints.ReferenceType;
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint))
+                parameterConstraints |= TypeParameterConstraints.ReferenceType;
 
-            if (attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
-                constraints |= TypeParameterConstraints.NotNullableValueType;
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
+                parameterConstraints |= TypeParameterConstraints.NotNullableValueType;
 
-            if (attributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint))
-                constraints |= TypeParameterConstraints.DefaultConstructor;
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint))
+                parameterConstraints |= TypeParameterConstraints.DefaultConstructor;
 
-            if (attributes.HasFlag((GenericParameterAttributes)32 /* AllowByRefLike */))
-                constraints |= TypeParameterConstraints.AllowByRefLike;
+            if (parameterAttributes.HasFlag((GenericParameterAttributes)32 /* AllowByRefLike */))
+                parameterConstraints |= TypeParameterConstraints.AllowByRefLike;
 
-            return constraints;
+            return parameterConstraints;
         }
 
         /// <summary>
@@ -239,6 +239,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             if (type.IsValueType)
                 return true;
+
+            if (type.IsInterface || type.IsEnum)
+                return false;
 
             return type is IWithConstructors { HasConstructors: true } withConstructors
                 && withConstructors.Constructors.Any(static c => c.IsDefaultConstructor);

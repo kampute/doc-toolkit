@@ -69,10 +69,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             IEnumerable<MethodInfo> NormalizedMethods(IEnumerable<MethodInfo> methods)
             {
-                var getMemberInfo = Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo;
+                var resolveExtensionMember = Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo;
                 foreach (var method in methods)
                 {
-                    switch (getMemberInfo(method))
+                    switch (resolveExtensionMember(method))
                     {
                         case null:
                             // A regular method
