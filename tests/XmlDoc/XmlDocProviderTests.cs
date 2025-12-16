@@ -15,12 +15,14 @@ namespace Kampute.DocToolkit.Test.XmlDoc
     [TestFixture]
     public class XmlDocProviderTests
     {
-        private readonly XmlDocProvider xmlDocProvider = new();
+        private XmlDocProvider xmlDocProvider = null!;
 
         [SetUp]
         public void SetUp()
         {
-            xmlDocProvider.ImportFile(Path.ChangeExtension(GetType().Assembly.Location, ".xml"));
+            var repository = new XmlDocRepository();
+            repository.ImportFile(Path.ChangeExtension(GetType().Assembly.Location, ".xml"));
+            xmlDocProvider = new XmlDocProvider(repository);
         }
 
         [TestCase("Acme", ExpectedResult = "Documentation for the Acme namespace.")]
@@ -119,6 +121,86 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             Assert.That(field, Is.InstanceOf<IField>());
 
             return xmlDocProvider.TryGetMemberDoc(field, out var doc) ? doc.Summary.ToString().Trim() : null;
+        }
+
+        [Test]
+        public void TryGetMemberDoc_ForExtensionBlocks_ReturnsCorrectDoc()
+        {
+            var extensionBlock = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
+                .ExtensionBlocks.First(block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
+
+            var result = xmlDocProvider.TryGetMemberDoc(extensionBlock, out var doc);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(doc, Is.Not.Null);
+            }
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(doc.Summary.ToString().Trim(), Is.EqualTo("Extension members for non-generic interface."));
+                Assert.That(doc.Parameters["instance"].ToString().Trim(), Is.EqualTo("The instance."));
+            }
+        }
+
+        [Test]
+        public void TryGetMemberDoc_ForExtensionBlockMembers_ReturnsCorrectDoc()
+        {
+            var extensionBlock = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
+                .ExtensionBlocks.First(block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
+
+            var member = extensionBlock.Properties.First(property => property.Name == "InstanceExtensionProperty");
+
+            var result = xmlDocProvider.TryGetMemberDoc(member, out var doc);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(doc?.Summary.ToString().Trim(), Is.EqualTo("An instance extension property."));
+            }
+        }
+
+        [Test]
+        public void TryGetMemberDoc_ForExtensionProperties_ReturnsDocWithExtensionBlockDoc()
+        {
+            var extensionProperty = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
+                .Properties.First(property => property.Name == "InstanceExtensionProperty");
+
+            var result = xmlDocProvider.TryGetMemberDoc(extensionProperty, out var doc);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(doc, Is.Not.Null);
+            }
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(doc.Summary.ToString().Trim(), Is.EqualTo("An instance extension property."));
+                Assert.That(doc.ExtensionBlock.Summary.ToString().Trim(), Is.EqualTo("Extension members for non-generic interface."));
+            }
+        }
+
+        [Test]
+        public void TryGetMemberDoc_ForExtensionMethods_ReturnsDocWithExtensionBlockDoc()
+        {
+            var extensionMethod = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
+                .Methods.First(method => method.Name == "StaticExtensionMethod");
+
+            var result = xmlDocProvider.TryGetMemberDoc(extensionMethod, out var doc);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(doc, Is.Not.Null);
+            }
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(doc.Summary.ToString().Trim(), Is.EqualTo("A static extension method."));
+                Assert.That(doc.ExtensionBlock.Summary.ToString().Trim(), Is.EqualTo("Extension members for non-generic interface."));
+            }
         }
     }
 }

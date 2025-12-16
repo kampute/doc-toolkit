@@ -309,15 +309,15 @@ namespace Kampute.DocToolkit
         /// </remarks>
         protected virtual IXmlDocProvider CreateXmlDocProvider()
         {
-            var xmlProvider = new XmlDocProvider
+            var repository = new XmlDocRepository
             {
                 ErrorHandler = XmlDocErrorHandler
             };
 
             foreach (var xmlDocPath in XmlDocPaths)
-                xmlProvider.ImportFile(xmlDocPath);
+                repository.ImportFile(xmlDocPath);
 
-            return xmlProvider;
+            return new XmlDocProvider(repository);
         }
 
         /// <summary>

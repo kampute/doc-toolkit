@@ -67,6 +67,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected override MemberVisibility GetMemberVisibility() => MemberVisibility.Public;
 
         /// <inheritdoc/>
-        protected override (char, string) GetCodeReferenceParts() => ('T', Reflection.BlockType.FullName!);
+        protected override (char, string) GetCodeReferenceParts()
+            => ('T', Reflection.BlockType.Name.Replace('+', '.') + '.' + Reflection.MarkerName);
     }
 }

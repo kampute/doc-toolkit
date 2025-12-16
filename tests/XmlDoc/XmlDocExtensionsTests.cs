@@ -7,7 +7,6 @@ namespace Kampute.DocToolkit.Test.XmlDoc
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.XmlDoc;
-    using Moq;
     using NUnit.Framework;
     using System;
     using System.IO;
@@ -28,9 +27,6 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 @"<?xml version='1.0' encoding='utf-8'?>
                 <doc>
                     <members>
-                        <member name='T:Acme.NamespaceDoc'>
-                            <summary>Documentation for the Acme namespace.</summary>
-                        </member>
                         <member name='T:Acme.ISampleInterface'>
                             <summary>A documented type but without member documentation.</summary>
                         </member>
@@ -46,9 +42,9 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             xmlFilePath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.xml");
             File.WriteAllText(xmlFilePath, xmlDoc);
 
-            var provider = new XmlDocProvider();
-            provider.ImportFile(xmlFilePath);
-            xmlDocProvider = provider;
+            var repository = new XmlDocRepository();
+            repository.ImportFile(xmlFilePath);
+            xmlDocProvider = new XmlDocProvider(repository);
         }
 
         [TearDown]
@@ -57,143 +53,6 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             if (File.Exists(xmlFilePath))
                 File.Delete(xmlFilePath);
         }
-
-        #region WithCaching Tests
-
-        [Test]
-        public void WithCaching_WithNullProvider_ThrowsArgumentNullException()
-        {
-            Assert.That(() => ((IXmlDocProvider)null!).WithCaching(),
-                Throws.ArgumentNullException.With.Property("ParamName").EqualTo("xmlDocProvider"));
-        }
-
-        [Test]
-        public void WithCaching_WithNonCachedProvider_ReturnsCacheWrapper()
-        {
-            var mockProvider = new Mock<IXmlDocProvider>();
-            var result = mockProvider.Object.WithCaching();
-
-            Assert.That(result, Is.InstanceOf<XmlDocProviderCache>());
-            Assert.That(result, Is.Not.SameAs(mockProvider.Object));
-        }
-
-        [Test]
-        public void WithCaching_WithAlreadyCachedProvider_ReturnsSameInstance()
-        {
-            var mockProvider = new Mock<IXmlDocProvider>();
-            var cache = new XmlDocProviderCache(mockProvider.Object);
-            var result = cache.WithCaching();
-
-            Assert.That(result, Is.SameAs(cache));
-        }
-
-        #endregion
-
-        #region TryGetNamespaceDoc Tests
-
-        [Test]
-        public void TryGetNamespaceDoc_WithNullProvider_ThrowsArgumentNullException()
-        {
-            Assert.That(() => ((IXmlDocProvider)null!).TryGetNamespaceDoc("Acme", out _),
-                Throws.ArgumentNullException.With.Property("ParamName").EqualTo("xmlDocProvider"));
-        }
-
-        [Test]
-        public void TryGetNamespaceDoc_WithNullNamespace_ThrowsArgumentException()
-        {
-            Assert.That(() => xmlDocProvider.TryGetNamespaceDoc(null!, out _),
-                Throws.ArgumentException.With.Property("ParamName").EqualTo("ns"));
-        }
-
-        [Test]
-        public void TryGetNamespaceDoc_WithEmptyNamespace_ThrowsArgumentException()
-        {
-            Assert.That(() => xmlDocProvider.TryGetNamespaceDoc(string.Empty, out _),
-                Throws.ArgumentException.With.Property("ParamName").EqualTo("ns"));
-        }
-
-        [Test]
-        public void TryGetNamespaceDoc_WithWhitespaceNamespace_ThrowsArgumentException()
-        {
-            Assert.That(() => xmlDocProvider.TryGetNamespaceDoc("   ", out _),
-                Throws.ArgumentException.With.Property("ParamName").EqualTo("ns"));
-        }
-
-        [Test]
-        public void TryGetNamespaceDoc_WithExistingNamespace_ReturnsCorrectDocumentation()
-        {
-            var result = xmlDocProvider.TryGetNamespaceDoc("Acme", out var doc);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.True);
-                Assert.That(doc!.Summary.ToString(), Is.EqualTo("Documentation for the Acme namespace."));
-            }
-        }
-
-        [Test]
-        public void TryGetNamespaceDoc_WithNonExistingNamespace_ReturnsFalse()
-        {
-            var result = xmlDocProvider.TryGetNamespaceDoc("NonExistent.Namespace", out var doc);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.False);
-                Assert.That(doc, Is.Null);
-            }
-        }
-
-        #endregion
-
-        #region TryGetMemberDoc Tests
-
-        [Test]
-        public void TryGetMemberDoc_WithNullProvider_ThrowsArgumentNullException()
-        {
-            var member = typeof(Acme.ISampleInterface).GetMetadata();
-
-            Assert.That(() => ((IXmlDocProvider)null!).TryGetMemberDoc(member, out _),
-                Throws.ArgumentNullException.With.Property("ParamName").EqualTo("xmlDocProvider"));
-        }
-
-        [Test]
-        public void TryGetMemberDoc_WithNullMember_ThrowsArgumentNullException()
-        {
-            Assert.That(() => xmlDocProvider.TryGetMemberDoc(null!, out _),
-                Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
-        }
-
-        [Test]
-        public void TryGetMemberDoc_WithDocumentedMember_ReturnsCorrectDocumentation()
-        {
-            var member = typeof(Acme.ISampleInterface).GetMetadata();
-
-            var result = xmlDocProvider.TryGetMemberDoc(member, out var doc);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.True);
-                Assert.That(doc!.Summary.ToString(), Is.EqualTo("A documented type but without member documentation."));
-            }
-        }
-
-        [Test]
-        public void TryGetMemberDoc_WithUndocumentedMember_ReturnsFalse()
-        {
-            var member = typeof(Acme.SampleAttribute).GetMetadata();
-
-            var result = xmlDocProvider.TryGetMemberDoc(member, out var doc);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.False);
-                Assert.That(doc, Is.Null);
-            }
-        }
-
-        #endregion
-
-        #region InspectDocumentation Tests
 
         [Test]
         public void InspectDocumentation_WithNullProvider_ThrowsArgumentNullException()
@@ -562,7 +421,5 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 Assert.That(issues[0].Member, Is.EqualTo(explicitConstructor));
             }
         }
-
-        #endregion
     }
 }

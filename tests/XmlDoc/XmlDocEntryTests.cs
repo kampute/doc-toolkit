@@ -36,6 +36,9 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 <overloads>
                     <summary>Test overload summary</summary>
                 </overloads>
+                <extensionblock>
+                    <summary>Test extension block summary</summary>
+                </extensionblock>
             </member>
         ";
 
@@ -165,9 +168,15 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         }
 
         [Test]
-        public void Overloads_ReturnsExpectedOverloads()
+        public void Overloads_ReturnsExpectedDocumentation()
         {
             Assert.That(doc.Overloads.Summary.ToString(), Is.EqualTo("Test overload summary"));
+        }
+
+        [Test]
+        public void ExtensionBlock_ReturnsExpectedDocumentation()
+        {
+            Assert.That(doc.ExtensionBlock.Summary.ToString(), Is.EqualTo("Test extension block summary"));
         }
     }
 }

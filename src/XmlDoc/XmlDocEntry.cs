@@ -46,6 +46,7 @@ namespace Kampute.DocToolkit.XmlDoc
         private readonly Lazy<Comment> valueDescription;
 
         private readonly Lazy<XmlDocEntry> overloads;
+        private readonly Lazy<XmlDocEntry> extensionBlock;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="XmlDocEntry"/> class.
@@ -73,6 +74,10 @@ namespace Kampute.DocToolkit.XmlDoc
 
             overloads = new(() => element.Element("overloads") is XElement { IsEmpty: false } overloadsElement
                 ? new XmlDocEntry(overloadsElement) { Context = Context }
+                : Empty);
+
+            extensionBlock = new(() => element.Element("extensionblock") is XElement { IsEmpty: false } extensionBlockElement
+                ? new XmlDocEntry(extensionBlockElement) { Context = Context }
                 : Empty);
         }
 
@@ -104,7 +109,14 @@ namespace Kampute.DocToolkit.XmlDoc
             permissions = other.permissions;
             events = other.events;
             seeAlso = other.seeAlso;
-            overloads = other.overloads;
+
+            overloads = other.overloads.IsValueCreated && !ReferenceEquals(other.overloads.Value, Empty)
+                ? new(() => new XmlDocEntry(other.overloads.Value, context))
+                : other.overloads;
+
+            extensionBlock = other.extensionBlock.IsValueCreated && !ReferenceEquals(other.extensionBlock.Value, Empty)
+                ? new(() => new XmlDocEntry(other.extensionBlock.Value, context))
+                : other.extensionBlock;
         }
 
         /// <summary>
@@ -228,12 +240,20 @@ namespace Kampute.DocToolkit.XmlDoc
         public Comment ReturnDescription => returnDescription.Value;
 
         /// <summary>
-        /// Gets common documentation for overloads.
+        /// Gets common documentation for overloads of a member.
         /// </summary>
         /// <value>
-        /// The shared documentation for all overloads.
+        /// The shared documentation for all overloads of the member.
         /// </value>
         public XmlDocEntry Overloads => overloads.Value;
+
+        /// <summary>
+        /// Gets the documentation for the extension block of an extension member.
+        /// </summary>
+        /// <value>
+        /// The extension block documentation for the extension member.
+        /// </value>
+        public XmlDocEntry ExtensionBlock => extensionBlock.Value;
 
         /// <summary>
         /// Creates a copy associated with the specified documentation context.

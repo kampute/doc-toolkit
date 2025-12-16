@@ -9,7 +9,6 @@ namespace Kampute.DocToolkit.XmlDoc
     using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
     /// <summary>
@@ -24,73 +23,6 @@ namespace Kampute.DocToolkit.XmlDoc
         /// <returns><see langword="true"/> if any inspection checks are enabled; otherwise, <see langword="false"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool HasAnyChecks(this XmlDocInspectionOptions options) => (options & XmlDocInspectionOptions.All) != XmlDocInspectionOptions.None;
-
-        /// <summary>
-        /// Wraps the specified <see cref="IXmlDocProvider"/> instance in a caching layer if it is not already cached.
-        /// </summary>
-        /// <param name="xmlDocProvider">The XML documentation provider to wrap.</param>
-        /// <returns>A cached version of the XML documentation provider.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="xmlDocProvider"/> is <see langword="null"/>.</exception>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IXmlDocProvider WithCaching(this IXmlDocProvider xmlDocProvider)
-        {
-            if (xmlDocProvider is null)
-                throw new ArgumentNullException(nameof(xmlDocProvider));
-
-            return xmlDocProvider is XmlDocProviderCache ? xmlDocProvider : new XmlDocProviderCache(xmlDocProvider);
-        }
-
-        /// <summary>
-        /// Attempts to retrieves the XML documentation for the specified namespace.
-        /// </summary>
-        /// <param name="xmlDocProvider">The XML documentation provider to use.</param>
-        /// <param name="ns">The namespace to retrieve the documentation for.</param>
-        /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the namespace,
-        /// if the documentation is available; otherwise, <see langword="null"/>.
-        /// </param>
-        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="xmlDocProvider"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="ns"/> is <see langword="null"/>, empty, or consists only of whitespace.</exception>
-        /// <remarks>
-        /// The XML documentation for a namespace is represented by a special type named "NamespaceDoc" within the namespace.
-        /// </remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryGetNamespaceDoc(this IXmlDocProvider xmlDocProvider, string ns, [NotNullWhen(true)] out XmlDocEntry? doc)
-        {
-            if (xmlDocProvider is null)
-                throw new ArgumentNullException(nameof(xmlDocProvider));
-            if (string.IsNullOrWhiteSpace(ns))
-                throw new ArgumentException("Namespace cannot be null or whitespace.", nameof(ns));
-
-            return xmlDocProvider.TryGetDoc($"T:{ns}.{nameof(NamespaceDoc)}", out doc);
-        }
-
-        /// <summary>
-        /// Attempts to retrieves the XML documentation for the specified member.
-        /// </summary>
-        /// <param name="xmlDocProvider">The XML documentation provider to use.</param>
-        /// <param name="member">The member to retrieve the documentation for.</param>
-        /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the member,
-        /// if the documentation is available; otherwise, <see langword="null"/>.
-        /// </param>
-        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="xmlDocProvider"/> or <paramref name="member"/> is <see langword="null"/>.</exception>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryGetMemberDoc(this IXmlDocProvider xmlDocProvider, IMember member, [NotNullWhen(true)] out XmlDocEntry? doc)
-        {
-            if (xmlDocProvider is null)
-                throw new ArgumentNullException(nameof(xmlDocProvider));
-            if (member is null)
-                throw new ArgumentNullException(nameof(member));
-
-            if (member.IsDirectDeclaration)
-                return xmlDocProvider.TryGetDoc(member.CodeReference, out doc);
-
-            doc = null;
-            return false;
-        }
 
         /// <summary>
         /// Inspects the XML documentation for the specified member.

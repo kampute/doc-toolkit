@@ -9,20 +9,16 @@ namespace Kampute.DocToolkit.XmlDoc
     using System.Xml.Linq;
 
     /// <summary>
-    /// Defines a contract for providing XML documentation associated with code references.
+    /// Defines a contract for providing XML documentation elements associated with code references.
     /// </summary>
     /// <remarks>
-    /// <para>
     /// The <see cref="IXmlDocErrorHandler"/> interface defines the core functionality for retrieving documentation
-    /// associated with a code reference.
+    /// elements associated with a code reference. 
+    /// <para>
+    /// Implementations of this interface are responsible for resolving inherited and included documentation as needed.
     /// </para>
-    /// Implementations of this interface are responsible for:
-    /// <list type="bullet">
-    ///   <item><description>Loading and parsing XML documentation from various sources</description></item>
-    ///   <item><description>Resolving documentation requests by code reference</description></item>
-    ///   <item><description>Managing the internal storage and retrieval of documentation content</description></item>
-    /// </list>
     /// </remarks>
+    /// <seealso cref="XmlDocRepository"/>
     public interface IXmlDocResolver
     {
         /// <summary>

@@ -18,6 +18,10 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         private const BindingFlags AllDeclaredMembers =
             BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
+        private Type[]? typeParameters;
+        private MethodInfo[]? extensionMethods;
+        private PropertyInfo[]? extensionProperties;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionBlockInfo"/> class.
         /// </summary>
@@ -30,14 +34,6 @@ namespace Kampute.DocToolkit.Metadata.Reflection
 
             ReceiverParameter = GetReceiverParameter(blockType)
                 ?? throw new ArgumentException("The specified type does not represent a valid extension block.", nameof(blockType));
-
-            var markerName = ReceiverParameter.Member.DeclaringType.Name;
-
-            ExtensionMethods = GetExtensionMethods(blockType, markerName);
-            ExtensionProperties = GetExtensionProperties(blockType, markerName);
-
-            if (blockType.IsGenericType)
-                TypeParameters = ReceiverParameter.ParameterType.GetGenericArguments();
         }
 
         /// <summary>
@@ -49,14 +45,6 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         public Type BlockType { get; }
 
         /// <summary>
-        /// Gets the type parameters of the extension block, if the block is generic.
-        /// </summary>
-        /// <value>
-        /// The type parameters of the extension block.
-        /// </value>
-        public Type[] TypeParameters { get; } = [];
-
-        /// <summary>
         /// Gets the receiver parameter of the extension block.
         /// </summary>
         /// <value>
@@ -65,12 +53,28 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         public ParameterInfo ReceiverParameter { get; }
 
         /// <summary>
+        /// Gets the marker name associated with the extension block.
+        /// </summary>
+        /// <value>
+        /// The marker name associated with the extension block.
+        /// </value>
+        public string MarkerName => ReceiverParameter.Member.DeclaringType.Name;
+
+        /// <summary>
+        /// Gets the type parameters of the extension block, if the block is generic.
+        /// </summary>
+        /// <value>
+        /// The type parameters of the extension block.
+        /// </value>
+        public Type[] TypeParameters => typeParameters ??= GetTypeParameters(BlockType, ReceiverParameter);
+
+        /// <summary>
         /// Gets the extension methods defined within the extension block.
         /// </summary>
         /// <value>
         /// The extension methods defined within the extension block.
         /// </value>
-        public MethodInfo[] ExtensionMethods { get; }
+        public MethodInfo[] ExtensionMethods => extensionMethods ??= GetExtensionMethods(BlockType, MarkerName);
 
         /// <summary>
         /// Gets the extension properties defined within the extension block.
@@ -78,7 +82,7 @@ namespace Kampute.DocToolkit.Metadata.Reflection
         /// <value>
         /// The extension properties defined within the extension block.
         /// </value>
-        public PropertyInfo[] ExtensionProperties { get; }
+        public PropertyInfo[] ExtensionProperties => extensionProperties ??= GetExtensionProperties(BlockType, MarkerName);
 
         /// <summary>
         /// Determines whether the current instance is equal to the specified <see cref="ExtensionBlockInfo"/> object.
@@ -138,6 +142,19 @@ namespace Kampute.DocToolkit.Metadata.Reflection
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Retrieves the type parameters for the specified extension block type and receiver parameter.
+        /// </summary>
+        /// <param name="extensionBlockType">The type representing the extension block.</param>
+        /// <param name="receiverParameter">The receiver parameter.</param>
+        /// <returns>An array of <see cref="Type"/> representing the type parameters.</returns>
+        private static Type[] GetTypeParameters(Type extensionBlockType, ParameterInfo receiverParameter)
+        {
+            return extensionBlockType.IsGenericTypeDefinition
+                ? receiverParameter.ParameterType.GetGenericArguments()
+                : [];
         }
 
         /// <summary>

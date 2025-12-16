@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.XmlDoc
 {
+    using Kampute.DocToolkit.Metadata;
     using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
@@ -22,14 +23,28 @@ namespace Kampute.DocToolkit.XmlDoc
         bool HasDocumentation { get; }
 
         /// <summary>
-        /// Attempts to retrieves the XML documentation for the specified code reference.
+        /// Attempts to retrieves the XML documentation for the specified namespace.
         /// </summary>
-        /// <param name="cref">The code reference to retrieve the documentation for.</param>
+        /// <param name="ns">The namespace to retrieve the documentation for.</param>
         /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the code,
-        /// reference if the code reference is valid and documentation is found; otherwise, <see langword="null"/>.
+        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the namespace,
+        /// if the documentation is available; otherwise, <see langword="null"/>.
         /// </param>
-        /// <returns><see langword="true"/> if the documentation is found; otherwise, <see langword="false"/>.</returns>
-        bool TryGetDoc(string cref, [NotNullWhen(true)] out XmlDocEntry? doc);
+        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// The XML documentation for a namespace is represented by a special type named "NamespaceDoc" within the namespace.
+        /// </remarks>
+        bool TryGetNamespaceDoc(string ns, [NotNullWhen(true)] out XmlDocEntry? doc);
+
+        /// <summary>
+        /// Attempts to retrieves the XML documentation for the specified member.
+        /// </summary>
+        /// <param name="member">The member to retrieve the documentation for.</param>
+        /// <param name="doc">
+        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the member,
+        /// if the documentation is available; otherwise, <see langword="null"/>.
+        /// </param>
+        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
+        bool TryGetMemberDoc(IMember member, [NotNullWhen(true)] out XmlDocEntry? doc);
     }
 }
