@@ -16,12 +16,12 @@ namespace Kampute.DocToolkit.Metadata
     public interface IGenericCapableType : IType
     {
         /// <summary>
-        /// Gets the unqualified name of the type without any generic arity suffix.
+        /// Gets the name of the type without any generic arity suffix.
         /// </summary>
         /// <value>
-        /// The unqualified name of the type without any generic arity suffix.
+        /// The name of the type without any generic arity suffix.
         /// </value>
-        string UnqualifiedName { get; }
+        string SimpleName { get; }
 
         /// <summary>
         /// Gets a value indicating whether the type is a generic type definition.

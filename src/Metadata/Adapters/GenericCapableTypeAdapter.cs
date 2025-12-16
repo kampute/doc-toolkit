@@ -46,7 +46,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public string UnqualifiedName => Name.SubstringBeforeLastOrSelf('`');
+        public string SimpleName => Name.SubstringBeforeLastOrSelf('`');
 
         /// <inheritdoc/>
         public sealed override bool IsDirectDeclaration => !IsConstructedGenericType;
@@ -185,7 +185,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                     var count = genericType.OwnGenericParameterRange.Count;
                     if (count > 0)
                     {
-                        sb.Append(genericType.UnqualifiedName);
+                        sb.Append(genericType.SimpleName);
                         AppendGenericParameters(count);
                         appendName = false;
                     }

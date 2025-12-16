@@ -165,7 +165,7 @@ namespace Kampute.DocToolkit.Languages
 
             if (type.IsGenericType)
             {
-                linker(writer, type.GenericTypeDefinition ?? type, type.UnqualifiedName);
+                linker(writer, type.GenericTypeDefinition ?? type, type.SimpleName);
                 var (offset, count) = type.OwnGenericParameterRange;
                 if (count > 0)
                 {
