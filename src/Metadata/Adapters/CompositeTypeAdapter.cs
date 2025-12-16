@@ -291,7 +291,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return type is not null
                 && !type.IsNestedPrivate
-                && (type.IsNestedPublic || type.IsNestedFamily || type.IsNestedFamORAssem);
+                && (type.IsNestedPublic || type.IsNestedFamily || type.IsNestedFamORAssem)
+                && !type.Name.StartsWith('<');
         }
 
         /// <summary>

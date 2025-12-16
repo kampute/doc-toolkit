@@ -219,6 +219,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
 
+        [TestCase(typeof(Acme.SampleFields))]
         [TestCase(typeof(Acme.SampleGenericStruct<>),
             typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>)
         )]
