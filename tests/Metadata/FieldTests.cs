@@ -31,6 +31,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = nameof(String))]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = nameof(Int32))]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = $"{nameof(Int32)}[]")]
         public string FieldType_HasExpectedValue(Type declaringType, string fieldName)
         {
             var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
@@ -198,6 +199,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "F:Acme.SampleFields.ConstField")]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "F:Acme.SampleFields.ComplexField")]
+        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "F:Acme.SampleFields.FixedBuffer")]
         public string CodeReference_HasExpectedValue(Type declaringType, string fieldName)
         {
             var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);

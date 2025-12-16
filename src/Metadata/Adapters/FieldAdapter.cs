@@ -138,7 +138,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Retrieves the type of the field.
         /// </summary>
         /// <returns>An <see cref="IType"/> representing the type of the field.</returns>
-        protected virtual IType GetFieldType() => Reflection.FieldType.GetMetadata();
-
+        protected virtual IType GetFieldType() => (IsFixedSizeBuffer ? typeof(int[]) : Reflection.FieldType).GetMetadata();
     }
 }
