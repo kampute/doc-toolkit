@@ -175,21 +175,29 @@ namespace Kampute.DocToolkit.Metadata
                 if (name is null)
                     return null;
 
-                return cache.GetOrAdd(name, _ => pathResolver.Resolve(context, assemblyName)
-                                              ?? FindInAppDomain(assemblyName)
-                                              ?? FindAssemblyInProbeFolders(context, assemblyName));
+                return cache.GetOrAdd(name, _ => LoadOrLocateAssembly(context, assemblyName));
             }
 
             /// <summary>
-            /// Searches for an assembly in the current AppDomain.
+            /// Loads or locates an assembly by its name.
             /// </summary>
-            /// <param name="assemblyName">The assembly name to find.</param>
-            /// <returns>The found assembly, or <see langword="null"/> if not found.</returns>
-            private static Assembly? FindInAppDomain(AssemblyName assemblyName)
+            /// <param name="context">The metadata load context.</param>
+            /// <param name="assemblyName">The assembly name to find or resolve.</param>
+            /// <returns>The found or resolved assembly, or <see langword="null"/> if not found.</returns>
+            private Assembly? LoadOrLocateAssembly(MetadataLoadContext context, AssemblyName assemblyName)
             {
-                return AppDomain.CurrentDomain
-                    .GetAssemblies()
-                    .FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
+                Assembly? assembly;
+
+                try
+                {
+                    assembly = pathResolver.Resolve(context, assemblyName);
+                }
+                catch
+                {
+                    assembly = context.GetAssemblies().FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
+                }
+
+                return assembly ?? FindAssemblyInProbeFolders(context, assemblyName) ?? FindAssemblyInAppDomain(assemblyName);
             }
 
             /// <summary>
@@ -233,6 +241,18 @@ namespace Kampute.DocToolkit.Metadata
 
                 // Fall back to highest compatible version
                 return context.LoadFromAssemblyPath(candidates.Values[0]);
+            }
+
+            /// <summary>
+            /// Searches for an assembly in the current AppDomain.
+            /// </summary>
+            /// <param name="assemblyName">The assembly name to find.</param>
+            /// <returns>The found assembly, or <see langword="null"/> if not found.</returns>
+            private static Assembly? FindAssemblyInAppDomain(AssemblyName assemblyName)
+            {
+                return AppDomain.CurrentDomain
+                    .GetAssemblies()
+                    .FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
             }
         }
     }
