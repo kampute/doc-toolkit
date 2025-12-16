@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An abstract adapter that wraps a generic-capable <see cref="Type"/> and provides metadata access.
@@ -71,7 +72,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public override bool IsAssignableFrom(IType source)
         {
-            // First, check standard inheritance assignability
             if (base.IsAssignableFrom(source))
                 return true;
 
@@ -79,94 +79,66 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return false;
 
             var genericSource = (IGenericCapableType)source;
-
-            if (IsGenericTypeDefinition)
+            return (IsGenericTypeDefinition, genericSource.IsGenericTypeDefinition) switch
             {
-                // Current is a generic type definition
-                // If source is also a generic type definition, their assignability already checked by base
-                if (genericSource.IsGenericTypeDefinition)
+                (true, true) => false,
+                (true, false) => IsDefinitionAssignableFromConstructedSource(),
+                (false, true) => IsConstructedAssignableFromDefinitionSource(),
+                (false, false) => IsConstructedAssignableFromConstructedSource(),
+            };
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsDefinitionAssignableFromConstructedSource()
+            {
+                return Equals(genericSource.GenericTypeDefinition)
+                    && IsAssignabilitySatisfied(TypeParameters, genericSource.TypeArguments);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsConstructedAssignableFromDefinitionSource()
+            {
+                return GenericTypeDefinition!.Equals(genericSource)
+                    && IsAssignabilitySatisfied(genericSource.TypeParameters, TypeArguments);
+            }
+
+            bool IsConstructedAssignableFromConstructedSource()
+            {
+                if (!GenericTypeDefinition!.Equals(genericSource.GenericTypeDefinition!))
                     return false;
 
-                // Source is a constructed generic type, its definition must match current
-                var srcDefinition = genericSource.GenericTypeDefinition!;
-                if (!Equals(srcDefinition))
-                    return false;
-
-                // TODO: Check if all type arguments of source are generic parameters satisfying the type parameter constraints
-                var assignable = true;
-                var defTypeParams = TypeParameters;
-                for (var i = 0; i < defTypeParams.Count; i++)
+                var typeParameters = GenericTypeDefinition.TypeParameters;
+                for (var i = 0; i < typeParameters.Count; i++)
                 {
-                    var sourceArg = genericSource.TypeArguments[i];
-                    if (sourceArg is not ITypeParameter sourceParam)
+                    var typeParameter = typeParameters[i];
+                    var currentTypeArgument = TypeArguments[i];
+                    var sourceTypeArgument = genericSource.TypeArguments[i];
+
+                    var isAssignable = typeParameter.Variance switch
                     {
-                        assignable = false;
-                        break;
-                    }
-                    var thisParam = defTypeParams[i];
-                    if (!sourceParam.IsSatisfiableBy(thisParam))
-                    {
-                        assignable = false;
-                        break;
-                    }
+                        TypeParameterVariance.Covariant => currentTypeArgument.IsAssignableFrom(sourceTypeArgument),
+                        TypeParameterVariance.Contravariant => sourceTypeArgument.IsAssignableFrom(currentTypeArgument),
+                        _ => currentTypeArgument.Equals(sourceTypeArgument),
+                    };
+
+                    if (!isAssignable)
+                        return false;
                 }
-                return assignable;
+
+                return true;
             }
 
-            if (genericSource.IsGenericTypeDefinition)
+            static bool IsAssignabilitySatisfied(IReadOnlyList<ITypeParameter> typeParameters, IReadOnlyList<IType> typeArguments)
             {
-                // Current is a constructed generic type and source is a generic type definition, both definitions must match
-                var currDefinition = GenericTypeDefinition!;
-                if (!currDefinition.Equals(genericSource))
-                    return false;
-
-                // TODO: Check if all type parameters of this are generic parameters and source satisfies the type parameter constraints
-                var assignable = true;
-                var defTypeParams = genericSource.TypeParameters;
-                for (var i = 0; i < defTypeParams.Count; i++)
+                for (var i = 0; i < typeParameters.Count; ++i)
                 {
-                    var thisArg = TypeArguments[i];
-                    if (thisArg is not ITypeParameter thisParam)
-                    {
-                        assignable = false;
-                        break;
-                    }
-                    var sourceParam = defTypeParams[i];
-                    if (!thisParam.IsSatisfiableBy(sourceParam))
-                    {
-                        assignable = false;
-                        break;
-                    }
+                    if (typeArguments[i] is not ITypeParameter argumentAsParameter)
+                        return false;
+
+                    if (!argumentAsParameter.IsSatisfiableBy(typeParameters[i]))
+                        return false;
                 }
-                return assignable;
+                return true;
             }
-
-            // Both are constructed generic types, their definitions must match
-            var thisDefinition = GenericTypeDefinition!;
-            var sourceDefinition = genericSource.GenericTypeDefinition!;
-            if (!thisDefinition.Equals(sourceDefinition))
-                return false;
-
-            // Check type argument assignability according to type parameter variance
-            var typeParams = thisDefinition.TypeParameters;
-            for (var i = 0; i < typeParams.Count; i++)
-            {
-                var param = typeParams[i];
-                var thisArg = TypeArguments[i];
-                var sourceArg = genericSource.TypeArguments[i];
-
-                var assignable = param.Variance switch
-                {
-                    TypeParameterVariance.Covariant => thisArg.IsAssignableFrom(sourceArg),
-                    TypeParameterVariance.Contravariant => sourceArg.IsAssignableFrom(thisArg),
-                    _ => thisArg.Equals(sourceArg),
-                };
-
-                if (!assignable)
-                    return false;
-            }
-
-            return true;
         }
 
         /// <inheritdoc/>
