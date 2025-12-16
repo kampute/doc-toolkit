@@ -131,7 +131,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Interfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Interfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = 1)]
@@ -149,7 +149,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Fields.Select(f => f.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Fields.Select(static f => f.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
@@ -179,7 +179,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Methods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Methods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
@@ -200,7 +200,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Properties.Select(p => p.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Properties.Select(static p => p.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
@@ -210,7 +210,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Events.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Events.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
@@ -220,7 +220,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Operators.Select(o => o.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Operators.Select(static o => o.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
@@ -232,7 +232,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var shortNames = metadata.ExplicitInterfaceMethods.Select(m => m.Name.SubstringAfterLast('.'));
+            var shortNames = metadata.ExplicitInterfaceMethods.Select(static m => m.Name.SubstringAfterLast('.'));
 
             Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
@@ -244,7 +244,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var shortNames = metadata.ExplicitInterfaceProperties.Select(p => p.Name.SubstringAfterLast('.'));
+            var shortNames = metadata.ExplicitInterfaceProperties.Select(static p => p.Name.SubstringAfterLast('.'));
 
             Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
@@ -256,7 +256,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var shortNames = metadata.ExplicitInterfaceEvents.Select(e => e.Name.SubstringAfterLast('.'));
+            var shortNames = metadata.ExplicitInterfaceEvents.Select(static e => e.Name.SubstringAfterLast('.'));
 
             Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
@@ -268,7 +268,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var shortNames = metadata.ExplicitInterfaceOperators.Select(e => e.Name.SubstringAfterLast('.'));
+            var shortNames = metadata.ExplicitInterfaceOperators.Select(static e => e.Name.SubstringAfterLast('.'));
 
             Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
@@ -282,7 +282,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void NestedTypes_HasExpectedValue(Type classType, params Type[] expectedTypes)
         {
             var metadata = classType.GetMetadata<IClassType>();
-            var expectedNestedTypes = expectedTypes.Select(t => t.GetMetadata());
+            var expectedNestedTypes = expectedTypes.Select(static t => t.GetMetadata());
 
             Assert.That(metadata.NestedTypes, Is.EquivalentTo(expectedNestedTypes));
         }
@@ -310,7 +310,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void DeclaringTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IClassType>();
-            var expectedDeclaringTypes = expectedTypes.Select(t => t.GetMetadata());
+            var expectedDeclaringTypes = expectedTypes.Select(static t => t.GetMetadata());
 
             Assert.That(metadata.DeclaringTypeHierarchy, Is.EqualTo(expectedDeclaringTypes));
         }
@@ -327,7 +327,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void BaseTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IClassType>();
-            var expectedBaseTypes = expectedTypes.Select(t => t.GetMetadata<IClassType>());
+            var expectedBaseTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
 
             Assert.That(metadata.BaseTypeHierarchy, Is.EqualTo(expectedBaseTypes));
         }
@@ -343,7 +343,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = type.GetMetadata<IClassType>();
 
-            Assert.That(metadata.ImplementedInterfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.ImplementedInterfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
@@ -383,7 +383,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var extendedType = type.GetMetadata<IClassType>();
 
-            Assert.That(extendedType.ExtensionProperties.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(extendedType.ExtensionProperties.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>),
@@ -396,7 +396,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var extendedType = type.GetMetadata<IClassType>();
 
-            Assert.That(extendedType.ExtensionMethods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(extendedType.ExtensionMethods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleGenericClass<>), typeof(object), ExpectedResult = true)]
@@ -423,7 +423,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void DerivedTypes_WithNoGenericBaseClass_ReturnsExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IClassType>();
-            var expectedDerivedTypes = expectedTypes.Select(t => t.GetMetadata<IClassType>());
+            var expectedDerivedTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
 
             Assert.That(metadata.DerivedTypes, Is.EquivalentTo(expectedDerivedTypes));
         }

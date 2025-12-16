@@ -94,11 +94,11 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_MissingSummary_WithRequiredOption_ReportsIssue()
         {
             var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
+            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
 
             var summaryIssues = xmlDocProvider
                 .InspectDocumentation(member, XmlDocInspectionOptions.Required)
-                .Where(i => i.XmlTag == XmlDocTag.Summary)
+                .Where(static i => i.XmlTag == XmlDocTag.Summary)
                 .ToList();
 
             Assert.That(summaryIssues, Has.Count.EqualTo(1));
@@ -270,11 +270,11 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_MissingSeeAlso_WithSeeAlsoOption_ReportsIssue()
         {
             var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
+            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
 
             var seeAlsoIssues = xmlDocProvider
                 .InspectDocumentation(member, XmlDocInspectionOptions.SeeAlso)
-                .Where(i => i.XmlTag == XmlDocTag.SeeAlso)
+                .Where(static i => i.XmlTag == XmlDocTag.SeeAlso)
                 .ToList();
 
             Assert.That(seeAlsoIssues, Has.Count.EqualTo(1));
@@ -326,14 +326,14 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_MultipleOptions_ReportsAllIssues()
         {
             var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
+            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
 
             var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.Remarks | XmlDocInspectionOptions.Example).ToList();
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Remarks), "Should report missing remarks");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Example), "Should report missing example");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Remarks), "Should report missing remarks");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Example), "Should report missing example");
             }
         }
 
@@ -341,22 +341,22 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_WithAllOptions_ReportsAllRelevantMissingTags()
         {
             var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
+            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
 
             var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.All).ToList();
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Summary), "Should report missing summary");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.TypeParam), "Should report undocumented typeparam");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Param), "Should report undocumented param");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Returns), "Should report undocumented returns");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Remarks), "Should report missing remarks");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Example), "Should report missing example");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.SeeAlso), "Should report untitled seealso");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Exception), "Should report undocumented exceptions");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Permission), "Should report undocumented permissions");
-                Assert.That(issues.Any(i => i.XmlTag == XmlDocTag.Event), "Should report undocumented events");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Summary), "Should report missing summary");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.TypeParam), "Should report undocumented typeparam");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Param), "Should report undocumented param");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Returns), "Should report undocumented returns");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Remarks), "Should report missing remarks");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Example), "Should report missing example");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.SeeAlso), "Should report untitled seealso");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Exception), "Should report undocumented exceptions");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Permission), "Should report undocumented permissions");
+                Assert.That(issues.Any(static i => i.XmlTag == XmlDocTag.Event), "Should report undocumented events");
             }
         }
 
@@ -381,7 +381,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_ImplicitConstructor_WithoutOmitFlag_ReportsMissingSummary()
         {
             var type = typeof(Acme.SampleGenericClass<>).GetMetadata<IClassType>();
-            var implicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+            var implicitConstructor = type.Constructors.First(static c => c.IsDefaultConstructor);
 
             var issues = xmlDocProvider.InspectDocumentation(implicitConstructor, XmlDocInspectionOptions.Summary).ToList();
 
@@ -398,7 +398,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_ImplicitConstructor_WithOmitFlag_ReportsNoIssues()
         {
             var type = typeof(Acme.SampleDirectDerivedConstructedGenericClass).GetMetadata<IClassType>();
-            var implicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+            var implicitConstructor = type.Constructors.First(static c => c.IsDefaultConstructor);
 
             var issues = xmlDocProvider.InspectDocumentation(implicitConstructor, XmlDocInspectionOptions.Summary | XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors).ToList();
 
@@ -409,7 +409,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void InspectDocumentation_ExplicitConstructor_WithOmitFlag_ReportsMissingSummary()
         {
             var type = typeof(Acme.SampleDerivedConstructedGenericClass).GetMetadata<IClassType>();
-            var explicitConstructor = type.Constructors.First(c => c.IsDefaultConstructor);
+            var explicitConstructor = type.Constructors.First(static c => c.IsDefaultConstructor);
 
             var issues = xmlDocProvider.InspectDocumentation(explicitConstructor, XmlDocInspectionOptions.Summary | XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors).ToList();
 

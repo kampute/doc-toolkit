@@ -153,7 +153,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (allInterfaces.Count == 0)
                 return allInterfaces;
 
-            var indirectInterfaces = allInterfaces.SelectMany(i => i.Interfaces);
+            var indirectInterfaces = allInterfaces.SelectMany(static i => i.Interfaces);
             return BaseType is not null && BaseType.HasInterfaces
                 ? indirectInterfaces.Concat(BaseType.Interfaces)
                 : indirectInterfaces;
@@ -167,7 +167,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return Reflection
                 .GetInterfaces()
-                .Where(i => i.IsPublic || i.IsNestedPublic || i.IsNestedFamily || i.IsNestedFamORAssem);
+                .Where(static i => i.IsPublic || i.IsNestedPublic || i.IsNestedFamily || i.IsNestedFamORAssem);
         }
 
         /// <summary>
@@ -224,7 +224,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>An enumeration of <see cref="IOperator"/> objects representing the operator methods declared by the type.</returns>
         protected virtual IEnumerable<MethodInfo> GetOperators() => Reflection
             .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
-            .Where(m => m.IsSpecialName && m.Name.StartsWith("op_", StringComparison.Ordinal));
+            .Where(static m => m.IsSpecialName && m.Name.StartsWith("op_", StringComparison.Ordinal));
 
         /// <summary>
         /// Retrieves the explicit interface methods implemented by the type.
@@ -304,7 +304,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return member is not null
                 && member.Name.IndexOf('.') > 0
-                && !member.CustomAttributes.Any(attr => attr.AttributeType.FullName == AttributeNames.CompilerGenerated);
+                && !member.CustomAttributes.Any(static attr => attr.AttributeType.FullName == AttributeNames.CompilerGenerated);
         }
 
         /// <summary>
@@ -323,12 +323,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             // Compiler-generated bridge methods are created for explicit interface implementations
             // that have by-ref parameters (in, ref, out). These methods must have a corresponding
             // public method with the same signature.
-            return parameters.Any(p => p.ParameterType.IsByRef) && Reflection.GetMethod
+            return parameters.Any(static p => p.ParameterType.IsByRef) && Reflection.GetMethod
             (
                 name: method.Name.SubstringAfterLast('.'),
                 bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance),
                 binder: null,
-                types: [.. parameters.Select(p => p.ParameterType)],
+                types: [.. parameters.Select(static p => p.ParameterType)],
                 modifiers: null
             ) is not null;
         }

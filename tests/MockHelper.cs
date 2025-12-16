@@ -136,9 +136,9 @@ namespace Kampute.DocToolkit.Test
         {
             var xmlDocResolverMock = new Mock<IXmlDocResolver>();
 
-            xmlDocResolverMock.SetupGet(x => x.HasDocumentation).Returns(true);
-            xmlDocResolverMock.Setup(x => x.TryGetXmlDoc(It.IsAny<string>(), out It.Ref<XElement?>.IsAny))
-                .Returns((string cref, out XElement? xmlDoc) =>
+            xmlDocResolverMock.SetupGet(static x => x.HasDocumentation).Returns(true);
+            xmlDocResolverMock.Setup(static x => x.TryGetXmlDoc(It.IsAny<string>(), out It.Ref<XElement?>.IsAny))
+                .Returns(static (string cref, out XElement? xmlDoc) =>
                 {
                     if (CodeReference.IsValid(cref))
                     {

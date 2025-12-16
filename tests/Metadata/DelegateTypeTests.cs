@@ -123,7 +123,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = type.GetMetadata<IDelegateType>();
 
-            Assert.That(metadata.BaseTypeHierarchy.Select(t => t.Name), Is.EqualTo(expectedNames));
+            Assert.That(metadata.BaseTypeHierarchy.Select(static t => t.Name), Is.EqualTo(expectedNames));
         }
 
         [TestCase(typeof(Func<>), typeof(Action), ExpectedResult = false)]

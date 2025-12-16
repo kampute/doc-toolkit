@@ -68,10 +68,10 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         public void EquivalentParameters_WithEquivalentParameters_ReturnsTrue()
         {
             var param1 = new Mock<IParameter>();
-            param1.Setup(p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
+            param1.Setup(static p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
 
             var param2 = new Mock<IParameter>();
-            param2.Setup(p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
+            param2.Setup(static p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
 
             var baseParameters = new List<IParameter> { param1.Object, param2.Object };
             var sourceParameters = new List<IParameter> { Mock.Of<IParameter>(), Mock.Of<IParameter>() };
@@ -85,10 +85,10 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         public void EquivalentParameters_WithNonEquivalentParameters_ReturnsFalse()
         {
             var param1 = new Mock<IParameter>();
-            param1.Setup(p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(false);
+            param1.Setup(static p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(false);
 
             var param2 = new Mock<IParameter>();
-            param2.Setup(p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
+            param2.Setup(static p => p.IsSatisfiableBy(It.IsAny<IParameter>())).Returns(true);
 
             var baseParameters = new List<IParameter> { param1.Object, param2.Object };
             var sourceParameters = new List<IParameter> { Mock.Of<IParameter>(), Mock.Of<IParameter>() };

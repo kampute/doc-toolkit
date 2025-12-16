@@ -87,7 +87,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var direct = typeof(Acme.ISampleInterface);
             var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).GetInterfaces()
-                .First(i => i.Name == nameof(Acme.ISampleInterface));
+                .First(static i => i.Name == nameof(Acme.ISampleInterface));
 
             using (Assert.EnterMultipleScope())
             {
@@ -101,7 +101,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var direct = typeof(System.Collections.Generic.IEnumerable<>);
             var viaReflection = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetInterfaces()
-                .First(i => i.Name == "IEnumerable`1");
+                .First(static i => i.Name == "IEnumerable`1");
 
             using (Assert.EnterMultipleScope())
             {
@@ -115,7 +115,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var direct = typeof(System.Collections.Generic.IEnumerable<string>);
             var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).GetInterfaces()
-                .First(i => i.Name == "IEnumerable`1");
+                .First(static i => i.Name == "IEnumerable`1");
 
             using (Assert.EnterMultipleScope())
             {

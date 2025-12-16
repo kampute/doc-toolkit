@@ -128,7 +128,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void TryGetMemberDoc_ForExtensionBlocks_ReturnsCorrectDoc()
         {
             var extensionBlock = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
-                .ExtensionBlocks.First(block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
+                .ExtensionBlocks.First(static block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
 
             var result = xmlDocProvider.TryGetMemberDoc(extensionBlock, out var doc);
 
@@ -149,9 +149,9 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void TryGetMemberDoc_ForExtensionBlockMembers_ReturnsCorrectDoc()
         {
             var extensionBlock = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
-                .ExtensionBlocks.First(block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
+                .ExtensionBlocks.First(static block => block.Receiver.Type.Name == nameof(Acme.ISampleInterface));
 
-            var member = extensionBlock.Properties.First(property => property.Name == "InstanceExtensionProperty");
+            var member = extensionBlock.Properties.First(static property => property.Name == "InstanceExtensionProperty");
 
             var result = xmlDocProvider.TryGetMemberDoc(member, out var doc);
 
@@ -166,7 +166,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void TryGetMemberDoc_ForExtensionProperties_ReturnsDocWithExtensionBlockDoc()
         {
             var extensionProperty = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
-                .Properties.First(property => property.Name == "InstanceExtensionProperty");
+                .Properties.First(static property => property.Name == "InstanceExtensionProperty");
 
             var result = xmlDocProvider.TryGetMemberDoc(extensionProperty, out var doc);
 
@@ -187,7 +187,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void TryGetMemberDoc_ForExtensionMethods_ReturnsDocWithExtensionBlockDoc()
         {
             var extensionMethod = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
-                .Methods.First(method => method.Name == "StaticExtensionMethod");
+                .Methods.First(static method => method.Name == "StaticExtensionMethod");
 
             var result = xmlDocProvider.TryGetMemberDoc(extensionMethod, out var doc);
 

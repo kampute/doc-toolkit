@@ -182,7 +182,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (IsIndexer)
             {
                 sb.Append('(');
-                sb.AppendJoin(',', Parameters.Select(p => p.Type.ParametricSignature));
+                sb.AppendJoin(',', Parameters.Select(static p => p.Type.ParametricSignature));
                 sb.Append(')');
             }
 

@@ -527,7 +527,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("T:Unresolvable.Type", ExpectedResult = "T:Unresolvable.Type")]
         public string FormatCodeReference_WithQualifierSelector_ReturnsExpectedString(string cref)
         {
-            return cs.FormatCodeReference(cref, member => member is IType ? NameQualifier.DeclaringType : NameQualifier.None);
+            return cs.FormatCodeReference(cref, static member => member is IType ? NameQualifier.DeclaringType : NameQualifier.None);
         }
     }
 }

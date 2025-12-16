@@ -16,7 +16,7 @@ namespace Kampute.DocToolkit.Test.Topics
         [Test]
         public void Render_OutputsExpectedContent()
         {
-            var adHocTopic = new AdHocTopic("TestTopic", (w, c) => w.WriteLink(new("https://example.com/"), "Example"));
+            var adHocTopic = new AdHocTopic("TestTopic", static (w, c) => w.WriteLink(new("https://example.com/"), "Example"));
 
             using (var textWriter = new StringWriter())
             using (var context = MockHelper.CreateDocumentationContext<HtmlFormat>())

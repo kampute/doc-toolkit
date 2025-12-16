@@ -375,7 +375,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(metadata.IsIndexer, Is.True);
-                Assert.That(metadata.Parameters.Select(p => p.Type.Name), Is.EqualTo(parameterTypes.Select(t => t.Name)));
+                Assert.That(metadata.Parameters.Select(static p => p.Type.Name), Is.EqualTo(parameterTypes.Select(static t => t.Name)));
             }
         }
 

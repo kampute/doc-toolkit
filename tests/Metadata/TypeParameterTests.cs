@@ -49,7 +49,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var typeMetadata = type.GetMetadata() as IGenericCapableType;
             Assert.That(typeMetadata, Is.Not.Null);
 
-            Assert.That(typeMetadata.TypeParameters.Select(tp => tp.Position), Is.EqualTo(Enumerable.Range(0, typeMetadata.TypeParameters.Count)));
+            Assert.That(typeMetadata.TypeParameters.Select(static tp => tp.Position), Is.EqualTo(Enumerable.Range(0, typeMetadata.TypeParameters.Count)));
         }
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints))]
@@ -62,7 +62,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var method = methodInfo.GetMetadata() as IMethod;
             Assert.That(method, Is.Not.Null);
 
-            Assert.That(method.TypeParameters.Select(tp => tp.Position), Is.EqualTo(Enumerable.Range(0, method.TypeParameters.Count)));
+            Assert.That(method.TypeParameters.Select(static tp => tp.Position), Is.EqualTo(Enumerable.Range(0, method.TypeParameters.Count)));
         }
 
         [TestCase(typeof(Acme.ISampleGenericInterface<>.IInnerGenericInterface<,>), 0, ExpectedResult = TypeParameterVariance.Invariant)]
@@ -127,7 +127,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(typeMetadata, Is.Not.Null);
 
             var typeParameter = typeMetadata.TypeParameters[parameterIndex];
-            Assert.That(typeParameter.TypeConstraints.Select(t => t.Name), Is.EquivalentTo(expectedTypeNames));
+            Assert.That(typeParameter.TypeConstraints.Select(static t => t.Name), Is.EquivalentTo(expectedTypeNames));
         }
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithoutTypeConstraints), 0)]
@@ -141,7 +141,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(method, Is.Not.Null);
 
             var typeParameter = method.TypeParameters[parameterIndex];
-            Assert.That(typeParameter.TypeConstraints.Select(t => t.Name), Is.EquivalentTo(expectedTypeNames));
+            Assert.That(typeParameter.TypeConstraints.Select(static t => t.Name), Is.EquivalentTo(expectedTypeNames));
         }
 
         [Test]

@@ -78,16 +78,16 @@ namespace Kampute.DocToolkit.Test
             // the inspection finds no required tag issues but it should report that the optional <remarks>, <example>, and
             // <threadsafety> tags are missing.
 
-            var requiredTagIssues = issues.Where(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag).ToList();
+            var requiredTagIssues = issues.Where(static i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag).ToList();
             Assert.That(requiredTagIssues, Is.Empty, "No required tags should be reported as missing");
 
-            var optionalTagIssues = issues.Where(i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag).ToList();
+            var optionalTagIssues = issues.Where(static i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag).ToList();
             Assert.That(optionalTagIssues, Has.Count.EqualTo(6), "The <remarks>, <example>, and <threadsafety> tags should be reported as missing");
 
-            var referenceIssues = issues.Where(i => i.IssueType == XmlDocInspectionIssueType.UndocumentedReference).ToList();
+            var referenceIssues = issues.Where(static i => i.IssueType == XmlDocInspectionIssueType.UndocumentedReference).ToList();
             Assert.That(referenceIssues, Is.Empty, "No references should be reported as undocumented");
 
-            var seeAlsoIssues = issues.Where(i => i.IssueType == XmlDocInspectionIssueType.UntitledSeeAlso).ToList();
+            var seeAlsoIssues = issues.Where(static i => i.IssueType == XmlDocInspectionIssueType.UntitledSeeAlso).ToList();
             Assert.That(seeAlsoIssues, Is.Empty, "No see-also references should be reported as untitled");
         }
 

@@ -123,7 +123,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// By default, this method returns all exported types from the assembly, excluding special name types.
         /// </remarks>
         protected virtual IEnumerable<Type> GetExportedTypes()
-                => Reflection.ExportedTypes.Where(type => !type.IsSpecialName && !type.Name.StartsWith('<'));
+                => Reflection.ExportedTypes.Where(static type => !type.IsSpecialName && !type.Name.StartsWith('<'));
 
         /// <summary>
         /// Retrieves all extension methods defined in the assembly.

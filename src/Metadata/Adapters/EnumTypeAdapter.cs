@@ -90,6 +90,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>An enumerable of <see cref="FieldInfo"/> representing the enum values.</returns>
         protected virtual IEnumerable<FieldInfo> GetValues() => Reflection
             .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static)
-            .Where(field => field.IsLiteral);
+            .Where(static field => field.IsLiteral);
     }
 }

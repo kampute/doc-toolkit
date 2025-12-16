@@ -25,7 +25,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <seealso cref="FindByFullName{T}(IReadOnlyList{T}, string)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<T> OrderByFullName<T>(this IEnumerable<T> source) where T : IType => source
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+            .OrderBy(static type => type.FullName, StringComparer.Ordinal);
 
         /// <summary>
         /// Orders constructors by their parameter count.
@@ -34,7 +34,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <returns>An ordered sequence of constructors.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IConstructor> OrderByParameterCount(this IEnumerable<IConstructor> source) => source
-            .OrderBy(c => c.Parameters.Count);
+            .OrderBy(static c => c.Parameters.Count);
 
         /// <summary>
         /// Orders operators by their names, then by parameter count.
@@ -43,8 +43,8 @@ namespace Kampute.DocToolkit.Metadata
         /// <returns>An ordered sequence of operators.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IOperator> OrderByName(this IEnumerable<IOperator> source) => source
-            .OrderBy(op => op.Name, StringComparer.Ordinal)
-            .ThenBy(op => op.Parameters.Count);
+            .OrderBy(static op => op.Name, StringComparer.Ordinal)
+            .ThenBy(static op => op.Parameters.Count);
 
         /// <summary>
         /// Orders methods by their names, then by type parameter count, then by parameter count.
@@ -56,9 +56,9 @@ namespace Kampute.DocToolkit.Metadata
         /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IMethod> OrderByName(this IEnumerable<IMethod> source) => source
-            .OrderBy(m => m.Name, StringComparer.Ordinal)
-            .ThenBy(m => m.TypeParameters.Count)
-            .ThenBy(m => m.Parameters.Count);
+            .OrderBy(static m => m.Name, StringComparer.Ordinal)
+            .ThenBy(static m => m.TypeParameters.Count)
+            .ThenBy(static m => m.Parameters.Count);
 
         /// <summary>
         /// Orders properties by their names, then by index parameter count.
@@ -70,8 +70,8 @@ namespace Kampute.DocToolkit.Metadata
         /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IProperty> OrderByName(this IEnumerable<IProperty> source) => source
-            .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .ThenBy(p => p.Parameters.Count);
+            .OrderBy(static p => p.Name, StringComparer.Ordinal)
+            .ThenBy(static p => p.Parameters.Count);
 
         /// <summary>
         /// Orders events by their names.
@@ -83,7 +83,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IEvent> OrderByName(this IEnumerable<IEvent> source) => source
-            .OrderBy(e => e.Name, StringComparer.Ordinal);
+            .OrderBy(static e => e.Name, StringComparer.Ordinal);
 
         /// <summary>
         /// Orders fields by their names.
@@ -95,7 +95,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <seealso cref="WhereName{T}(IReadOnlyList{T}, string, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IEnumerable<IField> OrderByName(this IEnumerable<IField> source) => source
-            .OrderBy(f => f.Name, StringComparer.Ordinal);
+            .OrderBy(static f => f.Name, StringComparer.Ordinal);
 
         /// <summary>
         /// Finds the index of a type by full name using binary search.

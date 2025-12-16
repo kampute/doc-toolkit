@@ -26,7 +26,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var method = methodInfo.GetMetadata();
             Assert.That(method, Is.Not.Null);
 
-            Assert.That(method.Parameters.Select(p => p.Name), Is.EqualTo(expectedNames));
+            Assert.That(method.Parameters.Select(static p => p.Name), Is.EqualTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod))]
@@ -41,7 +41,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var method = methodInfo.GetMetadata();
             Assert.That(method, Is.Not.Null);
 
-            Assert.That(method.Parameters.Select(p => p.Position), Is.EqualTo(Enumerable.Range(0, method.Parameters.Count)));
+            Assert.That(method.Parameters.Select(static p => p.Position), Is.EqualTo(Enumerable.Range(0, method.Parameters.Count)));
         }
 
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 0, ExpectedResult = ParameterReferenceKind.In)]
@@ -318,7 +318,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(method.Return.HasDefaultValue, Is.False);
                 Assert.That(method.Return.DefaultValue, Is.EqualTo(DBNull.Value));
                 Assert.That(method.Return.Type.Name, Is.EqualTo("T"));
-                Assert.That(method.Return.CustomAttributes.Select(a => a.Type.Name), Does.Contain("NotNullAttribute"));
+                Assert.That(method.Return.CustomAttributes.Select(static a => a.Type.Name), Does.Contain("NotNullAttribute"));
             }
         }
     }

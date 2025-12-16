@@ -89,7 +89,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Interfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Interfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -99,7 +99,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Fields.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Fields.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -115,7 +115,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Methods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Methods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -125,7 +125,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Properties.Select(p => p.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Properties.Select(static p => p.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -135,7 +135,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Events.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Events.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -146,7 +146,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = interfaceType.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.Operators.Select(e => e.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.Operators.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleGenericInterface<>),
@@ -158,7 +158,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void NestedTypes_HasExpectedValue(Type structType, params Type[] expectedTypes)
         {
             var metadata = structType.GetMetadata<IInterfaceType>();
-            var expectedNestedTypes = expectedTypes.Select(t => t.GetMetadata());
+            var expectedNestedTypes = expectedTypes.Select(static t => t.GetMetadata());
 
             Assert.That(metadata.NestedTypes, Is.EquivalentTo(expectedNestedTypes));
         }
@@ -186,7 +186,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void DeclaringTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
-            var expectedDeclaringTypes = expectedTypes.Select(t => t.GetMetadata());
+            var expectedDeclaringTypes = expectedTypes.Select(static t => t.GetMetadata());
 
             Assert.That(metadata.DeclaringTypeHierarchy, Is.EqualTo(expectedDeclaringTypes));
         }
@@ -221,7 +221,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var metadata = type.GetMetadata<IInterfaceType>();
 
-            Assert.That(metadata.ImplementedInterfaces.Select(i => i.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(metadata.ImplementedInterfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleInterface),
@@ -247,7 +247,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void ImplementingTypes_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IInterfaceType>();
-            var expectedImplementingTypes = expectedTypes.Select(t => t.GetMetadata());
+            var expectedImplementingTypes = expectedTypes.Select(static t => t.GetMetadata());
 
             Assert.That(metadata.ImplementingTypes, Is.EquivalentTo(expectedImplementingTypes));
         }
@@ -260,7 +260,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var extendedType = type.GetMetadata<IInterfaceType>();
 
-            Assert.That(extendedType.ExtensionProperties.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(extendedType.ExtensionProperties.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
         [TestCase(typeof(Acme.ISampleGenericInterface<>),
@@ -273,7 +273,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         {
             var extendedType = type.GetMetadata<IInterfaceType>();
 
-            Assert.That(extendedType.ExtensionMethods.Select(m => m.Name), Is.EquivalentTo(expectedNames));
+            Assert.That(extendedType.ExtensionMethods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Kampute.DocToolkit.Test.Support
         [Test]
         public void ResolveMember_WithNullCodeReference_ThrowsArgumentNullException()
         {
-            Assert.Throws<ArgumentNullException>(() => CodeReference.ResolveMember(null!));
+            Assert.Throws<ArgumentNullException>(static () => CodeReference.ResolveMember(null!));
         }
 
         [TestCase("", ExpectedResult = null)]

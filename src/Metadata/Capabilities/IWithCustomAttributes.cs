@@ -35,7 +35,7 @@ namespace Kampute.DocToolkit.Metadata.Capabilities
         /// <value>
         /// An enumerable collection of <see cref="ICustomAttribute"/> objects representing the custom attributes explicitly applied to the member.
         /// </value>
-        IEnumerable<ICustomAttribute> ExplicitCustomAttributes => CustomAttributes.Where(a => !a.IsImplicitlyApplied);
+        IEnumerable<ICustomAttribute> ExplicitCustomAttributes => CustomAttributes.Where(static a => !a.IsImplicitlyApplied);
 
         /// <summary>
         /// Determines whether the element has a specific custom attribute applied.

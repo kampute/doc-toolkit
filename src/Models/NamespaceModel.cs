@@ -194,7 +194,7 @@ namespace Kampute.DocToolkit.Models
 
                 var types = first.types.AsEnumerable();
                 do { types = types.Concat(iterator.Current.types); } while (iterator.MoveNext());
-                return new NamespaceModel(first.Context, name, types.OrderBy(t => t.Name, StringComparer.Ordinal));
+                return new NamespaceModel(first.Context, name, types.OrderBy(static t => t.Name, StringComparer.Ordinal));
             }
         }
     }

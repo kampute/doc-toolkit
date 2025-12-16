@@ -50,7 +50,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Reflection
         [Test]
         public void Constructor_WithNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => new ExtensionContainerInfo(null!), Throws.ArgumentNullException);
+            Assert.That(static () => new ExtensionContainerInfo(null!), Throws.ArgumentNullException);
         }
 
         [TestCase(typeof(Acme.SampleExtensions), ExpectedResult = 4)]

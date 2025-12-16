@@ -16,7 +16,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GetInheritedMember_WithNullMember_ThrowsArgumentNullException()
         {
-            Assert.That(() => default(IMember)!.GetInheritedMember(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+            Assert.That(static () => default(IMember)!.GetInheritedMember(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
         }
 
         [Test]
@@ -74,13 +74,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             var baseType = typeof(Acme.SampleDerivedGenericClass<object, int, string>).GetMetadata<IClassType>();
             Assert.That(baseType, Is.Not.Null);
 
-            var baseConstructor = baseType.Constructors.FirstOrDefault(c => c.Parameters.Count == 0);
+            var baseConstructor = baseType.Constructors.FirstOrDefault(static c => c.Parameters.Count == 0);
             Assert.That(baseConstructor, Is.InstanceOf<IConstructor>());
 
             var derivedType = typeof(Acme.SampleDerivedConstructedGenericClass).GetMetadata<IClassType>();
             Assert.That(derivedType, Is.Not.Null);
 
-            var derivedConstructor = derivedType.Constructors.FirstOrDefault(c => c.Parameters.Count == 0);
+            var derivedConstructor = derivedType.Constructors.FirstOrDefault(static c => c.Parameters.Count == 0);
             Assert.That(derivedConstructor, Is.InstanceOf<IConstructor>());
 
             var inheritedMember = derivedConstructor.GetInheritedMember();
@@ -93,7 +93,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var derivedType = typeof(Acme.SampleDerivedConstructedGenericClass).GetMetadata<IClassType>();
             Assert.That(derivedType, Is.Not.Null);
 
-            var derivedConstructor = derivedType.Constructors.FirstOrDefault(c => c.Parameters.Count == 1);
+            var derivedConstructor = derivedType.Constructors.FirstOrDefault(static c => c.Parameters.Count == 1);
             Assert.That(derivedConstructor, Is.InstanceOf<IConstructor>());
 
             var inheritedMember = derivedConstructor.GetInheritedMember();
@@ -194,7 +194,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var type = typeof(Acme.SampleMethods).GetMetadata<IClassType>();
             Assert.That(type, Is.Not.Null);
 
-            var regularMethod = type.Methods.FirstOrDefault(m => m.Name == nameof(Acme.SampleMethods.RegularMethod));
+            var regularMethod = type.Methods.FirstOrDefault(static m => m.Name == nameof(Acme.SampleMethods.RegularMethod));
             Assert.That(regularMethod, Is.InstanceOf<IMethod>());
 
             var inheritedMember = regularMethod.GetInheritedMember();
@@ -251,7 +251,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var type = typeof(Acme.SampleProperties).GetMetadata<IClassType>();
             Assert.That(type, Is.Not.Null);
 
-            var regularProperty = type.Properties.FirstOrDefault(p => p.Name == nameof(Acme.SampleProperties.RegularProperty));
+            var regularProperty = type.Properties.FirstOrDefault(static p => p.Name == nameof(Acme.SampleProperties.RegularProperty));
             Assert.That(regularProperty, Is.InstanceOf<IProperty>());
 
             var inheritedMember = regularProperty.GetInheritedMember();
@@ -308,7 +308,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var type = typeof(Acme.SampleEvents).GetMetadata<IClassType>();
             Assert.That(type, Is.Not.Null);
 
-            var regularEvent = type.Events.FirstOrDefault(e => e.Name == nameof(Acme.SampleEvents.RegularEvent));
+            var regularEvent = type.Events.FirstOrDefault(static e => e.Name == nameof(Acme.SampleEvents.RegularEvent));
             Assert.That(regularEvent, Is.InstanceOf<IEvent>());
 
             var inheritedMember = regularEvent.GetInheritedMember();
@@ -352,7 +352,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GetMembers_WithNullType_ThrowsArgumentNullException()
         {
-            Assert.That(() => default(IType)!.GetMembers(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("type"));
+            Assert.That(static () => default(IType)!.GetMembers(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("type"));
         }
 
         [Test]
@@ -406,13 +406,13 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             var members = type.GetMembers().ToList();
 
-            Assert.That(members.OfType<IVirtualTypeMember>().Any(m => m.IsExplicitInterfaceImplementation), Is.True);
+            Assert.That(members.OfType<IVirtualTypeMember>().Any(static m => m.IsExplicitInterfaceImplementation), Is.True);
         }
 
         [Test]
         public void GetMembersIncludingNested_WithNullType_ThrowsArgumentNullException()
         {
-            Assert.That(() => default(IType)!.GetMembersIncludingNested(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("type"));
+            Assert.That(static () => default(IType)!.GetMembersIncludingNested(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("type"));
         }
 
         [Test]
@@ -449,7 +449,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void TryGetOwnTypeParameters_WithNullMember_ThrowsArgumentNullException()
         {
-            Assert.That(() => default(IMember)!.TryGetOwnTypeParameters(out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+            Assert.That(static () => default(IMember)!.TryGetOwnTypeParameters(out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
         }
 
         [Test]
@@ -476,7 +476,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.True);
-                Assert.That(parameters.Select(p => p.Name), Is.EqualTo(["U", "V"]));
+                Assert.That(parameters.Select(static p => p.Name), Is.EqualTo(["U", "V"]));
             }
         }
 
@@ -503,7 +503,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.True);
-                Assert.That(parameters.Select(p => p.Name), Is.EqualTo(["T", "U", "V"]));
+                Assert.That(parameters.Select(static p => p.Name), Is.EqualTo(["T", "U", "V"]));
             }
         }
 
@@ -511,14 +511,14 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void TryGetOwnTypeParameters_WithGenericMethod_ReturnsTrueAndParameters()
         {
             var type = typeof(Acme.SampleMethods).GetMetadata<IClassType>();
-            var method = type.Methods.First(m => m.Name == nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints));
+            var method = type.Methods.First(static m => m.Name == nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints));
 
             var result = method.TryGetOwnTypeParameters(out var parameters);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.True);
-                Assert.That(parameters.Select(p => p.Name), Is.EqualTo(["T"]));
+                Assert.That(parameters.Select(static p => p.Name), Is.EqualTo(["T"]));
             }
         }
 
@@ -526,7 +526,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void TryGetOwnTypeParameters_WithNonGenericMethod_ReturnsFalse()
         {
             var type = typeof(Acme.SampleMethods).GetMetadata<IClassType>();
-            var method = type.Methods.First(m => m.Name == nameof(Acme.SampleMethods.RegularMethod));
+            var method = type.Methods.First(static m => m.Name == nameof(Acme.SampleMethods.RegularMethod));
 
             var result = method.TryGetOwnTypeParameters(out var parameters);
 
@@ -547,7 +547,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.True);
-                Assert.That(parameters.Select(p => p.Name), Is.EqualTo(["U", "V"]));
+                Assert.That(parameters.Select(static p => p.Name), Is.EqualTo(["U", "V"]));
             }
         }
     }

@@ -29,7 +29,7 @@ namespace Kampute.DocToolkit.Metadata
     public static class MetadataProvider
     {
         private static readonly ConditionalWeakTable<Assembly, IAssembly> assemblyCache = [];
-        private static Func<Assembly, IAssembly> assemblyFactory = asm => new AssemblyAdapter(asm);
+        private static Func<Assembly, IAssembly> assemblyFactory = static asm => new AssemblyAdapter(asm);
 
         /// <summary>
         /// Gets the assemblies for which metadata has been created.

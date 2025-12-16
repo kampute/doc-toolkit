@@ -79,7 +79,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void Constructor_WithNullAssemblyPaths_ThrowsArgumentNullException()
         {
-            Assert.That(() => new MetadataUniverse(null!), Throws.ArgumentNullException
+            Assert.That(static () => new MetadataUniverse(null!), Throws.ArgumentNullException
                 .With.Property("ParamName").EqualTo("assemblyPaths"));
         }
 
@@ -241,7 +241,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void FromProbeFolders_WithNullProbeFolders_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataUniverse.FromProbeFolders(null!), Throws.ArgumentNullException
+            Assert.That(static () => MetadataUniverse.FromProbeFolders(null!), Throws.ArgumentNullException
                 .With.Property("ParamName").EqualTo("probeFolders"));
         }
 

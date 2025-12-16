@@ -85,7 +85,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
 
             var attributeData = MethodBase.GetCurrentMethod()!.GetMetadata().CustomAttributes
-                .First(a => a.Type.FullName == "Acme.SampleAttribute");
+                .First(static a => a.Type.FullName == "Acme.SampleAttribute");
 
             writer.WriteDocLink(attributeData, context, NameQualifier.None);
 

@@ -69,7 +69,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool TryGetFixedSizeBufferInfo([NotNullWhen(true)] out IType? elementType, out int length)
         {
             var args = GetCustomAttributes()
-                .FirstOrDefault(a => a.AttributeType.FullName == AttributeNames.FixedBuffer)?
+                .FirstOrDefault(static a => a.AttributeType.FullName == AttributeNames.FixedBuffer)?
                 .ConstructorArguments;
 
             if

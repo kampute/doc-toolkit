@@ -116,7 +116,7 @@ namespace Kampute.DocToolkit.Metadata
 
             var files = probeFolders
                 .Where(Directory.Exists)
-                .SelectMany(dir => Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories));
+                .SelectMany(static dir => Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories));
 
             return new MetadataUniverse(files, searchFolders, includeTrustedPlatformAssemblies);
         }
@@ -209,7 +209,7 @@ namespace Kampute.DocToolkit.Metadata
             private Assembly? FindAssemblyInProbeFolders(MetadataLoadContext context, AssemblyName assemblyName)
             {
                 var fileName = assemblyName.Name! + ".dll";
-                var candidates = new SortedList<Version, string>(Comparer<Version>.Create((a, b) => b.CompareTo(a)));
+                var candidates = new SortedList<Version, string>(Comparer<Version>.Create(static (a, b) => b.CompareTo(a)));
 
                 foreach (var folder in probeFolders)
                 {

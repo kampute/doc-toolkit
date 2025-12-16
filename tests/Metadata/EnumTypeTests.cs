@@ -72,7 +72,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         public void BaseTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
         {
             var metadata = type.GetMetadata<IEnumType>();
-            var expectedBaseTypes = expectedTypes.Select(t => t.GetMetadata<IClassType>());
+            var expectedBaseTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
 
             Assert.That(metadata.BaseTypeHierarchy, Is.EqualTo(expectedBaseTypes));
         }

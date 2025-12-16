@@ -191,7 +191,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
                 Assert.That(metadata.Parameters, Has.Count.EqualTo(1));
                 Assert.That(metadata.IsGenericMethod, Is.True);
-                Assert.That(metadata.TypeParameters.Select(tp => tp.Name), Is.EquivalentTo(["U"]));
+                Assert.That(metadata.TypeParameters.Select(static tp => tp.Name), Is.EquivalentTo(["U"]));
                 Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
             }
         }
@@ -267,43 +267,43 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GetMetadataAssembly_WhenAssemblyIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((Assembly)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((Assembly)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataType_WhenTypeIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((System.Type)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((System.Type)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataConstructor_WhenConstructorIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((ConstructorInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((ConstructorInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataMethod_WhenMethodIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((MethodInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((MethodInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataProperty_WhenPropertyIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((PropertyInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((PropertyInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataEvent_WhenEventIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((EventInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((EventInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataField_WhenFieldIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((FieldInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((FieldInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
@@ -319,11 +319,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             static void RegisterAndForgetAssembly()
             {
                 var mockAssembly = new Mock<Assembly>();
-                mockAssembly.Setup(a => a.GetName()).Returns(new AssemblyName("TestAssembly"));
-                mockAssembly.Setup(a => a.Location).Returns(Path.GetTempFileName());
-                mockAssembly.Setup(a => a.Modules).Returns([]);
-                mockAssembly.Setup(a => a.CustomAttributes).Returns([]);
-                mockAssembly.Setup(a => a.GetExportedTypes()).Returns([]);
+                mockAssembly.Setup(static a => a.GetName()).Returns(new AssemblyName("TestAssembly"));
+                mockAssembly.Setup(static a => a.Location).Returns(Path.GetTempFileName());
+                mockAssembly.Setup(static a => a.Modules).Returns([]);
+                mockAssembly.Setup(static a => a.CustomAttributes).Returns([]);
+                mockAssembly.Setup(static a => a.GetExportedTypes()).Returns([]);
 
                 var _ = mockAssembly.Object.GetMetadata();
                 Assert.That(MetadataProvider.AvailableAssemblies, Is.Not.Empty);
