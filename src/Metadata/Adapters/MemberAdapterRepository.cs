@@ -303,7 +303,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Creates extension block metadata for the specified extension block information.
         /// </summary>
         /// <param name="extensionBlock">The extension block information to create metadata for.</param>
-        /// <returns></returns>
+        /// <returns>The metadata representation of the specified extension block.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when the provided extension block does not belong to the assembly of this provider.</exception>
         protected virtual IExtensionBlock CreateExtensionBlockMetadata(ExtensionBlockInfo extensionBlock)
@@ -313,7 +313,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (!Assembly.Represents(extensionBlock.BlockType.Assembly))
                 throw new ArgumentException("The provided extension block does not belong to the assembly of this provider.", nameof(extensionBlock));
 
-            var declaringType = (IClassType)GetTypeMetadata(extensionBlock.BlockType.DeclaringType);
+            var declaringType = GetTypeMetadata(extensionBlock.BlockType.DeclaringType);
             return Factory.CreateExtensionBlockMetadata(declaringType, extensionBlock);
         }
     }

@@ -267,6 +267,7 @@ namespace Kampute.DocToolkit.Support
         /// <param name="text">The string to process.</param>
         /// <param name="fromChars">The characters to translate from.</param>
         /// <param name="toChars">The characters to translate to.</param>
+        /// <returns>A new string with the specified characters translated.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when the lengths of <paramref name="fromChars"/> and <paramref name="toChars"/> are not the same.</exception>
         public static string TranslateChars(this string text, ReadOnlySpan<char> fromChars, ReadOnlySpan<char> toChars)

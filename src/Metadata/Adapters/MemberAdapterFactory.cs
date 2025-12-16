@@ -31,7 +31,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public static MemberAdapterFactory Instance { get; } = new();
 
         /// <inheritdoc/>
-        public virtual IExtensionBlock CreateExtensionBlockMetadata(IClassType declaringType, ExtensionBlockInfo extensionBlock)
+        public virtual IExtensionBlock CreateExtensionBlockMetadata(IType declaringType, ExtensionBlockInfo extensionBlock)
         {
             if (declaringType is null)
                 throw new ArgumentNullException(nameof(declaringType));
