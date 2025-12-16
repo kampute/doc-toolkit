@@ -66,7 +66,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsReadOnly => AnyAccessor.IsReadOnly;
 
         /// <inheritdoc/>
-        public virtual bool IsInitOnly => SetMethod?.Return.HasRequiredCustomModifier(ModifierNames.IsExternalInit) == true;
+        public virtual bool IsInitOnly => SetMethod?.Return.HasRequiredCustomModifier(ModifierNames.IsExternalInit) is true;
 
         /// <inheritdoc/>
         public virtual bool IsRequired => HasCustomAttribute(AttributeNames.RequiredMember);
