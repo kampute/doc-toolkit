@@ -5,7 +5,6 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
-    using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -14,7 +13,7 @@ namespace Kampute.DocToolkit.Metadata
     /// <summary>
     /// Defines a contract for accessing interface-specific metadata.
     /// </summary>
-    public interface IInterfaceType : IGenericCapableType, IInterfaceCapableType, IWithMethods, IWithProperties, IWithEvents
+    public interface IInterfaceType : ICompositeType
     {
         /// <summary>
         /// Gets the types that implement the interface either directly or indirectly within the same assembly.

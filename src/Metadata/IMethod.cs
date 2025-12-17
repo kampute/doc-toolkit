@@ -5,13 +5,13 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
-    using System;
+    using Kampute.DocToolkit.Metadata.Capabilities;
     using System.Collections.Generic;
 
     /// <summary>
     /// Defines a contract for accessing method metadata.
     /// </summary>
-    public interface IMethod : IVirtualTypeMember, IMethodBase
+    public interface IMethod : IMethodBase, IWithExtensionBehavior
     {
         /// <summary>
         /// Gets the type parameters declared by the method if it is generic.
@@ -30,28 +30,12 @@ namespace Kampute.DocToolkit.Metadata
         bool IsGenericMethod { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the method is read-only.
+        /// Gets a value indicating whether the method is a classic extension method.
         /// </summary>
         /// <value>
-        /// <see langword="true"/> if the method is read-only; otherwise, <see langword="false"/>.
+        /// <see langword="true"/> if the method is a classic extension method; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsReadOnly { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether the method is asynchronous.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if the method is asynchronous; otherwise, <see langword="false"/>.
-        /// </value>
-        bool IsAsync { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether the method is an extension method.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if the method is an extension method; otherwise, <see langword="false"/>.
-        /// </value>
-        bool IsExtension { get; }
+        bool IsClassicExtensionMethod { get; }
 
         /// <summary>
         /// Gets the base method that this method overrides, if any.
@@ -68,19 +52,5 @@ namespace Kampute.DocToolkit.Metadata
         /// The interface method that this method implements, or <see langword="null"/> if none.
         /// </value>
         IMethod? ImplementedMethod { get; }
-
-        /// <summary>
-        /// Determines whether the method is an extension method for the given type.
-        /// </summary>
-        /// <param name="type">The type to check against.</param>
-        /// <returns><see langword="true"/> if the method is an extension method for the specified type; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> is <see langword="null"/>.</exception>
-        bool IsExtensionMethodFor(IType type)
-        {
-            if (type is null)
-                throw new ArgumentNullException(nameof(type));
-
-            return IsExtension && Parameters[0].Type.IsAssignableFrom(type);
-        }
     }
 }

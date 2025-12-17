@@ -108,7 +108,7 @@ namespace Kampute.DocToolkit
 
             var memberAnchor = string.Empty;
             if (member is IWithOverloads { HasOverloads: true })
-                memberAnchor = signature.ReplaceMany(['.', '_'], '-').Replace("--", "-");
+                memberAnchor = signature.ReplaceChars(['.', '_'], '-').Replace("--", "-");
 
             address = CreateAddressFromPath(GetApiPath(memberPath), memberAnchor);
             return true;

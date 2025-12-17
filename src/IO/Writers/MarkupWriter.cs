@@ -270,7 +270,7 @@ namespace Kampute.DocToolkit.IO.Writers
         /// <param name="ns">The namespace for which the link is written.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="ns"/> is <see langword="null"/>.</exception>
         /// <remarks>
-        /// This method writes a hyperlink to the documentation for the specified namespace. If the namespace has has a valid documentation
+        /// This method writes a hyperlink to the documentation for the specified namespace. If the namespace has a valid documentation
         /// URL, a hyperlink is written using the namespace's name. If the namespace does not have documentation URL, the namespace's name
         /// is written as plain text.
         /// </remarks>

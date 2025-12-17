@@ -132,7 +132,7 @@ namespace Kampute.DocToolkit.Support
                 return string.Empty;
 
             var size = text.Length;
-            Span<char> newTextSpan = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
+            var newTextSpan = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
 
             var index = 0;
             var previousWasWhitespace = trim;

@@ -75,5 +75,27 @@ namespace Kampute.DocToolkit.Metadata
         /// <see langword="true"/> if the type parameter is from a generic method; otherwise, <see langword="false"/>.
         /// </value>
         bool IsGenericMethodParameter { get; }
+
+        /// <summary>
+        /// Determines whether the constraints of this type parameter can be satisfied by the specified type.
+        /// </summary>
+        /// <param name="type">The type to check against this type parameter's constraints.</param>
+        /// <returns><see langword="true"/> if this type parameter can be satisfied by the type; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// This type parameter is considered satisfiable by the specified type if all constraints defined on this type parameter are 
+        /// met by the provided type.
+        /// </remarks>
+        bool IsSatisfiableBy(IType type);
+
+        /// <summary>
+        /// Determines whether the constraints of this type parameter can be satisfied by the specified type parameter.
+        /// </summary>
+        /// <param name="other">The type parameter to check against this type parameter's constraints.</param>
+        /// <returns><see langword="true"/> if this type parameter can be satisfied by the other; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// This type parameter is considered satisfiable by the specified type parameter if all constraints defined on this type parameter 
+        /// are met by the provided type parameter.
+        /// </remarks>
+        bool IsSatisfiableBy(ITypeParameter other);
     }
 }

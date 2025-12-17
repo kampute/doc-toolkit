@@ -26,7 +26,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <value>
         /// <see langword="true"/> if the enum is decorated with the <c>Flags</c> attribute; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsFlagsEnum => HasCustomAttribute("System.FlagsAttribute");
+        bool IsFlagsEnum { get; }
 
         /// <summary>
         /// Retrieves the name of the enum member corresponding to the specified value.

@@ -78,6 +78,22 @@ namespace Kampute.DocToolkit.Metadata
         IReadOnlyDictionary<string, object?> Attributes { get; }
 
         /// <summary>
+        /// Gets all the extension properties defined in the assembly.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of <see cref="IProperty"/> instances representing the extension properties defined in the assembly.
+        /// </value>
+        IReadOnlyCollection<IProperty> ExtensionProperties { get; }
+
+        /// <summary>
+        /// Gets all the extension methods defined in the assembly.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of <see cref="IMethod"/> instances representing the extension methods defined in the assembly.
+        /// </value>
+        IReadOnlyCollection<IMethod> ExtensionMethods { get; }
+
+        /// <summary>
         /// Gets a value indicating whether the assembly is strongly named.
         /// </summary>
         /// <value>

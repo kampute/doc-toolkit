@@ -13,306 +13,1232 @@
 namespace Acme
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using System.Threading.Tasks;
+    using System.Reflection;
 
-    [AttributeUsage(AttributeTargets.Parameter)]
-    public class CustomAttribute : Attribute { }
-
-    public interface IProcess<out T>
+    /// <summary>
+    /// Binding flags for reflection tests.
+    /// </summary>
+    public static class Bindings
     {
-        bool IsCompleted { get; }
-
-        event EventHandler? Completed;
-
-        T GetStatus(bool state);
+        /// <summary>
+        /// Binding flags to get all members declared/implemented on a type.
+        /// </summary>
+        public const BindingFlags AllDeclared = BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
     }
 
-    public struct ValueType : ICloneable
-    {
-        public volatile int total;
-        public unsafe fixed int buffer[10];
-
-        public ValueType(int initial) => total = initial;
-
-        public readonly bool HasTotal => total != 0;
-
-        public int HalfTotal
-        {
-            readonly get => total / 2;
-            set => total = value * 2;
-        }
-
-        public unsafe void M1(int i) => buffer[i % 10] = ++total;
-        public readonly string M2(int? i = null) => $"{i}";
-
-        public readonly object Clone() => new ValueType(total);
-
-        public event EventHandler? E1;
-
-        public enum State
-        {
-            Empty,
-            NotEmpty
-        }
-    }
-
-    /// <seealso href="https://ecma-international.org/wp-content/uploads/ECMA-334_7th_edition_december_2023.pdf"/>
-    public class Widget
-    {
-        public string message;
-        internal static Direction defaultDirection;
-        public const double PI = 3.14159;
-        protected internal readonly double monthlyAverage;
-        public long[] array1;
-        public Widget[,] array2;
-        public unsafe int* pCount;
-        public unsafe float** ppValues;
-        private volatile bool valid;
-
-        static Widget() { }
-
-        [SetsRequiredMembers]
-        internal Widget() => Width = 0;
-
-        [SetsRequiredMembers]
-        protected Widget(string s) => Width = s.Length;
-
-        [SetsRequiredMembers]
-        public Widget(int width, int height)
-        {
-            Width = width;
-            Height = height;
-            valid = true;
-            Validated?.Invoke(this, EventArgs.Empty);
-        }
-
-        public static void M0() { }
-        public void M1(char c, out float f, ref ValueType v, in int i) { f = 0; }
-        public void M2(short[] x1, int[,] x2, long[][] x3) { }
-        public void M3(long[][] x3, Widget[][,,] x4) { }
-        public unsafe void M4(char* pc, Direction** pd = null) { }
-        public unsafe void M5(void* pv, double?*[][,][,,] pd) { }
-        public void M6(int i, params object[] args) { valid = i % 2 == 0; }
-        public T? M7<T>() => valid ? default : throw new InvalidOperationException();
-        public void M8<T>(T t, bool isTrusted = true) where T : class, new() { }
-        private bool Valid() => valid;
-
-        [return: NotNullIfNotNull(nameof(x))]
-        public static implicit operator long?(Widget? x) => x?.Width;
-        public static explicit operator int(Widget x) => x.Width;
-        public static Widget operator +(Widget x) => x;
-        public static Widget operator +(Widget x1, Widget x2) => x1;
-
-        public static Direction DefaultDirection
-        {
-            get => defaultDirection;
-            set => defaultDirection = value;
-        }
-
-        public required int Width { get; init; }
-        public int Height { get; set; }
-        public int Depth { get; private set; }
-        private bool IsValid => Valid();
-
-        public int this[int i] => IsValid ? i : -1;
-        public int this[string s, int i] => i;
-
-        protected internal event Del AnEvent;
-        internal event EventHandler? Validated;
-
-        public abstract class NestedClass
-        {
-            protected NestedClass() => value = 999;
-
-            public int value;
-
-            public void M1() { }
-            public abstract void M2(int i = 123);
-
-            public enum DeepNestedEnum
-            {
-                Value1,
-                Value2
-            }
-        }
-
-        public class NestedDerivedClass : NestedClass
-        {
-            public NestedDerivedClass() : base() { }
-            public NestedDerivedClass(int initialValue) => value = initialValue;
-            public NestedDerivedClass(string name) => value = name.Length;
-
-            public new void M1() { }
-            public sealed override void M2(int i = 123) { }
-        }
-
-        public interface IMenuItem<in T> where T : Widget, new()
-        {
-        }
-
-        protected internal delegate void Del(int i);
-
-        public enum Direction
-        {
-            North,
-            South,
-            East,
-            West
-        }
-
-        private struct PrivateType { }
-    }
-
-    public class DerivedWidget : Widget
-    {
-        [SetsRequiredMembers]
-        public DerivedWidget() : base() { }
-    }
-
-    public class MyList<T>(IEnumerable<T> items)
-        where T : struct
-    {
-        public IEnumerable<T> Items { get; protected set; } = items;
-
-        protected internal void Test([Custom] T t = default) { }
-
-        public Scope BeginScope() => new(Items);
-        public void EndScope(Scope scope) { }
-
-        public class Scope
-        {
-            public Scope(IEnumerable<T> items) => Items = [.. items];
-
-            public List<T> Items { get; }
-
-            public static implicit operator List<T>(Scope scope) => scope.Items;
-        }
-
-        public class Helper<U, V>
-        {
-            public U First { get; set; }
-            public V Second { get; set; }
-        }
-    }
-
-    public class MyExtendedList<T> : MyList<T>
-        where T : struct
-    {
-        public MyExtendedList() : base([]) { }
-    }
-
-    public sealed class UseList : IProcess<string>
-    {
-        bool IProcess<string>.IsCompleted => true;
-
-        event EventHandler? IProcess<string>.Completed
-        {
-            add { }
-            remove { }
-        }
-
-        string IProcess<string>.GetStatus(bool state) => string.Empty;
-
-        public async Task<bool> ProcessAsync(MyList<int> list) => await Task.FromResult(list.Items is not null);
-        public MyList<T> GetValues<T>(T value) where T : struct => new([value]);
-
-        [Obsolete("For sake of testing", DiagnosticId = "XYZ")]
-        public T Intercept<T>(in MyList<T>.Helper<char, string>[] helper) where T : struct => default;
-    }
-
-    public static class Extensions
-    {
-        public static void Hello(this Widget widget) => widget.message = "Hello, World!";
-    }
-
-    public interface ITestInterface
-    {
-        int Count { get; }
-        bool IsEmpty => Count == 0;
-
-        int this[int i] { get; }
-
-        void InterfaceMethod();
-        void InterfaceDefaultMethod() { }
-
-        event EventHandler? InterfaceEvent;
-    }
-
-    public class BaseClass
-    {
-        public virtual string VirtualProperty { get; set; } = "Base";
-        public string RegularProperty { get; set; } = "Regular";
-        public virtual int VirtualReadOnly { get; } = 42;
-
-        protected virtual event EventHandler? VirtualEvent;
-
-        public virtual string VirtualMethod() => "Base";
-        public virtual async Task<string> VirtualAsyncMethod() => await Task.FromResult("Base Async");
-    }
-
-    public class DerivedClass : BaseClass, ITestInterface, IProcess<string>
-    {
-        public sealed override string VirtualProperty { get; set; } = "Derived";
-        public override int VirtualReadOnly { get; } = 99;
-        public int Count => 10;
-        public int this[int i] => i * 2;
-        public bool InitOnlyProperty { get; init; }
-        public required int RequiredProperty { get; set; }
-        public static string StaticProperty { get; set; } = "Static";
-
-        bool IProcess<string>.IsCompleted => true;
-
-        public void RegularMethod() { }
-        public void InterfaceMethod() { }
-        public sealed override string VirtualMethod() => "Derived";
-        public override async Task<string> VirtualAsyncMethod() => await Task.FromResult("Derived Async");
-        string IProcess<string>.GetStatus(bool state) => state ? "Complete" : "Incomplete";
-
-        protected override event EventHandler? VirtualEvent;
-        public static event EventHandler<int>? StaticEvent;
-        internal event Widget.Del? RegularEvent;
-        public event EventHandler? InterfaceEvent;
-        event EventHandler? IProcess<string>.Completed
-        {
-            add { }
-            remove { }
-        }
-    }
-
-    [Example(typeof(TestClass), Days = [DayOfWeek.Saturday, DayOfWeek.Sunday])]
-    public class TestClass
-    {
-        public TestClass() { }
-        public TestClass(int value) { }
-        public TestClass(string name) { }
-        public TestClass(int value, string name) { }
-    }
-
+    /// <summary>
+    /// A sample attribute for testing purposes.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-    public class ExampleAttribute : Attribute
+    public class SampleAttribute : Attribute
     {
-        public ExampleAttribute(Type type) => Type = type;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleAttribute">SampleAttribute</see> class.
+        /// </summary>
+        /// <param name="type">The constructor parameter.</param>
+        public SampleAttribute(Type type) => Type = type;
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>The type value.</value>
         protected Type Type { get; }
+
+        /// <summary>
+        /// Gets or sets the days of the week.
+        /// </summary>
+        /// <value>The days of the week.</value>
         public DayOfWeek[] Days { get; set; } = [];
     }
 
-    public class UnmanagedConstraintClass<T> where T : unmanaged
+    /// <summary>
+    /// A sample interface for testing purposes.
+    /// </summary>
+    public interface ISampleInterface
     {
-        public void TestMethod<U>(U value) where U : unmanaged { }
+        /// <summary>
+        /// Initializes the static members of the <see cref="ISampleInterface">ISampleInterface</see> interface.
+        /// </summary>
+        static ISampleInterface()
+        {
+            InterfaceField = DateTime.Now;
+        }
+
+        /// <summary>
+        /// A static readonly field in interface.
+        /// </summary>
+        public static readonly DateTime InterfaceField;
+
+        /// <summary>
+        /// Gets the interface property value.
+        /// </summary>
+        /// <value>The interface property value.</value>
+        int InterfaceProperty => 42;
+
+        /// <summary>
+        /// A sample interface method.
+        /// </summary>
+        void InterfaceMethod() { }
+
+        /// <summary>
+        /// A generic method in the interface.
+        /// </summary>
+        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <param name="value">The value parameter.</param>
+        /// <returns>The value.</returns>
+        T InterfaceGenericMethod<T>(T value) where T : struct => value;
+
+        /// <summary>
+        /// A method with an in parameter.
+        /// </summary>
+        /// <param name="i">The in parameter.</param>
+        void InterfaceMethodWithInParam(in int i) { }
+
+        /// <summary>
+        /// A method with a ref parameter.
+        /// </summary>
+        /// <param name="s">The ref parameter.</param>
+        void InterfaceMethodWithRefParam(ref string s) { }
+
+        /// <summary>
+        /// A method with an out parameter.
+        /// </summary>
+        /// <param name="d">The out parameter.</param>
+        void InterfaceMethodWithOutParam(out double d) { d = default; }
+
+        /// <summary>
+        /// A static abstract method in the interface.
+        /// </summary>
+        static abstract void InterfaceStaticMethod();
+
+        /// <summary>
+        /// A static virtual method with default implementation in the interface.
+        /// </summary>
+        static virtual void InterfaceStaticDefaultMethod() { }
+
+        /// <summary>
+        /// Defines the true operator for the interface.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        /// <returns>Always true.</returns>
+        static virtual bool operator true(ISampleInterface instance) => true;
+
+        /// <summary>
+        /// Defines the false operator for the interface.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        /// <returns>The result.</returns>
+        static abstract bool operator false(ISampleInterface instance);
+
+        /// <summary>
+        /// An event in the interface.
+        /// </summary>
+        event EventHandler? InterfaceEvent { add { } remove { } }
     }
 
-    public class NotNullConstraintClass<T> where T : notnull
+    /// <summary>
+    /// A sample class demonstrating various constructor signatures.
+    /// </summary>
+    public class SampleConstructors
     {
-        public void TestMethod<U>(U value) where U : notnull { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleConstructors">SampleConstructors</see> class with required members set.
+        /// </summary>
+        [SetsRequiredMembers] protected SampleConstructors() { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleConstructors">SampleConstructors</see> class with an integer parameter.
+        /// </summary>
+        /// <param name="i">The integer parameter.</param>
+        public SampleConstructors(int i) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleConstructors">SampleConstructors</see> class with string and double parameters.
+        /// </summary>
+        /// <param name="s">The string parameter.</param>
+        /// <param name="d">The double parameter.</param>
+        public SampleConstructors(string s, double d) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleConstructors">SampleConstructors</see> class with an object parameter.
+        /// </summary>
+        /// <param name="o">The object parameter.</param>
+        protected SampleConstructors([NotNull] object o) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleConstructors">SampleConstructors</see> class with a string parameter.
+        /// </summary>
+        /// <param name="s">The string parameter.</param>
+        internal SampleConstructors(string s) { }
     }
 
-    public class MultipleConstraintClass<T, U> where T : class, ICloneable where U : class, new()
+    /// <summary>
+    /// A sample class demonstrating operator overloading.
+    /// </summary>
+    public class SampleOperators : ISampleInterface
     {
-        public T? Value { get; set; }
+        /// <summary>
+        /// Unary plus operator.
+        /// </summary>
+        /// <param name="x">The operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator +(SampleOperators x) => x;
+
+        /// <summary>
+        /// Unary minus operator.
+        /// </summary>
+        /// <param name="x">The operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator -(SampleOperators x) => x;
+
+        /// <summary>
+        /// Addition operator.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator +(SampleOperators x, SampleOperators y) => x;
+
+        /// <summary>
+        /// Subtraction operator.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator -(SampleOperators x, SampleOperators y) => x;
+
+        /// <summary>
+        /// Addition assignment operator.
+        /// </summary>
+        /// <param name="x">The operand.</param>
+        public void operator +=(SampleOperators x) { }
+
+        /// <summary>
+        /// Subtraction assignment operator.
+        /// </summary>
+        /// <param name="x">The operand.</param>
+        public void operator -=(SampleOperators x) { }
+
+        /// <summary>
+        /// Increment operator.
+        /// </summary>
+        public void operator ++() { }
+
+        /// <summary>
+        /// Decrement operator.
+        /// </summary>
+        public void operator --() { }
+
+        /// <summary>
+        /// Implicit conversion to string.
+        /// </summary>
+        /// <param name="x">The instance.</param>
+        /// <returns>The string representation.</returns>
+        public static implicit operator string(SampleOperators x) => "Sample";
+
+        /// <summary>
+        /// Explicit conversion to int.
+        /// </summary>
+        /// <param name="x">The instance.</param>
+        /// <returns>The integer value.</returns>
+        public static explicit operator int(SampleOperators x) => 42;
+
+        /// <summary>
+        /// Explicitly implements the false operator for the interface.
+        /// </summary>
+        /// <inheritdoc/>
+        static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+
+        /// <summary>
+        /// Explicitly implements the static method for the interface.
+        /// </summary>
+        /// <inheritdoc/>
+        static void ISampleInterface.InterfaceStaticMethod() { }
     }
+
+    /// <summary>
+    /// A sample abstract class demonstrating various method signatures.
+    /// </summary>
+    public abstract class SampleMethods : ISampleInterface
+    {
+        /// <summary>
+        /// A static method.
+        /// </summary>
+        public static void StaticMethod() { }
+
+        /// <summary>
+        /// A regular instance method.
+        /// </summary>
+        public void RegularMethod() { }
+
+        /// <summary>
+        /// An abstract method.
+        /// </summary>
+        internal protected abstract void AbstractMethod();
+
+        /// <summary>
+        /// A virtual method.
+        /// </summary>
+        /// <param name="i">The parameter.</param>
+        internal protected virtual void VirtualMethod(int i) { }
+
+        /// <summary>
+        /// An unsafe method.
+        /// </summary>
+        /// <param name="p">The pointer parameter.</param>
+        public unsafe void UnsafeMethod(int** p) { }
+
+        /// <summary>
+        /// A generic method with type constraints.
+        /// </summary>
+        /// <typeparam name="T">The type parameter.</typeparam>
+        /// <param name="value">The value.</param>
+        /// <returns>The value.</returns>
+        [return: NotNull] public T GenericMethodWithTypeConstraints<T>([NotNull] T value) where T : class, ICloneable, new() => value;
+
+        /// <summary>
+        /// A generic method without type constraints.
+        /// </summary>
+        /// <typeparam name="T">The first type parameter.</typeparam>
+        /// <typeparam name="U">The second type parameter.</typeparam>
+        /// <param name="t">The first parameter.</param>
+        /// <param name="u">The second parameter.</param>
+        /// <returns>The second parameter.</returns>
+        public U GenericMethodWithoutTypeConstraints<T, U>(T t, U u) where T : class where U : struct => u;
+
+        /// <summary>
+        /// A generic method with a generic parameter.
+        /// </summary>
+        /// <typeparam name="S">The type parameter.</typeparam>
+        /// <param name="list">The list.</param>
+        /// <returns>The first element.</returns>
+        public S GenericMethodWithGenericParameter<S>(List<S> list) => list[0];
+
+        /// <summary>
+        /// A method with ref, in, and out parameters.
+        /// </summary>
+        /// <param name="i">The in parameter.</param>
+        /// <param name="s">The ref parameter.</param>
+        /// <param name="d">The out parameter.</param>
+        public void RefParamsMethod(in int i, ref string s, out double d) { d = 0.0; }
+
+        /// <summary>
+        /// A method with params array.
+        /// </summary>
+        /// <param name="args">The arguments.</param>
+        public void ArrayParamsMethod(params IEnumerable<string> args) { }
+
+        /// <summary>
+        /// A method with optional parameters.
+        /// </summary>
+        /// <param name="i">The integer parameter.</param>
+        /// <param name="s">The string parameter.</param>
+        public void OptionalParamsMethod(int i = 42, string s = "default") { }
+
+        /// <summary>
+        /// A method with mixed parameter types.
+        /// </summary>
+        /// <param name="s">The string parameter.</param>
+        /// <param name="day">The day parameter.</param>
+        /// <param name="values">The values array.</param>
+        public unsafe void MixedParamsMethod(string s, in DayOfWeek day = DayOfWeek.Monday, params double?*[][,][,,,] values) { }
+
+        /// <summary>
+        /// An overloaded method.
+        /// </summary>
+        public void OverloadedMethod() { }
+
+        /// <summary>
+        /// An overloaded method with parameters.
+        /// </summary>
+        /// <param name="s">The string parameter.</param>
+        /// <param name="i">The integer parameter.</param>
+        public void OverloadedMethod(string s, int i) { }
+
+        /// <summary>
+        /// Explicitly implements the interface method.
+        /// </summary>
+        /// <inheritdoc/>
+        void ISampleInterface.InterfaceMethod() { }
+
+        /// <summary>
+        /// Implements the generic interface method.
+        /// </summary>
+        /// <inheritdoc/>
+        public T InterfaceGenericMethod<T>(T value) where T : struct => value;
+
+        /// <summary>
+        /// Explicitly implements the interface method with in parameter.
+        /// </summary>
+        /// <inheritdoc/>
+        void ISampleInterface.InterfaceMethodWithInParam(in int i) { }
+
+        /// <summary>
+        /// Explicitly implements the interface method with out parameter.
+        /// </summary>
+        /// <inheritdoc/>
+        void ISampleInterface.InterfaceMethodWithOutParam(out double d) => d = default;
+
+        /// <summary>
+        /// Implements the interface method with ref parameter.
+        /// </summary>
+        /// <inheritdoc/>
+        public void InterfaceMethodWithRefParam(ref string s) { }
+
+        /// <summary>
+        /// Explicitly implements the static interface method.
+        /// </summary>
+        /// <inheritdoc/>
+        static void ISampleInterface.InterfaceStaticMethod() { }
+
+        /// <summary>
+        /// Returns a string representation of the object.
+        /// </summary>
+        /// <returns>The string.</returns>
+        public sealed override string ToString() => "SampleMethods";
+
+        /// <summary>
+        /// An internal method.
+        /// </summary>
+        internal void InternalMethod() { }
+
+        /// <summary>
+        /// Implements the false operator.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        /// <returns>Always false.</returns>
+        static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+    }
+
+    /// <summary>
+    /// A sample abstract class demonstrating various property signatures.
+    /// </summary>
+    public abstract class SampleProperties : ISampleInterface
+    {
+        /// <summary>
+        /// A static property.
+        /// </summary>
+        /// <value>The static property value.</value>
+        public static string StaticProperty { get; set; } = "Static";
+
+        /// <summary>
+        /// A regular property.
+        /// </summary>
+        /// <value>The regular property value.</value>
+        public int RegularProperty { get; set; }
+
+        /// <summary>
+        /// An abstract property.
+        /// </summary>
+        /// <value>The abstract property value.</value>
+        internal protected abstract int AbstractProperty { get; }
+
+        /// <summary>
+        /// A virtual property.
+        /// </summary>
+        /// <value>The virtual property value.</value>
+        internal protected virtual int VirtualProperty { get; }
+
+        /// <summary>
+        /// Explicitly implements the interface property.
+        /// </summary>
+        /// <inheritdoc/>
+        int ISampleInterface.InterfaceProperty => 42;
+
+        /// <summary>
+        /// A read-only property.
+        /// </summary>
+        /// <value>The read-only property value.</value>
+        public int ReadOnlyProperty { get; }
+
+        /// <summary>
+        /// A write-only property.
+        /// </summary>
+        /// <value>The write-only property value.</value>
+        public int WriteOnlyProperty { set { } }
+
+        /// <summary>
+        /// An init-only property.
+        /// </summary>
+        /// <value>The init-only property value.</value>
+        public int InitOnlyProperty { get; init; }
+
+        /// <summary>
+        /// A required property.
+        /// </summary>
+        /// <value>The required property value.</value>
+        public required int RequiredProperty { get; set; }
+
+        /// <summary>
+        /// An indexer with one parameter.
+        /// </summary>
+        /// <param name="i">The index.</param>
+        /// <returns>The value.</returns>
+        /// <value>The indexed value.</value>
+        public int this[int i] => i;
+
+        /// <summary>
+        /// An indexer with two parameters.
+        /// </summary>
+        /// <param name="s">The string parameter.</param>
+        /// <param name="i">The integer parameter.</param>
+        /// <returns>The value.</returns>
+        /// <value>The indexed value.</value>
+        public string this[string s, int i] => $"{s}:{i}";
+
+        /// <summary>
+        /// An internal property.
+        /// </summary>
+        /// <value>The internal property value.</value>
+        internal int InternalProperty { get; set; }
+
+        /// <summary>
+        /// Explicitly implements the static interface method.
+        /// </summary>
+        /// <inheritdoc/>
+        static void ISampleInterface.InterfaceStaticMethod() => throw new NotImplementedException();
+
+        /// <summary>
+        /// Explicitly implements the false operator.
+        /// </summary>
+        /// <inheritdoc/>
+        static bool ISampleInterface.operator false(ISampleInterface instance) => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// A sample abstract class demonstrating various event signatures.
+    /// </summary>
+    public abstract class SampleEvents : ISampleInterface
+    {
+        /// <summary>
+        /// A static event.
+        /// </summary>
+        public static event EventHandler? StaticEvent;
+
+        /// <summary>
+        /// A regular event.
+        /// </summary>
+        public event EventHandler? RegularEvent;
+
+        /// <summary>
+        /// An abstract event.
+        /// </summary>
+        internal protected abstract event EventHandler? AbstractEvent;
+
+        /// <summary>
+        /// A virtual event.
+        /// </summary>
+        internal protected virtual event EventHandler? VirtualEvent;
+
+        /// <summary>
+        /// Explicitly implements the interface event.
+        /// </summary>
+        /// <inheritdoc/>
+        event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+
+        /// <summary>
+        /// An internal event.
+        /// </summary>
+        internal event EventHandler? InternalEvent;
+
+        /// <summary>
+        /// Explicitly implements the static interface method.
+        /// </summary>
+        /// <inheritdoc/>
+        static void ISampleInterface.InterfaceStaticMethod() => throw new NotImplementedException();
+
+        /// <summary>
+        /// Explicitly implements the false operator.
+        /// </summary>
+        /// <inheritdoc/>
+        static bool ISampleInterface.operator false(ISampleInterface instance) => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// A sample struct demonstrating various field types.
+    /// </summary>
+    public struct SampleFields
+    {
+        /// <summary>
+        /// A static readonly field.
+        /// </summary>
+        public static readonly int StaticReadonlyField = 10;
+
+        /// <summary>
+        /// A constant field.
+        /// </summary>
+        public const string ConstField = "Constant";
+
+        /// <summary>
+        /// A volatile field.
+        /// </summary>
+        public volatile int VolatileField;
+
+        /// <summary>
+        /// A fixed buffer field.
+        /// </summary>
+        public unsafe fixed byte FixedBuffer[16];
+
+        /// <summary>
+        /// A complex unsafe field.
+        /// </summary>
+        public unsafe double?*[][,][,,] ComplexField;
+
+        /// <summary>
+        /// An array field.
+        /// </summary>
+        public int[] ArrayField;
+
+        /// <summary>
+        /// An internal field.
+        /// </summary>
+        internal int InternalField;
+    }
+
+    /// <summary>
+    /// A sample generic class.
+    /// </summary>
+    /// <typeparam name="T">The type parameter.</typeparam>
+    public class SampleGenericClass<T>
+        where T : class
+    {
+        /// <summary>
+        /// An inner generic class.
+        /// </summary>
+        /// <typeparam name="U">The U type parameter.</typeparam>
+        /// <typeparam name="V">The V type parameter.</typeparam>
+        public class InnerGenericClass<U, V>()
+            where U : struct
+            where V : notnull
+        {
+            /// <summary>
+            /// A deep inner generic abstract class.
+            /// </summary>
+            public abstract class DeepInnerGenericClass : ISampleInterface, IEnumerable<V>
+            {
+                /// <summary>
+                /// A constant field.
+                /// </summary>
+                public const string Field = "DeepClass";
+
+                /// <summary>
+                /// Initializes a new instance of the <see cref="DeepInnerGenericClass">DeepInnerGenericClass</see> class.
+                /// </summary>
+                public DeepInnerGenericClass() { }
+
+                /// <summary>
+                /// A virtual property.
+                /// </summary>
+                /// <value>The virtual property value.</value>
+                public virtual T? Property { get; set; }
+
+                /// <summary>
+                /// Explicitly implements the interface property.
+                /// </summary>
+                /// <inheritdoc/>
+                int ISampleInterface.InterfaceProperty => 42;
+
+                /// <summary>
+                /// An abstract method.
+                /// </summary>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <param name="v">The v parameter.</param>
+                /// <returns>An object.</returns>
+                public abstract object Method(T t, U u, V v);
+
+                /// <summary>
+                /// A virtual generic method.
+                /// </summary>
+                /// <typeparam name="W">The W parameter.</typeparam>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <param name="v">The v parameter.</param>
+                /// <param name="w">The w parameter.</param>
+                /// <returns>The <paramref name="w">w</paramref> parameter.</returns>
+                public virtual W GenericMethod<W>(T t, U u, V v, W w) where W : class, new() => w;
+
+                /// <summary>
+                /// Implements the interface method.
+                /// </summary>
+                /// <inheritdoc/>
+                void ISampleInterface.InterfaceMethod() { }
+
+                /// <summary>
+                /// Explicitly implements the static interface method.
+                /// </summary>
+                /// <inheritdoc/>
+                static void ISampleInterface.InterfaceStaticMethod() { }
+
+                /// <summary>
+                /// Explicitly implements the GetEnumerator method.
+                /// </summary>
+                /// <returns>The enumerator.</returns>
+                IEnumerator<V> IEnumerable<V>.GetEnumerator() => throw new NotImplementedException();
+
+                /// <summary>
+                /// Explicitly implements the GetEnumerator method.
+                /// </summary>
+                /// <returns>The enumerator.</returns>
+                IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+                /// <summary>
+                /// Implicit conversion operator.
+                /// </summary>
+                /// <param name="instance">The instance.</param>
+                /// <returns>The result.</returns>
+                public static implicit operator T?(DeepInnerGenericClass instance) => instance.Property;
+
+                /// <summary>
+                /// Explicitly implements the false operator.
+                /// </summary>
+                /// <inheritdoc/>
+                static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+
+                /// <summary>
+                /// A virtual event.
+                /// </summary>
+                public virtual event EventHandler? Event;
+
+                /// <summary>
+                /// Explicitly implements the interface event.
+                /// </summary>
+                /// <inheritdoc/>
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        /// <summary>
+        /// A non-visible inner class.
+        /// </summary>
+        internal class NonVisibleInnerClass { }
+    }
+
+    /// <summary>
+    /// A sample derived generic class.
+    /// </summary>
+    /// <typeparam name="T">The T parameter.</typeparam>
+    /// <typeparam name="U">The U parameter.</typeparam>
+    /// <typeparam name="V">The V parameter.</typeparam>
+    public abstract class SampleDerivedGenericClass<T, U, V> : SampleGenericClass<T>.InnerGenericClass<U, V>.DeepInnerGenericClass
+        where T : class, new()
+        where U : struct
+        where V : notnull
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleDerivedGenericClass{T,U,V}">SampleDerivedGenericClass&lt;T,U,V&gt;</see> class.
+        /// </summary>
+        public SampleDerivedGenericClass() : base() { }
+
+        /// <summary>
+        /// Overrides the virtual property.
+        /// </summary>
+        /// <inheritdoc/>
+        public override T? Property { get; set; }
+
+        /// <summary>
+        /// Overrides the virtual generic method.
+        /// </summary>
+        /// <inheritdoc/>
+        public override W GenericMethod<W>(T t, U u, V v, W w) => w;
+
+        /// <summary>
+        /// Overrides the virtual event.
+        /// </summary>
+        /// <inheritdoc/>
+        public override event EventHandler? Event;
+    }
+
+    /// <summary>
+    /// A sample derived constructed generic class.
+    /// </summary>
+    public class SampleDerivedConstructedGenericClass : SampleDerivedGenericClass<object, int, string>
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleDerivedConstructedGenericClass">SampleDerivedConstructedGenericClass</see> class.
+        /// </summary>
+        public SampleDerivedConstructedGenericClass() : base() { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleDerivedConstructedGenericClass">SampleDerivedConstructedGenericClass</see> class with an object parameter.
+        /// </summary>
+        /// <param name="o">The object parameter.</param>
+        public SampleDerivedConstructedGenericClass(object o) : base() => Property = o;
+
+        /// <summary>
+        /// Overrides the property.
+        /// </summary>
+        /// <inheritdoc/>
+        public sealed override object? Property { get; set; }
+
+        /// <summary>
+        /// Overrides the abstract method with a string return type.
+        /// </summary>
+        /// <returns>A string, instead of an object.</returns>
+        /// <inheritdoc/>
+        public override string Method(object t, int u, string v) => string.Empty;
+
+        /// <summary>
+        /// Overrides the generic method.
+        /// </summary>
+        /// <inheritdoc/>
+        public sealed override W GenericMethod<W>(object t, int u, string v, W w) => w;
+
+        /// <summary>
+        /// Overrides the event.
+        /// </summary>
+        /// <inheritdoc/>
+        public sealed override event EventHandler? Event;
+    }
+
+    /// <summary>
+    /// A sample direct derived constructed generic class.
+    /// </summary>
+    public class SampleDirectDerivedConstructedGenericClass : SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass
+    {
+        /// <summary>
+        /// Overrides the abstract method.
+        /// </summary>
+        /// <inheritdoc/>
+        public sealed override object Method(object t, int u, string v) => new();
+    }
+
+    /// <summary>
+    /// A sample generic struct.
+    /// </summary>
+    /// <typeparam name="T">The type parameter.</typeparam>
+    public struct SampleGenericStruct<T>
+        where T : class, IDisposable
+    {
+        /// <summary>
+        /// An inner generic readonly struct.
+        /// </summary>
+        /// <typeparam name="U">The U parameter.</typeparam>
+        /// <typeparam name="V">The V parameter.</typeparam>
+        public readonly struct InnerGenericStruct<U, V>
+            where U : struct, allows ref struct
+            where V : allows ref struct
+        {
+            /// <summary>
+            /// A deep inner generic struct.
+            /// </summary>
+            public struct DeepInnerGenericStruct : ISampleInterface, IEnumerable<V>
+            {
+                /// <summary>
+                /// A constant field.
+                /// </summary>
+                public const string Field = "DeepStruct";
+
+                /// <summary>
+                /// Initializes a new instance of the <see cref="DeepInnerGenericStruct">DeepInnerGenericStruct</see> struct.
+                /// </summary>
+                /// <param name="value">The value.</param>
+                public DeepInnerGenericStruct(T value) => Property = value;
+
+                /// <summary>
+                /// A readonly property.
+                /// </summary>
+                /// <value>The readonly property value.</value>
+                public readonly T? Property { get; }
+
+                /// <summary>
+                /// Explicitly implements the interface property.
+                /// </summary>
+                /// <inheritdoc/>
+                readonly int ISampleInterface.InterfaceProperty => 42;
+
+                /// <summary>
+                /// A readonly method.
+                /// </summary>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <param name="v">The v parameter.</param>
+                public readonly void Method(T t, U u, V v) { }
+
+                /// <summary>
+                /// A readonly generic method.
+                /// </summary>
+                /// <typeparam name="W">The W parameter.</typeparam>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <param name="v">The v parameter.</param>
+                /// <param name="w">The w parameter.</param>
+                /// <returns>The <paramref name="w"/> parameter.</returns>
+                public readonly W GenericMethod<W>(T t, U u, V v, W w) where W : class, new() => w;
+
+                /// <summary>
+                /// Implements the interface method.
+                /// </summary>
+                /// <inheritdoc/>
+                readonly void ISampleInterface.InterfaceMethod() { }
+
+                /// <summary>
+                /// Explicitly implements the static interface method.
+                /// </summary>
+                /// <inheritdoc/>
+                static void ISampleInterface.InterfaceStaticMethod() { }
+
+                /// <summary>
+                /// Explicitly implements the GetEnumerator method.
+                /// </summary>
+                /// <returns>The enumerator.</returns>
+                readonly IEnumerator<V> IEnumerable<V>.GetEnumerator() => throw new NotImplementedException();
+
+                /// <summary>
+                /// Explicitly implements the GetEnumerator method.
+                /// </summary>
+                /// <returns>The enumerator.</returns>
+                readonly IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+                /// <summary>
+                /// Implicit conversion operator.
+                /// </summary>
+                /// <param name="instance">The instance.</param>
+                /// <returns>The result.</returns>
+                public static implicit operator T?(DeepInnerGenericStruct instance) => instance.Property;
+
+                /// <summary>
+                /// Explicitly implements the false operator.
+                /// </summary>
+                /// <inheritdoc/>
+                static bool ISampleInterface.operator false(ISampleInterface instance) => false;
+
+                /// <summary>
+                /// An event.
+                /// </summary>
+                public event EventHandler? Event;
+
+                /// <summary>
+                /// Explicitly implements the interface event.
+                /// </summary>
+                /// <inheritdoc/>
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        /// <summary>
+        /// A non-visible inner struct.
+        /// </summary>
+        internal struct NonVisibleInnerStruct { }
+    }
+
+    /// <summary>
+    /// A sample generic interface.
+    /// </summary>
+    /// <typeparam name="T">The type parameter.</typeparam>
+    public interface ISampleGenericInterface<T>
+        where T : class, new()
+    {
+        /// <summary>
+        /// An inner generic interface.
+        /// </summary>
+        /// <typeparam name="U">The U parameter.</typeparam>
+        /// <typeparam name="V">The V parameter.</typeparam>
+        public interface IInnerGenericInterface<in U, out V>
+        {
+            /// <summary>
+            /// A deep inner generic interface.
+            /// </summary>
+            public interface IDeepInnerGenericInterface : ISampleInterface, IEnumerable<V>
+            {
+                /// <summary>
+                /// A constant field.
+                /// </summary>
+                const string Field = "DeepInterface";
+
+                /// <summary>
+                /// A property.
+                /// </summary>
+                /// <value>The property value.</value>
+                T? Property { get; set; }
+
+                /// <summary>
+                /// Explicitly implements the interface property.
+                /// </summary>
+                /// <inheritdoc/>
+                int ISampleInterface.InterfaceProperty => 42;
+
+                /// <summary>
+                /// A method.
+                /// </summary>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <returns>The result.</returns>
+                V Method(T t, U u);
+
+                /// <summary>
+                /// A generic method.
+                /// </summary>
+                /// <typeparam name="W">The W parameter.</typeparam>
+                /// <param name="t">The t parameter.</param>
+                /// <param name="u">The u parameter.</param>
+                /// <param name="w">The w parameter.</param>
+                /// <returns>The result.</returns>
+                W GenericMethod<W>(T t, U u, W w) where W : class;
+
+                /// <summary>
+                /// Explicitly implements the interface method.
+                /// </summary>
+                /// <inheritdoc/>
+                void ISampleInterface.InterfaceMethod() { }
+
+                /// <summary>
+                /// Increment operator.
+                /// </summary>
+                void operator ++();
+
+                /// <summary>
+                /// An event.
+                /// </summary>
+                event EventHandler? Event;
+
+                /// <summary>
+                /// Explicitly implements the interface event.
+                /// </summary>
+                /// <inheritdoc/>
+                event EventHandler? ISampleInterface.InterfaceEvent { add { } remove { } }
+            }
+        }
+
+        /// <summary>
+        /// A non-visible inner interface.
+        /// </summary>
+        internal interface INonVisibleInnerInterface { }
+    }
+
+    /// <summary>
+    /// A sample extended generic interface.
+    /// </summary>
+    /// <typeparam name="T">The T parameter.</typeparam>
+    /// <typeparam name="U">The U parameter.</typeparam>
+    /// <typeparam name="V">The V parameter.</typeparam>
+    public interface ISampleExtendedGenericInterface<T, in U, out V> : ISampleGenericInterface<T>.IInnerGenericInterface<U, V>.IDeepInnerGenericInterface
+        where T : class, new()
+    {
+    }
+
+    /// <summary>
+    /// A sample extended constructed generic interface.
+    /// </summary>
+    public interface ISampleExtendedConstructedGenericInterface : ISampleExtendedGenericInterface<object, int, string>
+    {
+    }
+
+    /// <summary>
+    /// A sample direct extended constructed generic interface.
+    /// </summary>
+    public interface ISampleDirectExtendedConstructedGenericInterface : ISampleGenericInterface<object>.IInnerGenericInterface<int, string>.IDeepInnerGenericInterface
+    {
+    }
+
+    /// <summary>
+    /// A sample interface extending directly and indirectly.
+    /// </summary>
+    public interface ISampleDirectAndIndirectExtendedInterface : IReadOnlyCollection<int>, IEnumerable<string>
+    {
+    }
+
+    /// <summary>
+    /// Defines some extension members for testing purposes.
+    /// </summary>
+    public static class SampleExtensions
+    {
+        /// <summary>
+        /// A classic extension method for generic class.
+        /// </summary>
+        /// <typeparam name="W">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        public static void ClassicExtensionMethodForClass<W>(this SampleGenericClass<W> instance) where W : class { }
+
+        /// <summary>
+        /// Extension members for generic class.
+        /// </summary>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        extension<W>(SampleGenericClass<W> instance)
+            where W : class
+        {
+            /// <summary>
+            /// An instance extension property for generic class.
+            /// </summary>
+            /// <value>The value of the instance extension property.</value>
+            public int InstanceExtensionPropertyForClass => 42;
+
+            /// <summary>
+            /// A static extension property for generic class.
+            /// </summary>
+            /// <value>The value of the static extension property.</value>
+            public static bool StaticExtensionPropertyForClass => true;
+
+            /// <summary>
+            /// An instance extension method for generic class.
+            /// </summary>
+            public void InstanceExtensionMethodForClass() { }
+
+            /// <summary>
+            /// A static extension method for generic class.
+            /// </summary>
+            public static void StaticExtensionMethodForClass() { }
+
+            /// <summary>
+            /// A generic extension method for generic class.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
+            public void GenericExtensionMethodForClass<U>(U value) where U : struct { }
+        }
+
+        /// <summary>
+        /// A classic extension method for generic struct.
+        /// </summary>
+        /// <typeparam name="W">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        public static void ClassicExtensionMethodForStruct<W>(this SampleGenericStruct<W> instance) where W : class, IDisposable { }
+
+        /// <summary>
+        /// Extension members for generic struct.
+        /// </summary>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        extension<W>(SampleGenericStruct<W> instance)
+            where W : class, IDisposable
+        {
+            /// <summary>
+            /// An instance extension property for generic struct.
+            /// </summary>
+            /// <value>The value of the instance extension property.</value>
+            public int InstanceExtensionPropertyForStruct => 42;
+
+            /// <summary>
+            /// A static extension property for generic struct.
+            /// </summary>
+            /// <value>The value of the static extension property.</value>
+            public static bool StaticExtensionPropertyForStruct => true;
+
+            /// <summary>
+            /// An instance extension method for generic struct.
+            /// </summary>
+            public void InstanceExtensionMethodForStruct() { }
+
+            /// <summary>
+            /// A static extension method for generic struct.
+            /// </summary>
+            public static void StaticExtensionMethodForStruct() { }
+
+            /// <summary>
+            /// A generic extension method for generic struct.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
+            public void GenericExtensionMethodForStruct<U>(U value) where U : struct { }
+        }
+
+        /// <summary>
+        /// A classic extension method for generic interface.
+        /// </summary>
+        /// <typeparam name="W">The type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        public static void ClassicExtensionMethodForInterface<W>(this ISampleGenericInterface<W> instance) where W : class, new() { }
+
+        /// <summary>
+        /// Extension members for generic interface.
+        /// </summary>
+        /// <typeparam name="W">The receiver type parameter.</typeparam>
+        /// <param name="instance">The instance.</param>
+        extension<W>(ISampleGenericInterface<W> instance)
+            where W : class, new()
+        {
+            /// <summary>
+            /// An instance extension property for generic interface.
+            /// </summary>
+            /// <value>The value of the instance extension property.</value>
+            public int InstanceExtensionPropertyForInterface => 42;
+
+            /// <summary>
+            /// A static extension property for generic interface.
+            /// </summary>
+            /// <value>The value of the static extension property.</value>
+            public static bool StaticExtensionPropertyForInterface => true;
+
+            /// <summary>
+            /// An instance extension method for generic interface.
+            /// </summary>
+            public void InstanceExtensionMethodForInterface() { }
+
+            /// <summary>
+            /// A static extension method for generic interface.
+            /// </summary>
+            public static void StaticExtensionMethodForInterface() { }
+
+            /// <summary>
+            /// A generic extension method for generic interface.
+            /// </summary>
+            /// <typeparam name="U">The method type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
+            public void GenericExtensionMethodForInterface<U>(U value) where U : struct { }
+        }
+
+        /// <summary>
+        /// A classic extension method.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        public static void ClassicExtensionMethod(this ISampleInterface instance) { }
+
+        /// <summary>
+        /// Extension members for non-generic interface.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        extension(ISampleInterface instance)
+        {
+            /// <summary>
+            /// An instance extension property.
+            /// </summary>
+            /// <value>The value of the instance extension property.</value>
+            public int InstanceExtensionProperty => 42;
+
+            /// <summary>
+            /// A static extension property.
+            /// </summary>
+            /// <value>The value of the static extension property.</value>
+            public static bool StaticExtensionProperty => true;
+
+            /// <summary>
+            /// An extension property with both getter and setter.
+            /// </summary>
+            /// <value>The value of the full extension property.</value>
+            public string FullExtensionProperty { get => string.Empty; set { } }
+
+            /// <summary>
+            /// An instance extension method.
+            /// </summary>
+            public void InstanceExtensionMethod() { }
+
+            /// <summary>
+            /// A static extension method.
+            /// </summary>
+            public static void StaticExtensionMethod() { }
+
+            /// <summary>
+            /// A generic extension method.
+            /// </summary>
+            /// <typeparam name="U">The type parameter.</typeparam>
+            /// <param name="value">The parameter.</param>
+            public void GenericExtensionMethod<U>(U value) where U : struct { }
+        }
+
+        /// <summary>
+        /// A non-extension method to verify correct classification.
+        /// </summary>
+        public static void NonExtensionMethod() { }
+    }
+
+    /// <summary>
+    /// Documentation for the Acme namespace.
+    /// </summary>
+    internal static class NamespaceDoc { }
 }
 #pragma warning restore CS0067 // The event is never used
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value null

@@ -6,11 +6,11 @@
 namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
-    using Kampute.DocToolkit.Test;
     using Moq;
     using NUnit.Framework;
     using System;
     using System.IO;
+    using System.Linq;
     using System.Reflection;
 
     [TestFixture]
@@ -25,7 +25,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GetMetadataAssembly_WithSameAssembly_ReturnsCachedInstance()
         {
-            var assembly = typeof(TestTypes.TestBaseClass).Assembly;
+            var assembly = typeof(Acme.ISampleInterface).Assembly;
 
             var first = assembly.GetMetadata();
             var second = assembly.GetMetadata();
@@ -37,7 +37,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void ClearCache_WhenCalled_RemovesAllAvailableAssemblies()
         {
-            typeof(TestTypes.TestBaseClass).Assembly.GetMetadata();
+            typeof(Acme.ISampleInterface).Assembly.GetMetadata();
 
             Assert.That(MetadataProvider.AvailableAssemblies, Is.Not.Empty);
 
@@ -47,27 +47,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void GetMetadataType_WithRuntimeType_ReturnsRepresentingAdapter()
-        {
-            var type = typeof(TestTypes.TestDerivedClass);
-
-            var metadata = type.GetMetadata();
-
-            Assert.That(metadata, Is.Not.Null);
-            Assert.That(metadata.Represents(type), Is.True);
-        }
-
-        [Test]
-        public void GetMetadataGeneric_WithSupportedTargetInterface_ReturnsTypedMetadata()
-        {
-            var metadata = typeof(TestTypes.TestDerivedClass).GetMetadata<IClassType>();
-
-            Assert.That(metadata, Is.Not.Null);
-            Assert.That(metadata.Represents(typeof(TestTypes.TestDerivedClass)), Is.True);
-        }
-
-        [Test]
-        public void GetMetadataMember_WithUnsupportedMember_ThrowsNotSupportedException()
+        public void GetMetadata_ForUnsupportedMember_ThrowsNotSupportedException()
         {
             MemberInfo member = new UnsupportedMemberInfo();
 
@@ -75,71 +55,189 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void GetMetadataMember_ForConstructor_ReturnsSameInstanceAsConstructorAccessor()
+        public void GetMetadata_ForType_NonGeneric_ReturnsTypedMetadata()
         {
-            var constructorInfo = typeof(TestTypes.TestDerivedClass).GetConstructor([typeof(int)]);
+            var type = typeof(Acme.ISampleInterface);
+
+            var metadata = type.GetMetadata();
+
+            Assert.That(metadata, Is.InstanceOf<IInterfaceType>());
+            Assert.That(metadata.Represents(type), Is.True);
+        }
+
+        [Test]
+        public void GetMetadata_ForType_Generic_ReturnsTypedMetadata()
+        {
+            var metadata = typeof(Acme.ISampleInterface).GetMetadata<IInterfaceType>();
+
+            Assert.That(metadata, Is.InstanceOf<IInterfaceType>());
+            Assert.That(metadata.Represents(typeof(Acme.ISampleInterface)), Is.True);
+        }
+
+        [Test]
+        public void GetMetadata_ForConstructor_ReturnsSameInstanceAsConstructorAccessor()
+        {
+            var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor([typeof(int)]);
             Assert.That(constructorInfo, Is.Not.Null);
 
             var metadata = constructorInfo.GetMetadata();
 
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(metadata, Is.InstanceOf<IConstructor>());
             Assert.That(metadata.Represents(constructorInfo), Is.True);
         }
 
         [Test]
-        public void GetMetadataMember_ForMethod_ReturnsSameInstanceAsMethodAccessor()
+        public void GetMetadata_ForMethod_ReturnsSameInstanceAsMethodAccessor()
         {
-            var methodInfo = typeof(TestTypes.TestDerivedClass).GetMethod(nameof(TestTypes.TestDerivedClass.RegularTestMethod));
+            var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RegularMethod));
             Assert.That(methodInfo, Is.Not.Null);
 
             var metadata = methodInfo.GetMetadata();
 
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(metadata, Is.InstanceOf<IMethod>());
             Assert.That(metadata.Represents(methodInfo), Is.True);
         }
 
         [Test]
-        public void GetMetadataMember_ForProperty_ReturnsSameInstanceAsPropertyAccessor()
+        public void GetMetadata_ForProperty_ReturnsSameInstanceAsPropertyAccessor()
         {
-            var propertyInfo = typeof(TestTypes.TestDerivedClass).GetProperty(nameof(TestTypes.TestDerivedClass.RegularTestProperty));
+            var propertyInfo = typeof(Acme.SampleProperties).GetProperty(nameof(Acme.SampleProperties.RegularProperty));
             Assert.That(propertyInfo, Is.Not.Null);
 
             var metadata = propertyInfo.GetMetadata();
 
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(metadata, Is.InstanceOf<IProperty>());
             Assert.That(metadata.Represents(propertyInfo), Is.True);
         }
 
         [Test]
-        public void GetMetadataMember_ForEvent_ReturnsSameInstanceAsEventAccessor()
+        public void GetMetadata_ForEvent_ReturnsSameInstanceAsEventAccessor()
         {
-            var eventInfo = typeof(TestTypes.TestDerivedClass).GetEvent(nameof(TestTypes.TestDerivedClass.RegularTestEvent));
+            var eventInfo = typeof(Acme.SampleEvents).GetEvent(nameof(Acme.SampleEvents.RegularEvent));
             Assert.That(eventInfo, Is.Not.Null);
 
             var metadata = eventInfo.GetMetadata();
 
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(metadata, Is.InstanceOf<IEvent>());
             Assert.That(metadata.Represents(eventInfo), Is.True);
         }
 
         [Test]
-        public void GetMetadataMember_ForField_ReturnsSameInstanceAsFieldAccessor()
+        public void GetMetadata_ForField_ReturnsSameInstanceAsFieldAccessor()
         {
-            var fieldInfo = typeof(TestTypes.TestBaseClass).GetField(nameof(TestTypes.TestBaseClass.TestField));
+            var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.ComplexField));
             Assert.That(fieldInfo, Is.Not.Null);
 
             var metadata = fieldInfo.GetMetadata();
 
-            Assert.That(metadata, Is.Not.Null);
+            Assert.That(metadata, Is.InstanceOf<IField>());
             Assert.That(metadata.Represents(fieldInfo), Is.True);
+        }
+
+        [Test]
+        public void GetMetadata_ForInstanceExtensionMethod_ReturnsExtensionMethodMetadata()
+        {
+            var methodInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass));
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var metadata = methodInfo.GetMetadata() as IMethod;
+
+            Assert.That(metadata, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsStatic, Is.False);
+                Assert.That(metadata.IsExtension, Is.True);
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
+                Assert.That(metadata.Parameters, Is.Empty);
+                Assert.That(metadata.IsGenericMethod, Is.False);
+                Assert.That(metadata.TypeParameters, Is.Empty);
+                Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
+            }
+        }
+
+        [Test]
+        public void GetMetadata_ForStaticExtensionMethod_ReturnsExtensionMethodMetadata()
+        {
+            var methodInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.StaticExtensionMethodForClass));
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var metadata = methodInfo.GetMetadata() as IMethod;
+
+            Assert.That(metadata, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsStatic, Is.True);
+                Assert.That(metadata.IsExtension, Is.True);
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(typeof(Acme.SampleGenericClass<>).Name));
+                Assert.That(metadata.Parameters, Is.Empty);
+                Assert.That(metadata.IsGenericMethod, Is.False);
+                Assert.That(metadata.TypeParameters, Is.Empty);
+                Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
+            }
+        }
+
+        [Test]
+        public void GetMetadata_ForGenericExtensionMethod_ReturnsExtensionMethodMetadata()
+        {
+            var methodInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.GenericExtensionMethod));
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var metadata = methodInfo.GetMetadata() as IMethod;
+
+            Assert.That(metadata, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsExtension, Is.True);
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.Parameters, Has.Count.EqualTo(1));
+                Assert.That(metadata.IsGenericMethod, Is.True);
+                Assert.That(metadata.TypeParameters.Select(static tp => tp.Name), Is.EquivalentTo(["U"]));
+                Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
+            }
+        }
+
+        [Test]
+        public void GetMetadata_ForInstanceExtensionProperty_ReturnsExtensionPropertyMetadata()
+        {
+            var accessorInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.get_InstanceExtensionProperty));
+            Assert.That(accessorInfo, Is.Not.Null);
+
+            var metadata = ((MemberInfo)accessorInfo).GetMetadata() as IProperty;
+
+            Assert.That(metadata, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsStatic, Is.False);
+                Assert.That(metadata.IsExtension, Is.True);
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
+            }
+        }
+
+        [Test]
+        public void GetMetadata_ForStaticExtensionProperty_ReturnsExtensionPropertyMetadata()
+        {
+            var accessorInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.get_StaticExtensionProperty));
+            Assert.That(accessorInfo, Is.Not.Null);
+
+            var metadata = ((MemberInfo)accessorInfo).GetMetadata() as IProperty;
+
+            Assert.That(metadata, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsStatic, Is.True);
+                Assert.That(metadata.IsExtension, Is.True);
+                Assert.That(metadata.ExtensionBlock?.Receiver.Type.Name, Is.EqualTo(nameof(Acme.ISampleInterface)));
+                Assert.That(metadata.DeclaringType?.Name, Is.EqualTo(nameof(Acme.SampleExtensions)));
+            }
         }
 
         [Test]
         public void FindTypeByFullName_WithRegisteredAssembly_ReturnsMatchingType()
         {
-            typeof(TestTypes.TestBaseClass).Assembly.GetMetadata(); // Register the assembly
+            typeof(Acme.ISampleInterface).Assembly.GetMetadata(); // Register the assembly
 
-            var targetType = typeof(TestTypes.TestDerivedClass);
+            var targetType = typeof(Acme.ISampleInterface);
 
             var result = MetadataProvider.FindTypeByFullName(targetType.FullName!);
 
@@ -169,43 +267,43 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void GetMetadataAssembly_WhenAssemblyIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((Assembly)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((Assembly)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataType_WhenTypeIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((System.Type)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((System.Type)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataConstructor_WhenConstructorIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((ConstructorInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((ConstructorInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataMethod_WhenMethodIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((MethodInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((MethodInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataProperty_WhenPropertyIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((PropertyInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((PropertyInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataEvent_WhenEventIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((EventInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((EventInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
         public void GetMetadataField_WhenFieldIsNull_ThrowsArgumentNullException()
         {
-            Assert.That(() => MetadataProvider.GetMetadata((FieldInfo)null!), Throws.ArgumentNullException);
+            Assert.That(static () => MetadataProvider.GetMetadata((FieldInfo)null!), Throws.ArgumentNullException);
         }
 
         [Test]
@@ -221,11 +319,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             static void RegisterAndForgetAssembly()
             {
                 var mockAssembly = new Mock<Assembly>();
-                mockAssembly.Setup(a => a.GetName()).Returns(new AssemblyName("TestAssembly"));
-                mockAssembly.Setup(a => a.Location).Returns(Path.GetTempFileName());
-                mockAssembly.Setup(a => a.Modules).Returns([]);
-                mockAssembly.Setup(a => a.CustomAttributes).Returns([]);
-                mockAssembly.Setup(a => a.GetExportedTypes()).Returns([]);
+                mockAssembly.Setup(static a => a.GetName()).Returns(new AssemblyName("TestAssembly"));
+                mockAssembly.Setup(static a => a.Location).Returns(Path.GetTempFileName());
+                mockAssembly.Setup(static a => a.Modules).Returns([]);
+                mockAssembly.Setup(static a => a.CustomAttributes).Returns([]);
+                mockAssembly.Setup(static a => a.GetExportedTypes()).Returns([]);
 
                 var _ = mockAssembly.Object.GetMetadata();
                 Assert.That(MetadataProvider.AvailableAssemblies, Is.Not.Empty);
@@ -234,10 +332,10 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         private sealed class UnsupportedMemberInfo : MemberInfo
         {
-            public override Type? DeclaringType => typeof(TestTypes.TestBaseClass);
+            public override Type? DeclaringType => typeof(Acme.ISampleInterface);
             public override MemberTypes MemberType => MemberTypes.Custom;
             public override string Name => "UnsupportedMember";
-            public override Type ReflectedType => typeof(TestTypes.TestBaseClass);
+            public override Type ReflectedType => typeof(Acme.ISampleInterface);
             public override Module Module => DeclaringType!.Module;
 
             public override object[] GetCustomAttributes(bool inherit) => [];

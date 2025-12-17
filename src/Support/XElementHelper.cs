@@ -15,6 +15,17 @@ namespace Kampute.DocToolkit.Support
     public static class XElementHelper
     {
         /// <summary>
+        /// Determines whether the element has an attribute with the specified name.
+        /// </summary>
+        /// <param name="element">The <see cref="XElement"/> instance.</param>
+        /// <param name="attributeName">The name of the attribute.</param>
+        /// <returns><see langword="true"/> if the attribute exists; otherwise, <see langword="false"/>.</returns>
+        public static bool HasAttribute(this XElement element, string attributeName)
+        {
+            return element?.Attribute(attributeName) is not null;
+        }
+
+        /// <summary>
         /// Attempts to get the value of the attribute with the specified name.
         /// </summary>
         /// <param name="element">The <see cref="XElement"/> instance.</param>

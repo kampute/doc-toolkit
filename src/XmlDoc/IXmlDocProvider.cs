@@ -5,25 +5,12 @@
 
 namespace Kampute.DocToolkit.XmlDoc
 {
+    using Kampute.DocToolkit.Metadata;
     using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
-    /// Defines a contract for providing XML documentation for code references, types and type members.
+    /// Defines a contract for providing parsed XML documentation for namespaces, types and type members.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The <see cref="IXmlDocProvider"/> interface defines the core functionality for retrieving documentation
-    /// associated with types and members within an assembly.
-    /// </para>
-    /// Implementations of this interface are responsible for:
-    /// <list type="bullet">
-    ///   <item><description>Loading and parsing XML documentation from various sources</description></item>
-    ///   <item><description>Resolving documentation requests by code reference or reflection member</description></item>
-    ///   <item><description>Managing the internal storage and retrieval of documentation content</description></item>
-    /// </list>
-    /// The <see cref="XmlDocProvider"/> class is a concrete implementation of this interface that loads XML documentation
-    /// from XML files generated during compilation.
-    /// </remarks>
     /// <seealso cref="XmlDocProvider"/>
     public interface IXmlDocProvider
     {
@@ -36,14 +23,28 @@ namespace Kampute.DocToolkit.XmlDoc
         bool HasDocumentation { get; }
 
         /// <summary>
-        /// Attempts to retrieves the XML documentation for the specified code reference.
+        /// Attempts to retrieves the XML documentation for the specified namespace.
         /// </summary>
-        /// <param name="cref">The code reference to retrieve the documentation for.</param>
+        /// <param name="ns">The namespace to retrieve the documentation for.</param>
         /// <param name="doc">
-        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the code reference,
+        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the namespace,
         /// if the documentation is available; otherwise, <see langword="null"/>.
         /// </param>
         /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
-        bool TryGetDoc(string cref, [NotNullWhen(true)] out XmlDocEntry? doc);
+        /// <remarks>
+        /// The XML documentation for a namespace is represented by a special type named "NamespaceDoc" within the namespace.
+        /// </remarks>
+        bool TryGetNamespaceDoc(string ns, [NotNullWhen(true)] out XmlDocEntry? doc);
+
+        /// <summary>
+        /// Attempts to retrieves the XML documentation for the specified member.
+        /// </summary>
+        /// <param name="member">The member to retrieve the documentation for.</param>
+        /// <param name="doc">
+        /// When this method returns, contains the <see cref="XmlDocEntry"/> representing the documentation for the member,
+        /// if the documentation is available; otherwise, <see langword="null"/>.
+        /// </param>
+        /// <returns><see langword="true"/> if the documentation is available; otherwise, <see langword="false"/>.</returns>
+        bool TryGetMemberDoc(IMember member, [NotNullWhen(true)] out XmlDocEntry? doc);
     }
 }

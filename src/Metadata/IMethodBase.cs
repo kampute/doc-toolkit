@@ -14,7 +14,14 @@ namespace Kampute.DocToolkit.Metadata
     /// This interface is implemented by both regular methods and operator methods, but unlike the .NET reflection API,
     /// it does not include constructors.
     /// </remarks>
-    public interface IMethodBase : ITypeMember, IWithParameters, IWithReturnParameter, IWithOverloads
+    public interface IMethodBase : IVirtualTypeMember, IWithParameters, IWithReturnParameter, IWithOverloads
     {
+        /// <summary>
+        /// Gets a value indicating whether the method is read-only.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the method is read-only; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsReadOnly { get; }
     }
 }

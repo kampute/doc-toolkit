@@ -11,7 +11,6 @@ namespace Kampute.DocToolkit.Support
     using System.IO;
     using System.Runtime.CompilerServices;
     using System.Text;
-    using System.Threading;
 
     /// <summary>
     /// Provides a pool of <see cref="StringBuilder"/> instances to minimize memory allocations.
@@ -123,10 +122,9 @@ namespace Kampute.DocToolkit.Support
         /// <summary>
         /// Represents a <see cref="StringBuilder"/> instance that can be returned to the pool.
         /// </summary>
-        public sealed class ReusableStringBuilder : IDisposable
+        public readonly struct ReusableStringBuilder : IDisposable
         {
             private readonly StringBuilderPool pool;
-            private StringBuilder? builder;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="ReusableStringBuilder"/> class.
@@ -136,7 +134,7 @@ namespace Kampute.DocToolkit.Support
             internal ReusableStringBuilder(StringBuilderPool pool, StringBuilder builder)
             {
                 this.pool = pool;
-                this.builder = builder;
+                Builder = builder;
             }
 
             /// <summary>
@@ -145,27 +143,21 @@ namespace Kampute.DocToolkit.Support
             /// <value>
             /// The <see cref="StringBuilder"/> instance.
             /// </value>
-            /// <exception cref="ObjectDisposedException">Thrown when the instance has been disposed.</exception>
-            public StringBuilder Builder => builder ?? throw new ObjectDisposedException(nameof(ReusableStringBuilder));
+            public readonly StringBuilder Builder { get; }
 
             /// <summary>
             /// Returns a string that represents the current object.
             /// </summary>
             /// <returns>A string that represents the current object.</returns>
-            /// <exception cref="ObjectDisposedException">Thrown when the instance has been disposed.</exception>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public override string ToString() => Builder.ToString();
+            public readonly override string ToString() => Builder.ToString();
 
             /// <summary>
             /// Releases the <see cref="StringBuilder"/> back to the pool.
             /// </summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Dispose()
+            public readonly void Dispose()
             {
-                var pooledBuilder = Interlocked.Exchange(ref builder, null);
-                if (pooledBuilder is not null)
-                    pool.Recycle(pooledBuilder);
-
+                pool.Recycle(Builder);
                 GC.SuppressFinalize(this);
             }
 
@@ -174,10 +166,9 @@ namespace Kampute.DocToolkit.Support
             /// </summary>
             /// <param name="rsb">The <see cref="ReusableStringBuilder"/> instance.</param>
             /// <returns>The <see cref="StringBuilder"/> instance.</returns>
-            /// <exception cref="ObjectDisposedException">Thrown when the instance has been disposed.</exception>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [return: NotNullIfNotNull(nameof(rsb))]
-            public static implicit operator StringBuilder?(ReusableStringBuilder? rsb) => rsb?.Builder;
+            [return: NotNull]
+            public static implicit operator StringBuilder(ReusableStringBuilder rsb) => rsb.Builder;
         }
 
         /// <summary>

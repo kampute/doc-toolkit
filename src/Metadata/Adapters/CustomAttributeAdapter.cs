@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
     using Kampute.DocToolkit.Collections;
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -28,13 +29,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// </summary>
         protected static readonly IReadOnlyPatternCollection SystemAttributePatterns = new PatternCollection('.')
         {
+            AttributeNames.ParamArray,
+            AttributeNames.DebuggerHidden,
+            AttributeNames.DebuggerNonUserCode,
+            AttributeNames.DebuggerStepThrough,
             "System.Runtime.*",
             "System.Reflection.*",
             "System.CodeDom.*",
-            "System.ParamArrayAttribute",
-            "System.Diagnostics.DebuggerHiddenAttribute",
-            "System.Diagnostics.DebuggerNonUserCodeAttribute",
-            "System.Diagnostics.DebuggerStepThroughAttribute",
         };
 
         private readonly Lazy<IClassType> attributeType;

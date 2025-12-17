@@ -43,6 +43,30 @@ namespace Kampute.DocToolkit.Metadata
         bool IsNested { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the type is a primitive type.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the type is a primitive type; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsPrimitive { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the type is an interface.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the type is an interface; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsInterface { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the type is an enumeration.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the type is an enumeration; otherwise, <see langword="false"/>.
+        /// </value>
+        bool IsEnum { get; }
+
+        /// <summary>
         /// Gets a value indicating whether the type is a value type.
         /// </summary>
         /// <value>
@@ -73,17 +97,17 @@ namespace Kampute.DocToolkit.Metadata
         /// A string representation of the type used for constructing parameter and return type signatures in code references.
         /// </value>
         /// <remarks>
-        /// In most cases, the <see cref="ParametericSignature"/> is identical to the <see cref="Signature"/> property. However, 
-        /// for certain types such as generic types, this signature may differ to accurately represent how the type is used in 
+        /// In most cases, the <see cref="ParametricSignature"/> is identical to the <see cref="Signature"/> property. However,
+        /// for certain types such as generic types, this signature may differ to accurately represent how the type is used in
         /// parameter and return type contexts.
         /// </remarks>
-        string ParametericSignature { get; }
+        string ParametricSignature { get; }
 
         /// <summary>
         /// Gets the hierarchy of declaring types, starting from the outermost declaring type down to the immediate declaring type.
         /// </summary>
         /// <value>
-        /// An enumerable collection of declaring types from outermost to immediate.
+        /// An enumerable collection of <see cref="IType"/> representing the hierarchy of declaring types from outermost to immediate.
         /// </value>
         /// <remarks>
         /// This property is implemented by using deferred execution. The immediate return value is an object that stores all the information
@@ -107,7 +131,7 @@ namespace Kampute.DocToolkit.Metadata
         /// Gets the hierarchy of base types, starting from the root base type down to the immediate base type.
         /// </summary>
         /// <value>
-        /// An enumerable collection of base types in the hierarchy from root to immediate base.
+        /// An enumerable collection of <see cref="IClassType"/> representing the hierarchy of base types from root to immediate base."/>
         /// </value>
         /// <remarks>
         /// This property is implemented by using deferred execution. The immediate return value is an object that stores all the information
@@ -128,16 +152,32 @@ namespace Kampute.DocToolkit.Metadata
         }
 
         /// <summary>
-        /// Gets all extension methods applicable to the type in the containing assembly.
+        /// Gets extension properties of the type.
         /// </summary>
-        /// <returns>An enumerable collection of extension methods applicable to the type.</returns>
+        /// <returns>An enumerable collection of <see cref="IProperty"/> representing extension properties of the type.</returns>
         /// <remarks>
         /// This property is implemented by using deferred execution. The immediate return value is an object that stores all the information
         /// that is required to perform the action.
         /// </remarks>
-        IEnumerable<IMethod> ExtensionMethods => Assembly.ExportedTypes
-            .Where(static t => t.IsStatic && !t.IsNested).OfType<IClassType>()
-            .SelectMany(t => t.Methods.Where(m => m.IsExtensionMethodFor(this)));
+        IEnumerable<IProperty> ExtensionProperties => MetadataProvider
+            .AvailableAssemblies
+            .Where(a => a.IsReflectionOnly || ReferenceEquals(a, Assembly))
+            .SelectMany(a => a.ExtensionProperties)
+            .Where(p => p.Extends(this));
+
+        /// <summary>
+        /// Gets extension methods of the type.
+        /// </summary>
+        /// <returns>An enumerable collection of <see cref="IMethod"/> representing extension properties of the type.</returns>
+        /// <remarks>
+        /// This property is implemented by using deferred execution. The immediate return value is an object that stores all the information
+        /// that is required to perform the action.
+        /// </remarks>
+        IEnumerable<IMethod> ExtensionMethods => MetadataProvider
+            .AvailableAssemblies
+            .Where(a => a.IsReflectionOnly || ReferenceEquals(a, Assembly))
+            .SelectMany(a => a.ExtensionMethods)
+            .Where(m => m.Extends(this));
 
         /// <summary>
         /// Determines whether the instances of the specified type can be assigned to variables of the current type.
@@ -150,30 +190,25 @@ namespace Kampute.DocToolkit.Metadata
         ///  <item>The source is the same type as the current type.</item>
         ///  <item>The source is a subclass of the current type, either directly or indirectly.</item>
         ///  <item>The source implements the current interface type.</item>
-        ///  <item>The source is a value type that is assignable to the underlaying type of the current nullable type.</item>
+        ///  <item>The source is a value type that is assignable to the underlying type of the current nullable type.</item>
         /// </list>
         /// Any other combination of types is considered not assignable.
         /// </remarks>
         bool IsAssignableFrom(IType source);
 
         /// <summary>
-        /// Determines whether the specified type as a parameter type can be substituted for the current type.
+        /// Resolves a type member based on the specified XML documentation cref string.
         /// </summary>
-        /// <param name="other">The type to check against the current type.</param>
-        /// <returns><see langword="true"/> if the specified type is substitutable for the current type; otherwise, <see langword="false"/>.</returns>
+        /// <param name="cref">The code reference that identifies the member to resolve.</param>
+        /// <returns>An <see cref="IMember"/> representing the resolved member, or <see langword="null"/> if no matching member is found.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="cref"/> is <see langword="null"/>.</exception>
         /// <remarks>
-        /// This method is used to determine if two members have compatible signatures, such as when checking for method overrides or interface implementations.
-        /// <para>
-        /// The following conditions make the other type substitutable for the current type:
-        /// <list type="bullet">
-        ///   <item>The current type and the other type represent the same type.</item>
-        ///   <item>Both types are a decorated type (e.g., array, pointer, by-ref, or nullable) with identical modifiers and their element types are also satisfiable.</item>
-        ///   <item>Both types are generic type parameters with identical constraints and declaring member ancestry.</item>
-        ///   <item>The current type is a generic type parameter, and the other type is a type that satisfies all of its constraints.</item>
-        /// </list>
-        /// For all other cases, the current type is not considered substitutable by the other type.
-        /// </para>
+        /// This method resolves members declared directly on this type, such as methods, properties, fields, and events.
+        /// <note type="hint" title="Hint">
+        /// For comprehensive member resolution across assemblies, use <see cref="Support.CodeReference.ResolveMember(string)"/> instead.
+        /// </note>
         /// </remarks>
-        bool IsSubstitutableBy(IType other);
+        /// <seealso cref="Support.CodeReference.ResolveMember(string)"/>
+        IMember? ResolveMember(string cref);
     }
 }

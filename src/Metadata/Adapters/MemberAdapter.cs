@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
     using System.Reflection;
@@ -67,6 +68,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         public virtual bool IsDirectDeclaration => true;
+
+        /// <inheritdoc/>
+        public bool IsCompilerGenerated => HasCustomAttribute(AttributeNames.CompilerGenerated);
 
         /// <inheritdoc/>
         public abstract string CodeReference { get; }

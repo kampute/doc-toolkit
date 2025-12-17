@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit
     using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.Languages;
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Metadata.Capabilities;
     using Kampute.DocToolkit.Models;
     using Kampute.DocToolkit.XmlDoc;
     using System;
@@ -182,7 +183,7 @@ namespace Kampute.DocToolkit
             if (member is IType)
                 return NameQualifier.DeclaringType;
 
-            if (member is IMethod { IsExtension: true } or IOperator)
+            if (member is IWithExtensionBehavior { IsExtension: true } or IOperator)
                 return NameQualifier.None;
 
             return context.AddressProvider.ActiveScope.Model is TypeModel typeModel

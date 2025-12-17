@@ -27,7 +27,7 @@ namespace Kampute.DocToolkit.Languages
                 attributes = attributes.Concat(delType.Return.ExplicitCustomAttributes);
 
             WriteAttributes(writer, attributes, linker);
-            WriteVisibilityModifiers(writer, type.Visibility);
+            WriteVisibilityModifiers(writer, type);
             switch (type)
             {
                 case IClassType classType:
@@ -40,23 +40,26 @@ namespace Kampute.DocToolkit.Languages
                     writer.Write("class ");
                     WriteTypeSignature(writer, classType, NameQualifier.DeclaringType, linker, declarative: true);
                     WriteTypeInheritance(writer, classType, linker);
-                    WriteGenericConstraints(writer, classType.TypeParameters, linker);
+                    if (classType.IsGenericTypeDefinition)
+                        WriteGenericConstraints(writer, classType.TypeParameters, linker);
                     break;
                 case IStructType structType:
                     if (structType.IsReadOnly)
                         writer.Write("readonly ");
-                    if (structType.IsRef)
+                    if (structType.IsRefLike)
                         writer.Write("ref ");
                     writer.Write("struct ");
                     WriteTypeSignature(writer, structType, NameQualifier.DeclaringType, linker, declarative: true);
                     WriteTypeInheritance(writer, structType, linker);
-                    WriteGenericConstraints(writer, structType.TypeParameters, linker);
+                    if (structType.IsGenericTypeDefinition)
+                        WriteGenericConstraints(writer, structType.TypeParameters, linker);
                     break;
                 case IInterfaceType interfaceType:
                     writer.Write("interface ");
                     WriteTypeSignature(writer, type, NameQualifier.DeclaringType, linker, declarative: true);
                     WriteTypeInheritance(writer, type, linker);
-                    WriteGenericConstraints(writer, interfaceType.TypeParameters, linker);
+                    if (interfaceType.IsGenericTypeDefinition)
+                        WriteGenericConstraints(writer, interfaceType.TypeParameters, linker);
                     break;
                 case IEnumType enumType:
                     writer.Write("enum ");
@@ -162,7 +165,7 @@ namespace Kampute.DocToolkit.Languages
 
             if (type.IsGenericType)
             {
-                linker(writer, type.GenericTypeDefinition ?? type, type.UnqualifiedName);
+                linker(writer, type.GenericTypeDefinition ?? type, type.SimpleName);
                 var (offset, count) = type.OwnGenericParameterRange;
                 if (count > 0)
                 {
@@ -293,12 +296,7 @@ namespace Kampute.DocToolkit.Languages
 
             var needsCommaSeparation = false;
 
-            if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.UnmanagedType))
-            {
-                EnsureCommaSeparation();
-                writer.Write("unmanaged");
-            }
-            else if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.ValueType))
+            if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType))
             {
                 EnsureCommaSeparation();
                 writer.Write("struct");
@@ -307,11 +305,6 @@ namespace Kampute.DocToolkit.Languages
             {
                 EnsureCommaSeparation();
                 writer.Write("class");
-            }
-            else if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.NotNull))
-            {
-                EnsureCommaSeparation();
-                writer.Write("notnull");
             }
 
             foreach (var typeConstraint in typeParameter.TypeConstraints)
@@ -323,11 +316,13 @@ namespace Kampute.DocToolkit.Languages
                 WriteTypeSignature(writer, typeConstraint, Options.GlobalNameQualifier, linker);
             }
 
-            if
-            (
-               !typeParameter.Constraints.HasFlag(TypeParameterConstraints.ValueType) &&
-               typeParameter.Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor)
-            )
+            if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike))
+            {
+                EnsureCommaSeparation();
+                writer.Write("allows ref struct");
+            }
+            else if (typeParameter.Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor)
+                 && !typeParameter.Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType))
             {
                 EnsureCommaSeparation();
                 writer.Write("new()");
@@ -347,9 +342,9 @@ namespace Kampute.DocToolkit.Languages
         /// Writes the constraints of multiple type parameters to the <see cref="TextWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
-        /// <param name="typeParameters">The list of <see cref="ITypeParameter"/> whose constraints are to be written.</param>
+        /// <param name="typeParameters">The collection of <see cref="ITypeParameter"/> whose constraints are to be written.</param>
         /// <param name="linker">The delegate for linking to the documentation of a type or type's member.</param>
-        private void WriteGenericConstraints(TextWriter writer, IReadOnlyList<ITypeParameter> typeParameters, MemberDocLinker linker)
+        private void WriteGenericConstraints(TextWriter writer, IEnumerable<ITypeParameter> typeParameters, MemberDocLinker linker)
         {
             foreach (var typeParameter in typeParameters)
             {

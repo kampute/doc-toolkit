@@ -50,6 +50,7 @@ XML doc transformation uses embedded XSLT resources:
 - Uses **NUnit** with **Moq** for mocking
 - Use `[TestCase(..., ExpectedResult=...)]` for parameterized tests.
 - Name test methods: `MemberName_StateUnderTest_ExpectedBehavior`.
+- When applicable, use types and members defined in `Acme.cs` for test cases.
 - Prefer constraint-based assertions.
 - Write only tests for public members and business logic (skip private methods and parameter validation).
 - `tests/MockHelper.cs` provides common test utilities

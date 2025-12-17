@@ -5,7 +5,11 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Reflection;
 
     /// <summary>
     /// An adapter that wraps a reflection <see cref="Type"/> representing a class type and provides metadata access.
@@ -19,6 +23,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     /// <threadsafety static="true" instance="true"/>
     public class ClassTypeAdapter : CompositeTypeAdapter, IClassType
     {
+        private readonly Lazy<IReadOnlyCollection<IExtensionBlock>> extensionBlocks;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClassTypeAdapter"/> class.
         /// </summary>
@@ -34,6 +40,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             if (!classType.IsClass)
                 throw new ArgumentException("Type must be a class.", nameof(classType));
+
+            extensionBlocks = new(() => [.. GetExtensionBlocks().Select(Assembly.Repository.GetExtensionBlockMetadata)]);
         }
 
         /// <inheritdoc/>
@@ -44,5 +52,62 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         public virtual bool IsSealed => Reflection.IsSealed && !Reflection.IsAbstract;
+
+        /// <inheritdoc/>
+        public virtual bool MayContainExtensionMembers => Reflection.IsSealed && Reflection.IsAbstract && !Reflection.IsNested && !IsGenericType;
+
+        /// <inheritdoc/>
+        public IReadOnlyCollection<IExtensionBlock> ExtensionBlocks => extensionBlocks.Value;
+
+        /// <inheritdoc/>
+        protected override IEnumerable<MethodInfo> GetMethods()
+        {
+            var methods = base.GetMethods();
+            return MayContainExtensionMembers
+                ? NormalizedMethods(methods)
+                : methods;
+
+            IEnumerable<MethodInfo> NormalizedMethods(IEnumerable<MethodInfo> methods)
+            {
+                var resolveExtensionMember = Assembly.Repository.ExtensionReflection.GetExtensionMemberInfo;
+                foreach (var method in methods)
+                {
+                    switch (resolveExtensionMember(method))
+                    {
+                        case null:
+                            // A regular method
+                            yield return method;
+                            break;
+                        case MethodInfo extensionMethod:
+                            // An extension method
+                            yield return extensionMethod;
+                            break;
+                        default:
+                            // An extension property accessor, skip it
+                            break;
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<PropertyInfo> GetProperties()
+        {
+            var properties = base.GetProperties();
+            return MayContainExtensionMembers
+                ? properties.Concat(Assembly.Repository.ExtensionReflection.GetDeclaredExtensionProperties(Reflection))
+                : properties;
+        }
+
+        /// <summary>
+        /// Retrieves the extension blocks declared by this class type.
+        /// </summary>
+        /// <returns>An enumerable of <see cref="ExtensionBlockInfo"/> representing the extension blocks.</returns>
+        protected virtual IEnumerable<ExtensionBlockInfo> GetExtensionBlocks()
+        {
+            return MayContainExtensionMembers
+                ? Assembly.Repository.ExtensionReflection.GetDeclaredExtensionBlocks(Reflection)
+                : [];
+        }
     }
 }

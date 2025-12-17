@@ -235,7 +235,7 @@ namespace Kampute.DocToolkit
         {
             0 => TypeCollection.Empty,
             1 => Assemblies.First().ExportedTypes,
-            _ => new TypeCollection(Assemblies.SelectMany(asm => asm.ExportedTypes).OrderBy(static type => type.Name, StringComparer.Ordinal))
+            _ => new TypeCollection(Assemblies.SelectMany(static asm => asm.ExportedTypes).OrderBy(static type => type.Name, StringComparer.Ordinal))
         };
     }
 }

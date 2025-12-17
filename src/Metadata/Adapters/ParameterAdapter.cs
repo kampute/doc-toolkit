@@ -5,9 +5,11 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="ParameterInfo"/> and provides metadata access.
@@ -73,7 +75,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public virtual bool IsOptional => Reflection.IsOptional;
 
         /// <inheritdoc/>
-        public virtual bool IsParameterArray => HasCustomAttribute("System.ParamArrayAttribute");
+        public virtual bool IsParameterArray => HasCustomAttribute(AttributeNames.ParamArray) || HasCustomAttribute(AttributeNames.ParamsCollection);
 
         /// <inheritdoc/>
         public virtual bool IsReturnParameter => Reflection.Position == -1;
@@ -87,10 +89,26 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public virtual bool IsSatisfiableBy(IParameter other)
         {
-            return other is not null
-                && Position == other.Position
-                && ReferenceKind == other.ReferenceKind
-                && Type.IsSubstitutableBy(other.Type);
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null || Position != other.Position || ReferenceKind != other.ReferenceKind)
+                return false;
+
+            if (TypesAreCompatible(Type, other.Type))
+                return true;
+
+            return IsReturnParameter
+                && Member.DeclaringType is not IInterfaceType
+                && Type.IsAssignableFrom(other.Type);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool TypesAreCompatible(IType expectedType, IType actualType)
+            {
+                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
+                    ? typeParameter.IsSatisfiableBy(actualType)
+                    : expectedType.Equals(actualType);
+            }
         }
 
         /// <inheritdoc/>

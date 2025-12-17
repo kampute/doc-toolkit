@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using System;
 
     /// <summary>
@@ -37,9 +38,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public virtual bool IsReadOnly => HasCustomAttribute("System.Runtime.CompilerServices.IsReadOnlyAttribute");
+        public virtual bool IsReadOnly => HasCustomAttribute(AttributeNames.IsReadOnly);
 
         /// <inheritdoc/>
-        public virtual bool IsRef => Reflection.IsByRefLike;
+        public virtual bool IsRefLike => Reflection.IsByRefLike;
     }
 }

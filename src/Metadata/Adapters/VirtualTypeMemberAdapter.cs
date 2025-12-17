@@ -45,10 +45,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public MemberVirtuality Virtuality => virtuality.Value;
 
         /// <inheritdoc/>
-        public virtual bool IsInterfaceMember => Reflection.DeclaringType!.IsInterface;
-
-        /// <inheritdoc/>
-        public virtual bool IsExplicitInterfaceImplementation => !IsStatic && Name.IndexOf('.') > 0;
+        public virtual bool IsExplicitInterfaceImplementation => Name.IndexOf('.') > 0;
 
         /// <inheritdoc/>
         public IVirtualTypeMember? OverriddenMember => overriddenMember.Value;

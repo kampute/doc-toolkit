@@ -6,18 +6,20 @@
 namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Support;
     using NUnit.Framework;
     using System;
-    using System.Collections.Generic;
     using System.Linq;
 
     [TestFixture]
     public class StructTypeTests
     {
         [TestCase(typeof(DateTime), nameof(DateTime))]
-        [TestCase(typeof(KeyValuePair<,>), "KeyValuePair`2")]
-        [TestCase(typeof(KeyValuePair<string, int>), "KeyValuePair`2")]
-        [TestCase(typeof(TestTypes.TestValueType), nameof(TestTypes.TestValueType))]
+        [TestCase(typeof(System.Collections.Generic.KeyValuePair<,>), "KeyValuePair`2")]
+        [TestCase(typeof(System.Collections.Generic.KeyValuePair<string, int>), "KeyValuePair`2")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), "SampleGenericStruct`1")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), "InnerGenericStruct`2")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "DeepInnerGenericStruct")]
         public void ImplementsStructType(Type structType, string expectedName)
         {
             var metadata = structType.GetMetadata();
@@ -27,7 +29,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(ReadOnlySpan<>), true)]
-        [TestCase(typeof(TestTypes.TestValueType), false)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), false)]
         public void IsReadonly_HasExpectedValue(Type structType, bool isReadOnly)
         {
             var metadata = structType.GetMetadata<IStructType>();
@@ -36,18 +38,18 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(ReadOnlySpan<>), true)]
-        [TestCase(typeof(TestTypes.TestValueType), false)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), false)]
         public void IsRef_HasExpectedValue(Type structType, bool isRef)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.IsRef, Is.EqualTo(isRef));
+            Assert.That(metadata.IsRefLike, Is.EqualTo(isRef));
         }
 
         [Test]
         public void GenericTypeDefinition_HasCorrectGenericMetadata()
         {
-            var metadata = typeof(KeyValuePair<,>).GetMetadata<IStructType>();
+            var metadata = typeof(System.Collections.Generic.KeyValuePair<,>).GetMetadata<IStructType>();
 
             using (Assert.EnterMultipleScope())
             {
@@ -65,7 +67,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [Test]
         public void ConstructedGenericType_HasCorrectGenericMetadata()
         {
-            var metadata = typeof(KeyValuePair<int, string>).GetMetadata<IStructType>();
+            var metadata = typeof(System.Collections.Generic.KeyValuePair<int, string>).GetMetadata<IStructType>();
 
             using (Assert.EnterMultipleScope())
             {
@@ -81,10 +83,14 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(DateTime), 0, 0)]
-        [TestCase(typeof(KeyValuePair<,>), 0, 2)]
-        [TestCase(typeof(KeyValuePair<string, int>), 0, 2)]
-        [TestCase(typeof(ReadOnlySpan<byte>), 0, 1)]
-        [TestCase(typeof(TestTypes.TestValueType), 0, 0)]
+        [TestCase(typeof(System.Collections.Generic.KeyValuePair<,>), 0, 2)]
+        [TestCase(typeof(System.Collections.Generic.KeyValuePair<string, int>), 0, 2)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>), 0, 1)]
+        [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>), 0, 1)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), 1, 2)]
+        [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>.InnerGenericStruct<int, string>), 1, 2)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), 3, 0)]
+        [TestCase(typeof(Acme.SampleGenericStruct<System.IO.Stream>.InnerGenericStruct<int, string>.DeepInnerGenericStruct), 3, 0)]
         public void OwnGenericParameterRange_HasExpectedValue(Type structType, int expectedOffset, int expectedCount)
         {
             var metadata = structType.GetMetadata<IGenericCapableType>();
@@ -92,157 +98,213 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.OwnGenericParameterRange, Is.EqualTo((expectedOffset, expectedCount)));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Interfaces_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.ISampleInterface),
+            nameof(System.Collections.IEnumerable),
+            "IEnumerable`1" // IEnumerable<V>
+        )]
+        public void Interfaces_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Interfaces, Is.Not.Empty);
+            Assert.That(metadata.Interfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Fields_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), ExpectedResult = 1)]
+        public int Constructors_HasExpectedValue(Type structType)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Fields, Is.Not.Empty);
-            Assert.That(metadata.Fields.Where(f => !f.IsVisible), Is.Empty);
+            return metadata.Constructors.Count;
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Constructors_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Field)
+        )]
+        public void Fields_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Constructors, Is.Not.Empty);
-            Assert.That(metadata.Constructors.Where(c => !c.IsVisible), Is.Empty);
+            Assert.That(metadata.Fields.Select(static f => f.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Methods_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Method),
+            nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.GenericMethod)
+        )]
+        public void Methods_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Methods, Is.Not.Empty);
-            Assert.That(metadata.Methods.Where(m => !m.IsVisible), Is.Empty);
+            Assert.That(metadata.Methods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Properties_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Property)
+        )]
+        public void Properties_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Properties, Is.Not.Empty);
-            Assert.That(metadata.Properties.Where(p => !p.IsVisible), Is.Empty);
+            Assert.That(metadata.Properties.Select(static p => p.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Events_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct.Event)
+        )]
+        public void Events_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Events, Is.Not.Empty);
-            Assert.That(metadata.Events.Where(e => !e.IsVisible), Is.Empty);
+            Assert.That(metadata.Events.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
-        public void Operators_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            "Implicit"
+        )]
+        public void Operators_HasExpectedValue(Type structType, params string[] expectedNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            Assert.That(metadata.Operators, Is.Not.Empty);
-            Assert.That(metadata.Operators.Where(o => !o.IsVisible), Is.Empty);
+            Assert.That(metadata.Operators.Select(static o => o.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType.NestedValueType), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestValueType), ExpectedResult = new[] { nameof(TestTypes.TestValueType.NestedValueType) })]
-        public string[] NestedTypes_HasExpectedValue(Type structType)
-        {
-            var metadata = structType.GetMetadata<IStructType>();
-
-            return [.. metadata.NestedTypes.Select(static t => t.Name).OrderBy(n => n)];
-        }
-
-        [TestCase(typeof(TestTypes.TestValueType), new[] {
-            "Kampute.DocToolkit.Test.TestTypes.ITestInterface.InterfaceGenericTestMethod",
-            "Kampute.DocToolkit.Test.TestTypes.ITestInterface.InterfaceByRefParamTestMethod",
-        })]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.ISampleInterface.InterfaceMethod),
+            nameof(System.Collections.Generic.IEnumerable<>.GetEnumerator),
+            nameof(System.Collections.IEnumerable.GetEnumerator)
+        )]
         public void ExplicitInterfaceMethods_HasExpectedValue(Type structType, params string[] expectedMethodNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            var explicitMethods = metadata.ExplicitInterfaceMethods;
+            var shortNames = metadata.ExplicitInterfaceMethods.Select(static m => m.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitMethods.Select(m => m.Name), Is.EquivalentTo(expectedMethodNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedMethodNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.ISampleInterface.InterfaceProperty)
+        )]
         public void ExplicitInterfaceProperties_HasExpectedValue(Type structType, params string[] expectedPropertyNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            var explicitProperties = metadata.ExplicitInterfaceProperties;
+            var shortNames = metadata.ExplicitInterfaceProperties.Select(static p => p.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitProperties.Select(m => m.Name), Is.EquivalentTo(expectedPropertyNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedPropertyNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType))]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.ISampleInterface.InterfaceEvent)
+        )]
         public void ExplicitInterfaceEvents_HasExpectedValue(Type structType, params string[] expectedEventNames)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            var explicitEvents = metadata.ExplicitInterfaceEvents;
+            var shortNames = metadata.ExplicitInterfaceEvents.Select(static e => e.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitEvents.Select(m => m.Name), Is.EquivalentTo(expectedEventNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedEventNames));
         }
 
-        [TestCase(typeof(DateTime), ExpectedResult = "T:System.DateTime")]
-        [TestCase(typeof(Nullable<>), ExpectedResult = "T:System.Nullable`1")]
-        [TestCase(typeof(TestTypes.TestValueType), ExpectedResult = "T:Kampute.DocToolkit.Test.TestTypes.TestValueType")]
-        public string CodeReference_HasExpectedValue(Type structType)
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            "False"
+        )]
+        public void ExplicitInterfaceOperators_HasExpectedValue(Type classType, params string[] expectedNames)
+        {
+            var metadata = classType.GetMetadata<IStructType>();
+
+            var shortNames = metadata.ExplicitInterfaceOperators.Select(static e => e.Name.SubstringAfterLast('.'));
+
+            Assert.That(shortNames, Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.SampleFields))]
+        [TestCase(typeof(Acme.SampleGenericStruct<>),
+            typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>)
+        )]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>),
+            typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct)
+        )]
+        public void NestedTypes_HasExpectedValue(Type structType, params Type[] expectedTypes)
+        {
+            var metadata = structType.GetMetadata<IStructType>();
+            var expectedNestedTypes = expectedTypes.Select(static t => t.GetMetadata());
+
+            Assert.That(metadata.NestedTypes, Is.EquivalentTo(expectedNestedTypes));
+        }
+
+        [TestCase(typeof(DateTime), "T:System.DateTime")]
+        [TestCase(typeof(Nullable<>), "T:System.Nullable`1")]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct), "T:Acme.SampleGenericStruct`1.InnerGenericStruct`2.DeepInnerGenericStruct")]
+        public void CodeReference_HasExpectedValue(Type structType, string expected)
         {
             var metadata = structType.GetMetadata<IStructType>();
 
-            return metadata.CodeReference;
+            Assert.That(metadata.CodeReference, Is.EqualTo(expected));
         }
 
-        [TestCase(typeof(DateTime), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestValueType), ExpectedResult = new[] { nameof(TestTypes) })]
-        [TestCase(typeof(TestTypes.TestValueType.NestedValueType), ExpectedResult = new[] { nameof(TestTypes), nameof(TestTypes.TestValueType) })]
-        public string[] DeclaringTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(DateTime))]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>),
+            typeof(Acme.SampleGenericStruct<>)
+        )]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            typeof(Acme.SampleGenericStruct<>),
+            typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>)
+        )]
+        public void DeclaringTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
+        {
+            var metadata = type.GetMetadata<IStructType>();
+            var expectedDeclaringTypes = expectedTypes.Select(static t => t.GetMetadata());
+
+            Assert.That(metadata.DeclaringTypeHierarchy, Is.EqualTo(expectedDeclaringTypes));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            typeof(object),
+            typeof(ValueType)
+        )]
+        public void BaseTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
+        {
+            var metadata = type.GetMetadata<IStructType>();
+            var expectedBaseTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
+
+            Assert.That(metadata.BaseTypeHierarchy, Is.EqualTo(expectedBaseTypes));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
+            nameof(Acme.ISampleInterface),
+            "IEnumerable`1" // IEnumerable<V>
+        )]
+        public void ImplementedInterfaces_HasExpectedValue(Type type, params string[] expectedNames)
         {
             var metadata = type.GetMetadata<IStructType>();
 
-            return [.. metadata.DeclaringTypeHierarchy.Select(t => t.Name)];
+            Assert.That(metadata.ImplementedInterfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(DateTime), ExpectedResult = new[] { nameof(Object), nameof(ValueType) })]
-        public string[] BaseTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.SampleGenericStruct<>),
+            "InstanceExtensionPropertyForStruct",
+            "StaticExtensionPropertyForStruct"
+        )]
+        public void ExtensionProperties_HasExpectedValue(Type type, params string[] expectedNames)
         {
-            var metadata = type.GetMetadata<IStructType>();
+            var extendedType = type.GetMetadata<IStructType>();
 
-            return [.. metadata.BaseTypeHierarchy.Select(t => t.Name)];
+            Assert.That(extendedType.ExtensionProperties.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestValueType), ExpectedResult = new[] { nameof(TestTypes.ITestInterface) })]
-        [TestCase(typeof(TestTypes.TestValueType.NestedValueType), ExpectedResult = new string[] { })]
-        public string[] ImplementedInterfaces_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.SampleGenericStruct<>),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForStruct)
+        )]
+        public void ExtensionMethods_HasExpectedValue(Type type, params string[] expectedNames)
         {
-            var metadata = type.GetMetadata<IStructType>();
+            var extendedType = type.GetMetadata<IStructType>();
 
-            return [.. metadata.ImplementedInterfaces.Select(i => i.Name).OrderBy(n => n)];
-        }
-
-        [TestCase(typeof(TestTypes.TestValueType), typeof(TestTypes.TestValueType), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestValueType), typeof(TestTypes.TestValueType.NestedValueType), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.TestValueType), typeof(TestTypes.ITestInterface), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.TestValueType), typeof(TestTypes.TestBaseClass), ExpectedResult = false)]
-        public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
-        {
-            var targetMetadata = targetType.GetMetadata<IStructType>();
-            var sourceMetadata = sourceType.GetMetadata();
-
-            return targetMetadata.IsAssignableFrom(sourceMetadata);
+            Assert.That(extendedType.ExtensionMethods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
     }
 }

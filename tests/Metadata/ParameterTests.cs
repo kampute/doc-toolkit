@@ -8,52 +8,51 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
-    using System.Reflection;
+    using System.Linq;
 
     [TestFixture]
     public class ParameterTests
     {
-        private readonly BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-
-        [TestCase("M1", 0, ExpectedResult = "c")]
-        [TestCase("M1", 1, ExpectedResult = "f")]
-        [TestCase("M1", 2, ExpectedResult = "v")]
-        [TestCase("M1", 3, ExpectedResult = "i")]
-        public string Parameter_Name_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), "i", "s", "d")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), "i", "s")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), "args")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), "s", "day", "values")]
+        public void Name_HasExpectedValue(Type declaringType, string methodName, params string[] expectedNames)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
             Assert.That(method, Is.Not.Null);
 
-            var parameter = method.Parameters[parameterIndex];
-            return parameter.Name;
+            Assert.That(method.Parameters.Select(static p => p.Name), Is.EqualTo(expectedNames));
         }
 
-        [TestCase("M1", 0, ExpectedResult = 0)]
-        [TestCase("M1", 1, ExpectedResult = 1)]
-        [TestCase("M1", 2, ExpectedResult = 2)]
-        [TestCase("M1", 3, ExpectedResult = 3)]
-        public int Parameter_Position_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod))]
+        public void Position_HasExpectedValue(Type declaringType, string methodName)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
             Assert.That(method, Is.Not.Null);
 
-            var parameter = method.Parameters[parameterIndex];
-            return parameter.Position;
+            Assert.That(method.Parameters.Select(static p => p.Position), Is.EqualTo(Enumerable.Range(0, method.Parameters.Count)));
         }
 
-        [TestCase("M1", 0, ExpectedResult = ParameterReferenceKind.None)]
-        [TestCase("M1", 1, ExpectedResult = ParameterReferenceKind.Out)]
-        [TestCase("M1", 2, ExpectedResult = ParameterReferenceKind.Ref)]
-        [TestCase("M1", 3, ExpectedResult = ParameterReferenceKind.In)]
-        public ParameterReferenceKind Parameter_ReferenceKind_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 0, ExpectedResult = ParameterReferenceKind.In)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 1, ExpectedResult = ParameterReferenceKind.Ref)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 2, ExpectedResult = ParameterReferenceKind.Out)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = ParameterReferenceKind.None)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = ParameterReferenceKind.In)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = ParameterReferenceKind.None)]
+        public ParameterReferenceKind ReferenceKind_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -63,13 +62,15 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.ReferenceKind;
         }
 
-        [TestCase("M1", 0, ExpectedResult = false)]
-        [TestCase("M1", 1, ExpectedResult = true)]
-        [TestCase("M1", 2, ExpectedResult = true)]
-        [TestCase("M1", 3, ExpectedResult = true)]
-        public bool Parameter_IsByRef_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 0, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 1, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 2, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = false)]
+        public bool IsByRef_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -79,12 +80,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.IsByRef;
         }
 
-        [TestCase("M1", 0, ExpectedResult = false)]
-        [TestCase("M4", 1, ExpectedResult = true)]
-        [TestCase("M8", 1, ExpectedResult = true)]
-        public bool Parameter_IsOptional_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
+        public bool IsOptional_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -94,11 +96,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.IsOptional;
         }
 
-        [TestCase("M2", 0, ExpectedResult = false)]
-        [TestCase("M6", 1, ExpectedResult = true)]
-        public bool Parameter_IsParams_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ArrayParamsMethod), 0, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), 0, ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
+        public bool IsParams_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -108,12 +112,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.IsParameterArray;
         }
 
-        [TestCase("M1", 0, ExpectedResult = false)]
-        [TestCase("M4", 1, ExpectedResult = true)]
-        [TestCase("M8", 1, ExpectedResult = true)]
-        public bool Parameter_HasDefaultValue_HasExpectedValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = true)]
+        public bool HasDefaultValue_HasExpectedValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -123,11 +128,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.HasDefaultValue;
         }
 
-        [TestCase("M1", 3)]
-        [TestCase("M6", 1)]
-        public void Parameter_DefaultValue_WithoutDefault_ReturnsDBNull(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 2)]
+        public void DefaultValue_WithoutDefault_ReturnsDBNull(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -137,11 +142,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(parameter.DefaultValue, Is.EqualTo(DBNull.Value));
         }
 
-        [TestCase("M4", 1, ExpectedResult = null)]
-        [TestCase("M8", 1, ExpectedResult = true)]
-        public object? Parameter_DefaultValue_WithDefault_ReturnsDefaultValue(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = 42)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = "default")]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 1, ExpectedResult = (int)DayOfWeek.Monday)]
+        public object? DefaultValue_WithDefault_ReturnsDefaultValue(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -151,15 +157,12 @@ namespace Kampute.DocToolkit.Test.Metadata
             return Parameter.DefaultValue;
         }
 
-        [TestCase("M1", 0, ExpectedResult = "Char")]
-        [TestCase("M1", 1, ExpectedResult = "Single&")]
-        [TestCase("M1", 2, ExpectedResult = "ValueType&")]
-        [TestCase("M1", 3, ExpectedResult = "Int32&")]
-        [TestCase("M6", 0, ExpectedResult = "Int32")]
-        [TestCase("M6", 1, ExpectedResult = "Object[]")]
-        public string Parameter_ParameterType_HasExpectedName(string methodName, int parameterIndex)
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 0, ExpectedResult = nameof(Int32))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OptionalParamsMethod), 1, ExpectedResult = nameof(String))]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.MixedParamsMethod), 0, ExpectedResult = nameof(String))]
+        public string ParameterType_HasExpectedName(Type declaringType, string methodName, int parameterIndex)
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod(methodName, bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -169,27 +172,23 @@ namespace Kampute.DocToolkit.Test.Metadata
             return parameter.Type.Name;
         }
 
-        [Test]
-        public void Parameter_CustomAttributes_ReturnsExpectedAttributes()
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), 0, typeof(System.Diagnostics.CodeAnalysis.NotNullAttribute))]
+        public void CustomAttributes_ReturnsExpectedAttributes(Type declaringType, string methodName, int parameterIndex, Type expectedAttribute)
         {
-            var methodInfo = typeof(Acme.MyList<int>).GetMethod("Test", bindingFlags);
+            var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
             Assert.That(method, Is.Not.Null);
 
-            var parameter = method.Parameters[0];
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(parameter.CustomAttributes, Is.Not.Empty);
-                Assert.That(parameter.HasCustomAttribute("Acme.CustomAttribute"), Is.True);
-            }
+            var parameter = method.Parameters[parameterIndex];
+            Assert.That(parameter.CustomAttributes.Any(a => a.Type.Represents(expectedAttribute)), Is.True);
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForSameParameter()
+        public void IsSatisfiableBy_ForSameParameter_ReturnsTrue()
         {
-            var methodInfo = typeof(Acme.Widget).GetMethod("M8", bindingFlags);
+            var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RefParamsMethod), Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
 
             var method = methodInfo.GetMetadata();
@@ -200,79 +199,127 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForMatchingParameters()
+        public void IsSatisfiableBy_ForMatchingParameters_ReturnsTrue()
         {
-            var widgetMethodInfo = typeof(Acme.Widget).GetMethod("M6", bindingFlags);
-            Assert.That(widgetMethodInfo, Is.Not.Null);
+            var methodName = nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod);
 
-            var valueTypeMethodInfo = typeof(Acme.ValueType).GetMethod("M1", bindingFlags);
-            Assert.That(valueTypeMethodInfo, Is.Not.Null);
+            var baseMethodInfo = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetMethod(methodName, Acme.Bindings.AllDeclared);
+            Assert.That(baseMethodInfo, Is.Not.Null);
 
-            var widgetMethod = widgetMethodInfo.GetMetadata();
-            var valueTypeMethod = valueTypeMethodInfo.GetMetadata();
+            var derivedMethodInfo = typeof(Acme.SampleDerivedGenericClass<,,>).GetMethod(methodName, Acme.Bindings.AllDeclared);
+            Assert.That(derivedMethodInfo, Is.Not.Null);
 
-            var widgetParam = widgetMethod.Parameters[0];
-            var valueTypeParam = valueTypeMethod.Parameters[0];
+            var baseMethod = baseMethodInfo.GetMetadata();
+            var derivedMethod = derivedMethodInfo.GetMetadata();
 
-            // These should match as they are both "int" parameters without any modifiers
-            Assert.That(widgetParam.IsSatisfiableBy(valueTypeParam), Is.True);
+            for (var i = 0; i < baseMethod.Parameters.Count; i++)
+            {
+                var baseParam = baseMethod.Parameters[i];
+                var derivedParam = derivedMethod.Parameters[i];
+
+                Assert.That(baseParam.IsSatisfiableBy(derivedParam), Is.True);
+            }
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForDifferentParameterDirections()
+        public void IsSatisfiableBy_ForParametersWithDifferentTypes_ReturnsFalse()
         {
-            var widgetMethodInfo = typeof(Acme.Widget).GetMethod("M1", bindingFlags);
-            Assert.That(widgetMethodInfo, Is.Not.Null);
+            var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
+            Assert.That(firstMethodInfo, Is.Not.Null);
 
-            var valueTypeMethodInfo = typeof(Acme.ValueType).GetMethod("M1", bindingFlags);
-            Assert.That(valueTypeMethodInfo, Is.Not.Null);
+            var secondMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.UnsafeMethod), Acme.Bindings.AllDeclared);
+            Assert.That(secondMethodInfo, Is.Not.Null);
 
-            var widgetMethod = widgetMethodInfo.GetMetadata();
-            var valueTypeMethod = valueTypeMethodInfo.GetMetadata();
+            var firstMethod = firstMethodInfo.GetMetadata();
+            var secondMethod = secondMethodInfo.GetMetadata();
 
-            var widgetParam = widgetMethod.Parameters[3];
-            var valueTypeParam = valueTypeMethod.Parameters[0];
+            var firstMethodParam = firstMethod.Parameters[0]; // int
+            var secondMethodParam = secondMethod.Parameters[0]; // int**
 
-            // These should not match as one is input "int" parameter and the other is a regular "int" parameter
-            Assert.That(widgetParam.IsSatisfiableBy(valueTypeParam), Is.False);
+            Assert.That(firstMethodParam.IsSatisfiableBy(secondMethodParam), Is.False);
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsFalseForDifferentParameterTypes()
+        public void IsSatisfiableBy_ForParametersWithDifferentModifiers_ReturnsFalse()
         {
-            var widgetMethodInfo = typeof(Acme.Widget).GetMethod("M1", bindingFlags);
-            Assert.That(widgetMethodInfo, Is.Not.Null);
+            var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
+            Assert.That(firstMethodInfo, Is.Not.Null);
 
-            var valueTypeMethodInfo = typeof(Acme.ValueType).GetMethod("M2", bindingFlags);
-            Assert.That(valueTypeMethodInfo, Is.Not.Null);
+            var secondMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RefParamsMethod), Acme.Bindings.AllDeclared);
+            Assert.That(secondMethodInfo, Is.Not.Null);
 
-            var widgetMethod = widgetMethodInfo.GetMetadata();
-            var valueTypeMethod = valueTypeMethodInfo.GetMetadata();
+            var firstMethod = firstMethodInfo.GetMetadata();
+            var secondMethod = secondMethodInfo.GetMetadata();
 
-            var widgetParam = widgetMethod.Parameters[0];
-            var valueTypeParam = valueTypeMethod.Parameters[0];
+            var firstMethodParam = firstMethod.Parameters[0]; // int i
+            var secondMethodParam = secondMethod.Parameters[0]; // in int i
 
-            // These should not match as one is "int" parameter and the other is a nullable "int" parameter
-            Assert.That(widgetParam.IsSatisfiableBy(valueTypeParam), Is.False);
+            Assert.That(firstMethodParam.IsSatisfiableBy(secondMethodParam), Is.False);
         }
 
         [Test]
-        public void Parameter_IsSubstitutableBy_ReturnsTrueForOpenAndClosedMethodParameters()
+        public void IsSatisfiableBy_ForParametersWithDifferentPositions_ReturnsFalse()
         {
-            var openMethodInfo = typeof(Acme.UseList).GetMethod("GetValues", bindingFlags);
-            Assert.That(openMethodInfo, Is.Not.Null);
+            var firstMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OptionalParamsMethod), Acme.Bindings.AllDeclared);
+            Assert.That(firstMethodInfo, Is.Not.Null);
 
-            var closedMethodInfo = openMethodInfo.MakeGenericMethod(typeof(int));
-            Assert.That(closedMethodInfo, Is.Not.Null);
+            var secondMethodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.OverloadedMethod), Acme.Bindings.AllDeclared, [typeof(string), typeof(int)]);
+            Assert.That(secondMethodInfo, Is.Not.Null);
 
-            var openMethod = openMethodInfo.GetMetadata();
-            var closedMethod = closedMethodInfo.GetMetadata();
+            var firstMethod = firstMethodInfo.GetMetadata();
+            var secondMethod = secondMethodInfo.GetMetadata();
 
-            var openParam = openMethod.Parameters[0];
-            var closedParam = closedMethod.Parameters[0];
+            var firstMethodParam = firstMethod.Parameters[0]; // int i
+            var secondMethodParam = secondMethod.Parameters[1]; // int i
 
-            // open generic parameter T should be substitutable by concrete int parameter
-            Assert.That(openParam.IsSatisfiableBy(closedParam), Is.True);
+            Assert.That(firstMethodParam.IsSatisfiableBy(secondMethodParam), Is.False);
+        }
+
+        [Test]
+        public void IsSatisfiableBy_ForOpenAndClosedMethodParameters_ReturnsTrue()
+        {
+            var methodName = nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod);
+
+            var baseMethodInfo = typeof(Acme.SampleDerivedGenericClass<,,>).GetMethod(methodName, Acme.Bindings.AllDeclared);
+            Assert.That(baseMethodInfo, Is.Not.Null);
+
+            var derivedMethodInfo = typeof(Acme.SampleDerivedConstructedGenericClass).GetMethod(methodName, Acme.Bindings.AllDeclared);
+            Assert.That(derivedMethodInfo, Is.Not.Null);
+
+            var baseMethod = baseMethodInfo.GetMetadata();
+            var derivedMethod = derivedMethodInfo.GetMetadata();
+
+            for (var i = 0; i < baseMethod.Parameters.Count; i++)
+            {
+                var baseParam = baseMethod.Parameters[i];
+                var derivedParam = derivedMethod.Parameters[i];
+
+                Assert.That(baseParam.IsSatisfiableBy(derivedParam), Is.True);
+            }
+        }
+
+        [Test]
+        public void ReturnParameter_HasExpectedProperties()
+        {
+            var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.GenericMethodWithTypeConstraints), Acme.Bindings.AllDeclared);
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var method = methodInfo.GetMetadata();
+            Assert.That(method, Is.Not.Null);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(method.Return.Member, Is.SameAs(method));
+                Assert.That(method.Return.Name, Is.Empty);
+                Assert.That(method.Return.Position, Is.EqualTo(-1));
+                Assert.That(method.Return.IsByRef, Is.False);
+                Assert.That(method.Return.IsOptional, Is.False);
+                Assert.That(method.Return.IsParameterArray, Is.False);
+                Assert.That(method.Return.HasDefaultValue, Is.False);
+                Assert.That(method.Return.DefaultValue, Is.EqualTo(DBNull.Value));
+                Assert.That(method.Return.Type.Name, Is.EqualTo("T"));
+                Assert.That(method.Return.CustomAttributes.Select(static a => a.Type.Name), Does.Contain("NotNullAttribute"));
+            }
         }
     }
 }

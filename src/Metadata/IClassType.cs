@@ -31,6 +31,25 @@ namespace Kampute.DocToolkit.Metadata
         bool IsSealed { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the class may contain extension members.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if the class may contain extension members; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// A class can declare extension members if it is static, not nested, and not a generic type.
+        /// </remarks>
+        bool MayContainExtensionMembers { get; }
+
+        /// <summary>
+        /// Gets the collection of extension blocks defined in the class.
+        /// </summary>
+        /// <value>
+        /// A read-only collection of <see cref="IExtensionBlock"/> objects representing the extension blocks defined in the class.
+        /// </value>
+        IReadOnlyCollection<IExtensionBlock> ExtensionBlocks { get; }
+
+        /// <summary>
         /// Gets the types that directly derive from the class in the same assembly.
         /// </summary>
         /// <value>

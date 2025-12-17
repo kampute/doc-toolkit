@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Support;
     using NUnit.Framework;
     using System;
     using System.Linq;
@@ -16,6 +17,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(string), nameof(String))]
         [TestCase(typeof(System.Collections.Generic.List<>), "List`1")]
         [TestCase(typeof(System.Collections.Generic.List<string>), "List`1")]
+        [TestCase(typeof(Acme.SampleGenericClass<>), "SampleGenericClass`1")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), "InnerGenericClass`2")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), "DeepInnerGenericClass")]
         public void ImplementsClassType(Type classType, string expectedName)
         {
             var metadata = classType.GetMetadata();
@@ -43,7 +47,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(string), false)]
-        [TestCase(typeof(System.Linq.Enumerable), true)]
+        [TestCase(typeof(Enumerable), true)]
         public void IsStatic_HasExpectedValue(Type classType, bool isStatic)
         {
             var metadata = classType.GetMetadata<IClassType>();
@@ -51,6 +55,8 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.IsStatic, Is.EqualTo(isStatic));
         }
 
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass))]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), typeof(Acme.SampleDerivedGenericClass<object, int, string>))]
         [TestCase(typeof(System.IO.MemoryStream), typeof(System.IO.Stream))]
         [TestCase(typeof(System.IO.Stream), typeof(MarshalByRefObject))]
         [TestCase(typeof(MarshalByRefObject), typeof(object))]
@@ -103,9 +109,12 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(System.Collections.Generic.List<int>), 0, 1)]
         [TestCase(typeof(System.Collections.Generic.Dictionary<,>), 0, 2)]
         [TestCase(typeof(System.Collections.Generic.Dictionary<string, int>), 0, 2)]
-        [TestCase(typeof(Acme.MyList<int>), 0, 1)]
-        [TestCase(typeof(Acme.MyList<>.Helper<,>), 1, 2)]
-        [TestCase(typeof(Acme.MyList<int>.Helper<bool, string>), 1, 2)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, 1)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), 0, 1)]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, 2)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>), 1, 2)]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), 3, 0)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass), 3, 0)]
         public void OwnGenericParameterRange_HasExpectedValue(Type classType, int expectedOffset, int expectedCount)
         {
             var metadata = classType.GetMetadata<IClassType>();
@@ -113,121 +122,176 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.OwnGenericParameterRange, Is.EqualTo((expectedOffset, expectedCount)));
         }
 
-        [TestCase(typeof(Acme.UseList))]
-        public void Interfaces_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.ISampleInterface),
+            nameof(System.Collections.IEnumerable),
+            "IEnumerable`1" // IEnumerable<V>
+        )]
+        public void Interfaces_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Interfaces, Is.Not.Empty);
+            Assert.That(metadata.Interfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Fields_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = 1)]
+        public int Constructors_HasExpectedValue(Type classType)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Fields, Is.Not.Empty);
-            Assert.That(metadata.Fields.Where(f => !f.IsVisible), Is.Empty);
+            return metadata.Constructors.Count;
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Constructors_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Field)
+        )]
+        public void Fields_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Constructors, Is.Not.Empty);
-            Assert.That(metadata.Constructors.Where(c => !c.IsVisible), Is.Empty);
+            Assert.That(metadata.Fields.Select(static f => f.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Methods_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod)
+        )]
+        [TestCase(typeof(Acme.SampleExtensions),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForStruct),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForInterface),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethod),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethod),
+            nameof(Acme.SampleExtensions.StaticExtensionMethod),
+            nameof(Acme.SampleExtensions.GenericExtensionMethod),
+            nameof(Acme.SampleExtensions.NonExtensionMethod)
+        )]
+        public void Methods_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Methods, Is.Not.Empty);
-            Assert.That(metadata.Methods.Where(m => !m.IsVisible), Is.Empty);
+            Assert.That(metadata.Methods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Properties_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Property)
+        )]
+        [TestCase(typeof(Acme.SampleExtensions),
+            "InstanceExtensionPropertyForClass",
+            "StaticExtensionPropertyForClass",
+            "InstanceExtensionPropertyForStruct",
+            "StaticExtensionPropertyForStruct",
+            "InstanceExtensionPropertyForInterface",
+            "StaticExtensionPropertyForInterface",
+            "InstanceExtensionProperty",
+            "StaticExtensionProperty",
+            "FullExtensionProperty"
+        )]
+        public void Properties_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Properties, Is.Not.Empty);
-            Assert.That(metadata.Properties.Where(p => !p.IsVisible), Is.Empty);
+            Assert.That(metadata.Properties.Select(static p => p.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Events_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Event)
+        )]
+        public void Events_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Events, Is.Not.Empty);
-            Assert.That(metadata.Events.Where(e => !e.IsVisible), Is.Empty);
+            Assert.That(metadata.Events.Select(static e => e.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget))]
-        public void Operators_HasExpectedValue(Type classType)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            "Implicit"
+        )]
+        public void Operators_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.Operators, Is.Not.Empty);
-            Assert.That(metadata.Operators.Where(o => !o.IsVisible), Is.Empty);
+            Assert.That(metadata.Operators.Select(static o => o.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(Acme.Widget), new[] {
-            nameof(Acme.Widget.NestedClass),
-            nameof(Acme.Widget.NestedDerivedClass),
-            nameof(Acme.Widget.Direction),
-            nameof(Acme.Widget.Del),
-            "IMenuItem`1"
-        })]
-        public void NestedTypes_HasExpectedValue(Type classType, params string[] expectedTypeNames)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.ISampleInterface.InterfaceMethod),
+            nameof(System.Collections.Generic.IEnumerable<>.GetEnumerator),
+            nameof(System.Collections.IEnumerable.GetEnumerator)
+        )]
+        public void ExplicitInterfaceMethods_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            Assert.That(metadata.NestedTypes.Select(static x => x.Name), Is.EquivalentTo(expectedTypeNames));
+            var shortNames = metadata.ExplicitInterfaceMethods.Select(static m => m.Name.SubstringAfterLast('.'));
+
+            Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestBaseClass))]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.GetStatus")]
-        public void ExplicitInterfaceMethods_HasExpectedValue(Type classType, params string[] expectedMethodNames)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.ISampleInterface.InterfaceProperty)
+        )]
+        public void ExplicitInterfaceProperties_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var explicitMethods = metadata.ExplicitInterfaceMethods;
+            var shortNames = metadata.ExplicitInterfaceProperties.Select(static p => p.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitMethods.Select(m => m.Name), Is.EquivalentTo(expectedMethodNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestBaseClass))]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.IsCompleted")]
-        public void ExplicitInterfaceProperties_HasExpectedValue(Type classType, params string[] expectedPropertyNames)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.ISampleInterface.InterfaceEvent)
+        )]
+        public void ExplicitInterfaceEvents_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var explicitProperties = metadata.ExplicitInterfaceProperties;
+            var shortNames = metadata.ExplicitInterfaceEvents.Select(static e => e.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitProperties.Select(m => m.Name), Is.EquivalentTo(expectedPropertyNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(TestTypes.TestBaseClass))]
-        [TestCase(typeof(Acme.UseList), "Acme.IProcess<System.String>.Completed")]
-        public void ExplicitInterfaceEvents_HasExpectedValue(Type classType, params string[] expectedEventNames)
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            "False"
+        )]
+        public void ExplicitInterfaceOperators_HasExpectedValue(Type classType, params string[] expectedNames)
         {
             var metadata = classType.GetMetadata<IClassType>();
 
-            var explicitEvents = metadata.ExplicitInterfaceEvents;
+            var shortNames = metadata.ExplicitInterfaceOperators.Select(static e => e.Name.SubstringAfterLast('.'));
 
-            Assert.That(explicitEvents.Select(m => m.Name), Is.EquivalentTo(expectedEventNames));
+            Assert.That(shortNames, Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>),
+            typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>)
+        )]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>),
+            typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass)
+        )]
+        public void NestedTypes_HasExpectedValue(Type classType, params Type[] expectedTypes)
+        {
+            var metadata = classType.GetMetadata<IClassType>();
+            var expectedNestedTypes = expectedTypes.Select(static t => t.GetMetadata());
+
+            Assert.That(metadata.NestedTypes, Is.EquivalentTo(expectedNestedTypes));
         }
 
         [TestCase(typeof(string), ExpectedResult = "T:System.String")]
         [TestCase(typeof(System.Collections.Generic.List<>), ExpectedResult = "T:System.Collections.Generic.List`1")]
-        [TestCase(typeof(Acme.Widget), ExpectedResult = "T:Acme.Widget")]
-        [TestCase(typeof(Acme.Widget.NestedClass), ExpectedResult = "T:Acme.Widget.NestedClass")]
-        [TestCase(typeof(Acme.MyList<>), ExpectedResult = "T:Acme.MyList`1")]
-        [TestCase(typeof(Acme.MyList<>.Helper<,>), ExpectedResult = "T:Acme.MyList`1.Helper`2")]
+        [TestCase(typeof(Acme.SampleGenericClass<>), ExpectedResult = "T:Acme.SampleGenericClass`1")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), ExpectedResult = "T:Acme.SampleGenericClass`1.InnerGenericClass`2")]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = "T:Acme.SampleGenericClass`1.InnerGenericClass`2.DeepInnerGenericClass")]
         public string CodeReference_HasExpectedValue(Type type)
         {
             var metadata = type.GetMetadata<IClassType>();
@@ -235,68 +299,59 @@ namespace Kampute.DocToolkit.Test.Metadata
             return metadata.CodeReference;
         }
 
-        [TestCase(typeof(TestTypes), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestNestedClass), ExpectedResult = new[] { nameof(TestTypes) })]
-        [TestCase(typeof(TestTypes.TestNestedClass.InnerClass), ExpectedResult = new[] { nameof(TestTypes), nameof(TestTypes.TestNestedClass) })]
-        [TestCase(typeof(TestTypes.TestNestedClass.InnerClass.DeepestClass), ExpectedResult = new[] { nameof(TestTypes), nameof(TestTypes.TestNestedClass), nameof(TestTypes.TestNestedClass.InnerClass) })]
-        public string[] DeclaringTypeHierarchy_HasExpectedValue(Type type)
+        [TestCase(typeof(Acme.SampleGenericClass<>))]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>),
+            typeof(Acme.SampleGenericClass<>)
+        )]
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            typeof(Acme.SampleGenericClass<>),
+            typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>)
+        )]
+        public void DeclaringTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
+        {
+            var metadata = type.GetMetadata<IClassType>();
+            var expectedDeclaringTypes = expectedTypes.Select(static t => t.GetMetadata());
+
+            Assert.That(metadata.DeclaringTypeHierarchy, Is.EqualTo(expectedDeclaringTypes));
+        }
+
+        [TestCase(typeof(object))]
+        [TestCase(typeof(Acme.SampleGenericClass<>),
+            typeof(object)
+        )]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass),
+            typeof(object),
+            typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass),
+            typeof(Acme.SampleDerivedGenericClass<object, int, string>)
+        )]
+        public void BaseTypeHierarchy_HasExpectedValue(Type type, params Type[] expectedTypes)
+        {
+            var metadata = type.GetMetadata<IClassType>();
+            var expectedBaseTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
+
+            Assert.That(metadata.BaseTypeHierarchy, Is.EqualTo(expectedBaseTypes));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            nameof(Acme.ISampleInterface),
+            "IEnumerable`1" // IEnumerable<V>
+        )]
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>))]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass))]
+        [TestCase(typeof(Acme.SampleDirectDerivedConstructedGenericClass))]
+        public void ImplementedInterfaces_HasExpectedValue(Type type, params string[] expectedNames)
         {
             var metadata = type.GetMetadata<IClassType>();
 
-            return [.. metadata.DeclaringTypeHierarchy.Select(t => t.Name)];
+            Assert.That(metadata.ImplementedInterfaces.Select(static i => i.Name), Is.EquivalentTo(expectedNames));
         }
 
-        [TestCase(typeof(object), ExpectedResult = new string[] { })]
-        [TestCase(typeof(TestTypes.TestBaseClass), ExpectedResult = new[] { nameof(Object) })]
-        [TestCase(typeof(TestTypes.TestDerivedClass), ExpectedResult = new[] { nameof(Object), nameof(TestTypes.TestBaseClass) })]
-        [TestCase(typeof(TestTypes.TestGrandChildClass), ExpectedResult = new[] { nameof(Object), nameof(TestTypes.TestBaseClass), nameof(TestTypes.TestDerivedClass) })]
-        public string[] BaseTypeHierarchy_HasExpectedValue(Type type)
-        {
-            var metadata = type.GetMetadata<IClassType>();
-
-            return [.. metadata.BaseTypeHierarchy.Select(t => t.Name)];
-        }
-
-        [TestCase(typeof(TestTypes.TestExtensionTarget), ExpectedResult = new[] { nameof(TestTypes.ExtensionMethod) })]
-        [TestCase(typeof(TestTypes.TestBaseClass), ExpectedResult = new string[] { })]
-        public string[] ExtensionMethods_HasExpectedValue(Type type)
-        {
-            var extendedType = type.GetMetadata<IClassType>();
-
-            return [.. extendedType.ExtensionMethods.Select(m => m.Name)];
-        }
-
-        [TestCase(typeof(TestTypes.TestBaseClass), ExpectedResult = new[] { nameof(TestTypes.ITestInterface) })]
-        [TestCase(typeof(TestTypes.TestDerivedClass), ExpectedResult = new[] { nameof(TestTypes.IExtendedTestInterface) })]
-        public string[] ImplementedInterfaces_HasExpectedValue(Type type)
-        {
-            var metadata = type.GetMetadata<IClassType>();
-
-            return [.. metadata.ImplementedInterfaces.Select(i => i.Name)];
-        }
-
-        [TestCase(typeof(TestTypes.TestBaseClass), ExpectedResult = new[] {
-            nameof(TestTypes.TestDerivedClass)                // Directly inherits TestBaseClass
-        })]
-        [TestCase(typeof(TestTypes.GenericBaseClass<>), ExpectedResult = new[] {
-            nameof(TestTypes.ConstructedGenericDerivedClass), // Inherits GenericBaseClass<string>
-            "GenericDerivedClass`1"                           // Directly inherits GenericBaseClass<T>
-        })]
-        public string[] DerivedTypes_WithNoGenericBaseClass_ReturnsExpectedValue(Type type)
-        {
-            var metadata = type.GetMetadata<IClassType>();
-
-            return [.. metadata.DerivedTypes.Select(t => t.Name).OrderBy(n => n)];
-        }
-
-        [TestCase(typeof(TestTypes.TestBaseClass), typeof(TestTypes.TestBaseClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestBaseClass), typeof(TestTypes.TestDerivedClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestDerivedClass), typeof(TestTypes.TestBaseClass), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.TestDerivedClass), typeof(TestTypes.ITestInterface), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.GenericBaseClass<>), typeof(TestTypes.GenericDerivedClass<>), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.GenericBaseClass<int>), typeof(TestTypes.ConstructedGenericDerivedClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.GenericDerivedClass<>), typeof(TestTypes.GenericBaseClass<>), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.GenericBaseClass<int>), typeof(TestTypes.GenericBaseClass<long>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<object>), typeof(Acme.SampleGenericClass<string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<string>), typeof(Acme.SampleGenericClass<object>), ExpectedResult = false)]
         public bool IsAssignableFrom_ReturnsExpectedResult(Type targetType, Type sourceType)
         {
             var targetMetadata = targetType.GetMetadata<IClassType>();
@@ -305,21 +360,72 @@ namespace Kampute.DocToolkit.Test.Metadata
             return targetMetadata.IsAssignableFrom(sourceMetadata);
         }
 
-        [TestCase(typeof(TestTypes.TestDerivedClass), typeof(TestTypes.TestBaseClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestGrandChildClass), typeof(TestTypes.TestDerivedClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestGrandChildClass), typeof(TestTypes.TestBaseClass), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestGrandChildClass), typeof(object), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.TestBaseClass), typeof(TestTypes.TestDerivedClass), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.GenericDerivedClass<>), typeof(TestTypes.GenericBaseClass<>), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.ConstructedGenericDerivedClass), typeof(TestTypes.GenericBaseClass<int>), ExpectedResult = true)]
-        [TestCase(typeof(TestTypes.ConstructedGenericDerivedClass), typeof(TestTypes.GenericBaseClass<>), ExpectedResult = false)]
-        [TestCase(typeof(TestTypes.TestDerivedClass), typeof(TestTypes.TestDerivedClass), ExpectedResult = false)]
+        [Test]
+        public void IsAssignableFrom_ForSameTypeDefinitionButDifferentContexts_ReturnsTrue()
+        {
+            var direct = typeof(Acme.SampleGenericClass<>).GetMetadata<IClassType>();
+            var indirect = typeof(Acme.SampleExtensions)
+                .GetMethod(nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass))!
+                .GetParameters()[0].ParameterType.GetMetadata<IClassType>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(direct.IsAssignableFrom(indirect), Is.True, "Direct should be assignable from Indirect");
+                Assert.That(indirect.IsAssignableFrom(direct), Is.True, "Indirect should be assignable from Direct");
+            }
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>),
+            "InstanceExtensionPropertyForClass",
+            "StaticExtensionPropertyForClass"
+        )]
+        public void ExtensionProperties_HasExpectedValue(Type type, params string[] expectedNames)
+        {
+            var extendedType = type.GetMetadata<IClassType>();
+
+            Assert.That(extendedType.ExtensionProperties.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>),
+            nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.StaticExtensionMethodForClass),
+            nameof(Acme.SampleExtensions.GenericExtensionMethodForClass)
+        )]
+        public void ExtensionMethods_HasExpectedValue(Type type, params string[] expectedNames)
+        {
+            var extendedType = type.GetMetadata<IClassType>();
+
+            Assert.That(extendedType.ExtensionMethods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(object), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), typeof(Acme.SampleDerivedGenericClass<object, int, string>), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleDirectDerivedConstructedGenericClass), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleDirectDerivedConstructedGenericClass), typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleDirectDerivedConstructedGenericClass), typeof(Acme.SampleDerivedGenericClass<object, int, string>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), typeof(Acme.SampleDerivedConstructedGenericClass), ExpectedResult = false)]
         public bool IsSubclassOf_ReturnsExpectedResult(Type type, Type superType)
         {
             var metadata = type.GetMetadata<IClassType>();
             var baseMetadata = superType.GetMetadata<IClassType>();
 
             return metadata.IsSubclassOf(baseMetadata);
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
+            typeof(Acme.SampleDerivedGenericClass<,,>),
+            typeof(Acme.SampleDirectDerivedConstructedGenericClass)
+        )]
+        public void DerivedTypes_WithNoGenericBaseClass_ReturnsExpectedValue(Type type, params Type[] expectedTypes)
+        {
+            var metadata = type.GetMetadata<IClassType>();
+            var expectedDerivedTypes = expectedTypes.Select(static t => t.GetMetadata<IClassType>());
+
+            Assert.That(metadata.DerivedTypes, Is.EquivalentTo(expectedDerivedTypes));
         }
     }
 }

@@ -5,12 +5,12 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
-    using Kampute.DocToolkit.Collections;
     using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="Type"/> representing a generic type parameter and provides metadata access.
@@ -25,6 +25,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     public class TypeParameterAdapter : TypeAdapter, ITypeParameter
     {
         private readonly Lazy<IMember> declaringMember;
+        private readonly Lazy<TypeParameterConstraints> constraints;
         private readonly Lazy<IReadOnlyList<IType>> typeConstraints;
 
         /// <summary>
@@ -42,6 +43,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentException("Type must be a generic parameter.", nameof(type));
 
             declaringMember = new(GetDeclaringMember);
+            constraints = new(GetConstraints);
             typeConstraints = new(() => [.. GetConstraintTypes()]);
         }
 
@@ -59,12 +61,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             get
             {
-                var attrs = Reflection.GenericParameterAttributes;
+                var attributes = Reflection.GenericParameterAttributes & GenericParameterAttributes.VarianceMask;
 
-                if ((attrs & GenericParameterAttributes.Covariant) != 0)
+                if (attributes.HasFlag(GenericParameterAttributes.Covariant))
                     return TypeParameterVariance.Covariant;
 
-                if ((attrs & GenericParameterAttributes.Contravariant) != 0)
+                if (attributes.HasFlag(GenericParameterAttributes.Contravariant))
                     return TypeParameterVariance.Contravariant;
 
                 return TypeParameterVariance.Invariant;
@@ -72,38 +74,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public virtual TypeParameterConstraints Constraints
-        {
-            get
-            {
-                var attrs = Reflection.GenericParameterAttributes;
-                var constraints = TypeParameterConstraints.None;
-
-                if ((attrs & GenericParameterAttributes.ReferenceTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.ReferenceType;
-
-                if ((attrs & GenericParameterAttributes.NotNullableValueTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.ValueType;
-
-                if ((attrs & GenericParameterAttributes.DefaultConstructorConstraint) != 0)
-                    constraints |= TypeParameterConstraints.DefaultConstructor;
-
-                /* .NET Standard 2.1 does not have the following flags:
-
-                if ((attrs & GenericParameterAttributes.NotNullConstraint) != 0)
-                    constraints |= TypeParameterConstraints.NotNull;
-
-                if ((attrs & GenericParameterAttributes.UnmanagedTypeConstraint) != 0)
-                    constraints |= TypeParameterConstraints.UnmanagedType;
-
-                */
-
-                return constraints;
-            }
-        }
+        public TypeParameterConstraints Constraints => constraints.Value;
 
         /// <inheritdoc/>
         public IReadOnlyList<IType> TypeConstraints => typeConstraints.Value;
+
+        /// <inheritdoc/>
+        public sealed override bool IsDirectDeclaration => false;
 
         /// <inheritdoc/>
         public virtual bool IsGenericMethodParameter => Reflection.IsGenericMethodParameter;
@@ -115,124 +92,93 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public bool HasConstraints => Constraints != TypeParameterConstraints.None || TypeConstraints.Count > 0;
 
         /// <inheritdoc/>
-        public sealed override bool IsDirectDeclaration => false;
-
-        /// <inheritdoc/>
         public override bool IsAssignableFrom(IType source) => false;
 
         /// <inheritdoc/>
-        public override bool IsSubstitutableBy(IType other)
+        public virtual bool IsSatisfiableBy(IType type)
         {
-            if (other is null)
+            if (type is null)
                 return false;
 
+            if (type is ITypeParameter typeParameter)
+                return IsSatisfiableBy(typeParameter);
+
+            // Check reference type constraint, disallow value and by-ref-like types
+            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && type is not IClassType)
+                return false;
+
+            // Check not-nullable value type constraint, disallow reference types
+            if (Constraints.HasFlag(TypeParameterConstraints.NotNullableValueType) && !type.IsValueType)
+                return false;
+
+            // Check by-ref-like constraint, disallow by-ref-like types if not allowed
+            if (!Constraints.HasFlag(TypeParameterConstraints.AllowByRefLike) && type is IStructType { IsRefLike: true })
+                return false;
+
+            // Check default constructor constraint, disallow types without a default constructor
+            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !HasDefaultConstructor(type))
+                return false;
+
+            // Check type constraints
+            return TypeConstraints.All(tc => tc.IsAssignableFrom(type));
+        }
+
+        /// <inheritdoc/>
+        public virtual bool IsSatisfiableBy(ITypeParameter other)
+        {
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (other is ITypeParameter otherTypeParameter)
-                return Accepts(otherTypeParameter);
-
-            // Check reference type constraint
-            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && other.IsValueType)
+            if (other is null)
                 return false;
 
-            // Check value type constraint
-            if (Constraints.HasFlag(TypeParameterConstraints.ValueType) && !other.IsValueType)
+            // Check reference type constraint matching
+            if (IsConstraintNotSatisfied(TypeParameterConstraints.NotNullableValueType))
                 return false;
 
-            // Check default constructor constraint (only applies to reference types)
-            if (Constraints.HasFlag(TypeParameterConstraints.DefaultConstructor) && !other.IsValueType)
+            // Check by-ref-like constraint matching
+            if (IsConstraintNotSatisfied(TypeParameterConstraints.AllowByRefLike))
+                return false;
+
+            // Check not-nullable value type constraint matching
+            if (IsConstraintNotSatisfied(TypeParameterConstraints.ReferenceType))
             {
-                if (other is not IWithConstructors sourceWithConstructors)
-                    return false;
-
-                if (!sourceWithConstructors.Constructors.Any(c => c.IsDefaultConstructor))
+                // If the other missing the not-nullable value type constraint,
+                // it must have type constraints that are all reference types
+                if (other.TypeConstraints.Count == 0 || !other.TypeConstraints.All(static tc => tc is IClassType))
                     return false;
             }
 
-            // Check type constraints
-            return TypeConstraints.All(tc => tc.IsAssignableFrom(other));
+            // Check default constructor constraint matching
+            if (IsConstraintNotSatisfied(TypeParameterConstraints.DefaultConstructor))
+            {
+                // If the other is missing the default constructor constraint,
+                // it must have type constraints that all have default constructors
+                if (other.TypeConstraints.Count == 0 || !other.TypeConstraints.All(HasDefaultConstructor))
+                    return false;
+            }
+
+            return TypeConstraints.All(tc => other.TypeConstraints.Any(cct => tc.IsAssignableFrom(cct)));
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsConstraintNotSatisfied(TypeParameterConstraints flag)
+                => Constraints.HasFlag(flag) && !other.Constraints.HasFlag(flag);
         }
 
-        /// <summary>
-        /// Determines whether this type parameter accepts the specified type parameter as a valid substitution.
-        /// </summary>
-        /// <param name="source">The type parameter to evaluate for substitution compatibility.</param>
-        /// <returns>
-        /// <see langword="true"/> if this type parameter accepts the specified type parameter; otherwise, <see langword="false"/>.
-        /// </returns>
-        /// <remarks>
-        /// A type parameter is accepted if it represents the same parameter position in the generic hierarchy,
-        /// accounting for inheritance chains, method overrides, interface implementations, and type nesting.
-        /// <para>
-        /// This method is used to match type parameters across method overrides, interface implementations,
-        /// and nested type declarations accessing outer type parameters.
-        /// </para>
-        /// </remarks>
-        protected virtual bool Accepts(ITypeParameter source)
+        /// <inheritdoc/>
+        public override bool Equals(IType? other)
         {
-            if (source is null)
-                return false;
-
-            if (ReferenceEquals(this, source))
+            if (ReferenceEquals(this, other))
                 return true;
 
-            if (Position != source.Position || IsGenericMethodParameter != source.IsGenericMethodParameter)
-                return false;
-
-            var targetMember = DeclaringMember;
-            var sourceMember = source.DeclaringMember;
-
-            if (ReferenceEquals(targetMember, sourceMember))
-                return true;
-
-            // Walk up the inheritance chain
-            // Overridden methods and base types can access base type parameters
-            try
-            {
-                var inheritedMember = sourceMember.GetInheritedMember();
-                while (inheritedMember is not null)
-                {
-                    if (ReferenceEquals(targetMember, inheritedMember))
-                        return true;
-
-                    inheritedMember = inheritedMember.GetInheritedMember();
-                }
-            }
-            catch (InvalidOperationException) when (IsGenericMethodParameter)
-            {
-                // A recursive call chain may occur if this function is called
-                // as part of resolving the base declaration of a generic method.
-                // In such case, this exception indicates that the source type
-                // parameter and this type parameter are declared on the same
-                // generic method definition.
-                return true;
-            }
-
-            if (IsGenericTypeParameter)
-            {
-                // Check nesting relationships
-                // Nested types can access outer type parameters
-                var declaringType = sourceMember.DeclaringType;
-                while (declaringType is not null)
-                {
-                    if (ReferenceEquals(targetMember, declaringType))
-                        return true;
-
-                    declaringType = declaringType.DeclaringType;
-                }
-
-                // Check implemented interfaces
-                // Types can access type parameters declared on their interfaces
-                if (sourceMember is IWithInterfaces typeWithInterfaces)
-                {
-                    return typeWithInterfaces.Interfaces
-                        .Select(i => i.IsConstructedGenericType ? (IInterfaceType)i.GenericTypeDefinition! : i)
-                        .Contains(targetMember, ReferenceEqualityComparer<IMember>.Instance);
-                }
-            }
-
-            return false;
+            return other is ITypeParameter otherParam
+                && otherParam.Name == Name
+                && otherParam.Position == Position
+                && otherParam.Variance == Variance
+                && otherParam.Constraints == Constraints
+                && otherParam.IsGenericMethodParameter == IsGenericMethodParameter
+                && otherParam.IsGenericTypeParameter == IsGenericTypeParameter
+                && otherParam.TypeConstraints.SequenceEqual(TypeConstraints);
         }
 
         /// <inheritdoc/>
@@ -249,6 +195,30 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             => Assembly.Repository.GetMemberMetadata(IsGenericMethodParameter ? Reflection.DeclaringMethod! : Reflection.DeclaringType!);
 
         /// <summary>
+        /// Retrieves the constraints applied to the type parameter.
+        /// </summary>
+        /// <returns>A <see cref="TypeParameterConstraints"/> value representing the constraints.</returns>
+        protected virtual TypeParameterConstraints GetConstraints()
+        {
+            var parameterAttributes = Reflection.GenericParameterAttributes;
+            var parameterConstraints = TypeParameterConstraints.None;
+
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint))
+                parameterConstraints |= TypeParameterConstraints.ReferenceType;
+
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
+                parameterConstraints |= TypeParameterConstraints.NotNullableValueType;
+
+            if (parameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint))
+                parameterConstraints |= TypeParameterConstraints.DefaultConstructor;
+
+            if (parameterAttributes.HasFlag((GenericParameterAttributes)32 /* AllowByRefLike */))
+                parameterConstraints |= TypeParameterConstraints.AllowByRefLike;
+
+            return parameterConstraints;
+        }
+
+        /// <summary>
         /// Retrieves the constraint types for the type parameter.
         /// </summary>
         /// <returns>An enumerable collection <see cref="IType"/> representing the constraint types.</returns>
@@ -258,5 +228,23 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override ICustomAttribute CreateAttributeMetadata(CustomAttributeData attribute)
             => Assembly.Repository.GetCustomAttributeMetadata(attribute, AttributeTarget.TypeParameter);
+
+        /// <summary>
+        /// Determines whether the specified type has a default constructor.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns><see langword="true"/> if the type has a default constructor; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasDefaultConstructor(IType type)
+        {
+            if (type.IsValueType)
+                return true;
+
+            if (type.IsInterface || type.IsEnum)
+                return false;
+
+            return type is IWithConstructors { HasConstructors: true } withConstructors
+                && withConstructors.Constructors.Any(static c => c.IsDefaultConstructor);
+        }
     }
 }

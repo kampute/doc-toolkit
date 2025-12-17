@@ -59,7 +59,9 @@ namespace Kampute.DocToolkit.Test
         public static IDocumentationContext CreateDocumentationContext<TFormat>(IEnumerable<IAssembly> assemblies, IEnumerable<ITopic> topics)
             where TFormat : IDocumentFormatter, new()
         {
-            return new DocumentationContext(new CSharp(), CreateAddressProvider(), CreateXmlDocProvider(), new TFormat(), assemblies, topics);
+            var addressProvider = CreateAddressProvider();
+            var xmlDocProvider = new XmlDocProvider(CreateXmlDocResolver());
+            return new DocumentationContext(new CSharp(), addressProvider, xmlDocProvider, new TFormat(), assemblies, topics);
         }
 
         /// <summary>
@@ -85,7 +87,7 @@ namespace Kampute.DocToolkit.Test
                 {
                     if (member.IsDirectDeclaration)
                     {
-                        var resourceName = member.CodeReference[2..].ReplaceMany(['`', '#'], '-').ToLowerInvariant();
+                        var resourceName = member.CodeReference[2..].ReplaceChars(['`', '#'], '-').ToLowerInvariant();
                         url = new RawUri($"https://example.com/{resourceName}", UriKind.Absolute);
                         return true;
                     }
@@ -110,7 +112,7 @@ namespace Kampute.DocToolkit.Test
                 {
                     if (member.IsDirectDeclaration)
                     {
-                        path = member.CodeReference[2..].ReplaceMany(['`', '#'], '-').ToLowerInvariant();
+                        path = member.CodeReference[2..].ReplaceChars(['`', '#'], '-').ToLowerInvariant();
                         return true;
                     }
 
@@ -127,29 +129,28 @@ namespace Kampute.DocToolkit.Test
         }
 
         /// <summary>
-        /// Creates a mocked XML documentation provider.
+        /// Creates a mocked XML documentation resolver.
         /// </summary>
-        /// <returns>A mocked XML documentation provider.</returns>
-        public static IXmlDocProvider CreateXmlDocProvider()
+        /// <returns>A mocked XML documentation resolver.</returns>
+        public static IXmlDocResolver CreateXmlDocResolver()
         {
-            var contentProviderMock = new Mock<IXmlDocProvider>();
+            var xmlDocResolverMock = new Mock<IXmlDocResolver>();
 
-            contentProviderMock.SetupGet(x => x.HasDocumentation).Returns(true);
-            contentProviderMock.Setup(x => x.TryGetDoc(It.IsAny<string>(), out It.Ref<XmlDocEntry?>.IsAny))
-                .Returns((string cref, out XmlDocEntry? doc) =>
+            xmlDocResolverMock.SetupGet(static x => x.HasDocumentation).Returns(true);
+            xmlDocResolverMock.Setup(static x => x.TryGetXmlDoc(It.IsAny<string>(), out It.Ref<XElement?>.IsAny))
+                .Returns(static (string cref, out XElement? xmlDoc) =>
                 {
                     if (CodeReference.IsValid(cref))
                     {
-                        var xmlComment = XElement.Parse($"<member name=\"{cref}\"><summary>Description of <c>{cref[2..]}</c>.</summary></member>");
-                        doc = new XmlDocEntry(xmlComment);
+                        xmlDoc = XElement.Parse($"<member name=\"{cref}\"><summary>Description of <c>{cref[2..]}</c>.</summary></member>");
                         return true;
                     }
 
-                    doc = null;
+                    xmlDoc = null;
                     return false;
                 });
 
-            return contentProviderMock.Object;
+            return xmlDocResolverMock.Object;
         }
 
         /// <summary>
@@ -158,17 +159,17 @@ namespace Kampute.DocToolkit.Test
         /// <returns>A mocked XML documentation provider.</returns>
         public static IXmlDocReferenceResolver CreateXmlDocReferenceResolver()
         {
-            var referenceResolverMock = new Mock<IXmlDocReferenceResolver>();
+            var xmlDocReferenceResolverMock = new Mock<IXmlDocReferenceResolver>();
 
-            referenceResolverMock.Setup(static r => r.FormatCode(It.IsAny<string>())).Returns<string>(static code => code);
-            referenceResolverMock.Setup(static r => r.GetLanguageId(It.IsAny<string>())).Returns("csharp");
-            referenceResolverMock.Setup(static r => r.GetKeywordUrl(It.IsAny<string>())).Returns<string>(static kw => $"https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/{kw}");
-            referenceResolverMock.Setup(static r => r.GetCodeReferenceUrl(It.IsAny<string>())).Returns<string>(static cref => $"https://learn.microsoft.com/dotnet/api/{cref[2..].ToLowerInvariant()}");
-            referenceResolverMock.Setup(static r => r.GetCodeReferenceTitle(It.IsAny<string>())).Returns<string>(static cref => cref[2..]);
-            referenceResolverMock.Setup(static r => r.GetTopicUrl(It.IsAny<string>())).Returns<string>(static href => href);
-            referenceResolverMock.Setup(static r => r.GetTopicTitle(It.IsAny<string>())).Returns<string>(static href => $"Title of {href}");
+            xmlDocReferenceResolverMock.Setup(static r => r.FormatCode(It.IsAny<string>())).Returns<string>(static code => code);
+            xmlDocReferenceResolverMock.Setup(static r => r.GetLanguageId(It.IsAny<string>())).Returns("csharp");
+            xmlDocReferenceResolverMock.Setup(static r => r.GetKeywordUrl(It.IsAny<string>())).Returns<string>(static kw => $"https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/{kw}");
+            xmlDocReferenceResolverMock.Setup(static r => r.GetCodeReferenceUrl(It.IsAny<string>())).Returns<string>(static cref => $"https://learn.microsoft.com/dotnet/api/{cref[2..].ToLowerInvariant()}");
+            xmlDocReferenceResolverMock.Setup(static r => r.GetCodeReferenceTitle(It.IsAny<string>())).Returns<string>(static cref => cref[2..]);
+            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicUrl(It.IsAny<string>())).Returns<string>(static href => href);
+            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicTitle(It.IsAny<string>())).Returns<string>(static href => $"Title of {href}");
 
-            return referenceResolverMock.Object;
+            return xmlDocReferenceResolverMock.Object;
         }
 
         /// <summary>

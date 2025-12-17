@@ -70,7 +70,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Constructs the code reference string for this member.
         /// </summary>
         /// <returns>The constructed code reference string.</returns>
-        private string ConstructCodeReference()
+        protected virtual string ConstructCodeReference()
         {
             var (prefix, unqualifiedSignature) = GetCodeReferenceParts();
             return $"{prefix}:{DeclaringType.Signature}.{unqualifiedSignature}";

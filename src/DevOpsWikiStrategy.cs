@@ -305,7 +305,7 @@ namespace Kampute.DocToolkit
         /// <remarks>
         /// This method encodes fragments to match Azure DevOps Wiki heading fragment rules:
         /// <list type="bullet">
-        ///   <item><description>Lowercases all characters.</description></item>
+        ///   <item><description>All characters are converted to lowercase.</description></item>
         ///   <item><description>Spaces are replaced with hyphens.</description></item>
         ///   <item><description>Reserved or special characters are percent-encoded.</description></item>
         ///   <item><description>Forbidden characters such (#, /, \) are replaced with underscores.</description></item>

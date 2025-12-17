@@ -5,10 +5,14 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Capabilities;
+    using Kampute.DocToolkit.Support;
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="EventInfo"/> and provides metadata access.
@@ -77,18 +81,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
         /// <inheritdoc/>
         protected sealed override (char, string) GetCodeReferenceParts()
-        {
-            var signature = Name;
-            if (signature.Contains('.'))
-                signature = signature.Replace('.', '#').Replace('<', '{').Replace('>', '}');
-
-            return ('E', signature);
-        }
+            => ('E', Name.Contains('.') ? Name.TranslateChars(".<>", "#{}") : Name);
 
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindOverriddenMember()
         {
-            if (IsStatic || IsExplicitInterfaceImplementation || Virtuality == MemberVirtuality.None)
+            if (Virtuality == MemberVirtuality.None)
                 return null;
 
             for (var baseType = DeclaringType.BaseType; baseType is not null; baseType = baseType.BaseType)
@@ -107,7 +105,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindImplementedMember()
         {
-            if (IsPublic && !IsStatic)
+            if (IsPublic)
             {
                 return ((IInterfaceCapableType)DeclaringType).Interfaces
                     .Select(i => i.Events.FindByName(Name))
@@ -116,7 +114,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
 
             if (IsExplicitInterfaceImplementation)
             {
-                var (interfaceFullName, memberName) = AdapterHelper.DecodeExplicitName(Name);
+                var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
 
                 return ((IInterfaceCapableType)DeclaringType)
                     .Interfaces.FindByFullName(interfaceFullName)?
@@ -129,21 +127,34 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
-            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IWithEvents typeDef }
-                ? typeDef.Events.FindByName(Name)
+            return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
+                ? GetEventsWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
                 : (IVirtualTypeMember?)null;
         }
 
         /// <summary>
-        /// Determines whether the given eent can be considered a base declaration of this event.
+        /// Determines whether the given event can be considered a base declaration of this event.
         /// </summary>
         /// <param name="baseCandidate">The other event to compare against.</param>
         /// <returns><see langword="true"/> if the given event can be considered a base declaration; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// This method compares only the event handler types of the events. It assumes that the caller has already verified other necessary conditions,
-        /// such as matching names.
+        /// This method compares only the event signatures, specifically the static/instance nature and the event handler types of the events.
+        /// It assumes that the caller has already verified other necessary conditions, such as matching names.
         /// </remarks>
-        protected virtual bool HasMatchingSignature(IEvent? baseCandidate) => baseCandidate is not null && baseCandidate.Type.IsSubstitutableBy(Type);
+        protected virtual bool HasMatchingSignature(IEvent? baseCandidate)
+        {
+            return baseCandidate is not null
+                && baseCandidate.IsStatic == IsStatic
+                && TypesAreCompatible(baseCandidate.Type, Type);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool TypesAreCompatible(IType expectedType, IType actualType)
+            {
+                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
+                    ? typeParameter.IsSatisfiableBy(actualType)
+                    : expectedType.Equals(actualType);
+            }
+        }
 
         /// <summary>
         /// Retrieves the event handler type for the event.
@@ -168,5 +179,23 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// </summary>
         /// <returns>An <see cref="IMethod"/> representing the raise method, or <see langword="null"/> if none exists.</returns>
         protected virtual IMethod? GetRaiserMethod() => Reflection.RaiseMethod is MethodInfo raiser ? (IMethod)Assembly.Repository.GetMethodMetadata(raiser) : null;
+
+        /// <summary>
+        /// Retrieves events from the specified type that have the same name as this event.
+        /// </summary>
+        /// <param name="type">The type to search for similar property names.</param>
+        /// <param name="preserveOrder">Indicates whether to preserve the order of events as they appear in the type.</param>
+        /// <returns>An enumerable collection of <see cref="IEvent"/> objects with same name as this event.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected IEnumerable<IEvent> GetEventsWithSameName(IType type, bool preserveOrder = false)
+        {
+            return IsExplicitInterfaceImplementation
+                ? type is IWithExplicitInterfaceEvents withExplicitEvents
+                    ? withExplicitEvents.ExplicitInterfaceEvents.WhereName(Name, preserveOrder)
+                    : []
+                : type is IWithEvents withEvents
+                    ? withEvents.Events.WhereName(Name, preserveOrder)
+                    : [];
+        }
     }
 }

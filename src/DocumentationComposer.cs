@@ -269,11 +269,7 @@ namespace Kampute.DocToolkit
             }
 
             if (granularity.HasFlag(PageGranularity.Member))
-            {
-                GenerateDocumentationForProperties(writerFactory, interfaceType.Properties);
-                GenerateDocumentationForMethods(writerFactory, interfaceType.Methods);
-                GenerateDocumentationForEvents(writerFactory, interfaceType.Events);
-            }
+                GenerateDocumentationForCompositeTypeMembers(writerFactory, interfaceType);
         }
 
         /// <summary>
@@ -485,12 +481,12 @@ namespace Kampute.DocToolkit
             if (compositeType is null)
                 throw new ArgumentNullException(nameof(compositeType));
 
-            GenerateDocumentationForConstructors(writerFactory, compositeType.Constructors);
             GenerateDocumentationForFields(writerFactory, compositeType.Fields);
+            GenerateDocumentationForConstructors(writerFactory, compositeType.Constructors);
             GenerateDocumentationForProperties(writerFactory, compositeType.Properties.Concat(compositeType.ExplicitInterfaceMembers.OfType<PropertyModel>()));
             GenerateDocumentationForMethods(writerFactory, compositeType.Methods.Concat(compositeType.ExplicitInterfaceMembers.OfType<MethodModel>()));
             GenerateDocumentationForEvents(writerFactory, compositeType.Events.Concat(compositeType.ExplicitInterfaceMembers.OfType<EventModel>()));
-            GenerateDocumentationForOperators(writerFactory, compositeType.Operators);
+            GenerateDocumentationForOperators(writerFactory, compositeType.Operators.Concat(compositeType.ExplicitInterfaceMembers.OfType<OperatorModel>()));
         }
     }
 }

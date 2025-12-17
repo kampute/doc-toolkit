@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An abstract adapter that wraps a generic-capable <see cref="Type"/> and provides metadata access.
@@ -45,7 +46,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         }
 
         /// <inheritdoc/>
-        public string UnqualifiedName => Name.SubstringBeforeLastOrSelf('`');
+        public string SimpleName => Name.SubstringBeforeLastOrSelf('`');
+
+        /// <inheritdoc/>
+        public sealed override bool IsDirectDeclaration => !IsConstructedGenericType;
 
         /// <inheritdoc/>
         public virtual bool IsGenericTypeDefinition => Reflection.IsGenericTypeDefinition;
@@ -66,7 +70,76 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public (int Offset, int Count) OwnGenericParameterRange => ownGenericArity ??= GetOwnGenericParameterRange();
 
         /// <inheritdoc/>
-        public override bool IsDirectDeclaration => !IsGenericType || IsGenericTypeDefinition;
+        public override bool IsAssignableFrom(IType source)
+        {
+            if (base.IsAssignableFrom(source))
+                return true;
+
+            if (!IsGenericType || !source.IsGenericType)
+                return false;
+
+            var genericSource = (IGenericCapableType)source;
+            return (IsGenericTypeDefinition, genericSource.IsGenericTypeDefinition) switch
+            {
+                (true, true) => false,
+                (true, false) => IsDefinitionAssignableFromConstructedSource(),
+                (false, true) => IsConstructedAssignableFromDefinitionSource(),
+                (false, false) => IsConstructedAssignableFromConstructedSource(),
+            };
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsDefinitionAssignableFromConstructedSource()
+            {
+                return Equals(genericSource.GenericTypeDefinition)
+                    && IsAssignabilitySatisfied(TypeParameters, genericSource.TypeArguments);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool IsConstructedAssignableFromDefinitionSource()
+            {
+                return GenericTypeDefinition!.Equals(genericSource)
+                    && IsAssignabilitySatisfied(genericSource.TypeParameters, TypeArguments);
+            }
+
+            bool IsConstructedAssignableFromConstructedSource()
+            {
+                if (!GenericTypeDefinition!.Equals(genericSource.GenericTypeDefinition!))
+                    return false;
+
+                var typeParameters = GenericTypeDefinition.TypeParameters;
+                for (var i = 0; i < typeParameters.Count; i++)
+                {
+                    var typeParameter = typeParameters[i];
+                    var currentTypeArgument = TypeArguments[i];
+                    var sourceTypeArgument = genericSource.TypeArguments[i];
+
+                    var isAssignable = typeParameter.Variance switch
+                    {
+                        TypeParameterVariance.Covariant => currentTypeArgument.IsAssignableFrom(sourceTypeArgument),
+                        TypeParameterVariance.Contravariant => sourceTypeArgument.IsAssignableFrom(currentTypeArgument),
+                        _ => currentTypeArgument.Equals(sourceTypeArgument),
+                    };
+
+                    if (!isAssignable)
+                        return false;
+                }
+
+                return true;
+            }
+
+            static bool IsAssignabilitySatisfied(IReadOnlyList<ITypeParameter> typeParameters, IReadOnlyList<IType> typeArguments)
+            {
+                for (var i = 0; i < typeParameters.Count; ++i)
+                {
+                    if (typeArguments[i] is not ITypeParameter argumentAsParameter)
+                        return false;
+
+                    if (!argumentAsParameter.IsSatisfiableBy(typeParameters[i]))
+                        return false;
+                }
+                return true;
+            }
+        }
 
         /// <inheritdoc/>
         protected override string ConstructSignature(bool useParameterNotation)
@@ -112,7 +185,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                     var count = genericType.OwnGenericParameterRange.Count;
                     if (count > 0)
                     {
-                        sb.Append(genericType.UnqualifiedName);
+                        sb.Append(genericType.SimpleName);
                         AppendGenericParameters(count);
                         appendName = false;
                     }
@@ -135,7 +208,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                         sb.Append(',');
 
                     var typeArg = typeArgs[typeArgIndex++];
-                    sb.Append(useParameterNotation ? typeArg.ParametericSignature : typeArg.Signature);
+                    sb.Append(useParameterNotation ? typeArg.ParametricSignature : typeArg.Signature);
                 }
                 sb.Append('}');
             }

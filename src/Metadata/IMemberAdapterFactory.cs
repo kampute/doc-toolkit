@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata
 {
+    using Kampute.DocToolkit.Metadata.Reflection;
     using System;
     using System.Reflection;
 
@@ -17,6 +18,16 @@ namespace Kampute.DocToolkit.Metadata
     /// </remarks>
     public interface IMemberAdapterFactory
     {
+        /// <summary>
+        /// Creates the extension block metadata for the specified extension block information.
+        /// </summary>
+        /// <param name="declaringType">The type metadata that declares the extension block.</param>
+        /// <param name="extensionBlock">The extension block information to get metadata for.</param>
+        /// <returns>A metadata representation of the specified extension block.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="extensionBlock"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="extensionBlock"/> does not belong to the specified class.</exception>
+        IExtensionBlock CreateExtensionBlockMetadata(IType declaringType, ExtensionBlockInfo extensionBlock);
+
         /// <summary>
         /// Creates the type metadata for the specified type within the given assembly.
         /// </summary>

@@ -29,7 +29,7 @@ namespace Kampute.DocToolkit.Models
         protected EnumModel(object declaringEntity, IEnumType type)
             : base(declaringEntity, type)
         {
-            values = new(() => [.. type.Fields.Select(field => new FieldModel(this, field))]);
+            values = new(() => [.. Metadata.Fields.Select(field => new FieldModel(this, field))]);
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace Kampute.DocToolkit.Models
         /// <param name="declaringType">The type that declares the type.</param>
         /// <param name="type">The type represented by this instance.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaringType"/> or <paramref name="type"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> is not directedly nested within <paramref name="declaringType"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> is not directly nested within <paramref name="declaringType"/>.</exception>
         public EnumModel(TypeModel declaringType, IEnumType type)
             : this((object)declaringType ?? throw new ArgumentNullException(nameof(declaringType)), type)
         {

@@ -11,7 +11,7 @@ namespace Kampute.DocToolkit.Metadata
     /// <summary>
     /// Defines a contract for accessing property metadata.
     /// </summary>
-    public interface IProperty : IVirtualTypeMember, IWithParameters, IWithOverloads, IWithCustomModifiers
+    public interface IProperty : IVirtualTypeMember, IWithParameters, IWithOverloads, IWithCustomModifiers, IWithExtensionBehavior
     {
         /// <summary>
         /// Gets the type of the property.

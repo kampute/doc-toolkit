@@ -97,7 +97,7 @@ namespace Kampute.DocToolkit.IO.Minifiers
         /// </value>
         public HashSet<string> PreformattedTags { get; } = new(StringComparer.OrdinalIgnoreCase)
         {
-            "pre", "textarea", "script", "style"
+            "PRE", "TEXTAREA", "SCRIPT", "STYLE"
         };
 
         /// <summary>
@@ -109,9 +109,9 @@ namespace Kampute.DocToolkit.IO.Minifiers
         /// </value>
         public HashSet<string> InlineTags { get; } = new(StringComparer.OrdinalIgnoreCase)
         {
-            "a", "abbr", "b", "bdi", "bdo", "br", "button", "cite", "code", "data", "dfn", "del", "em", "i",
-            "img", "input", "ins", "kbd", "label", "mark", "object", "output", "q", "ruby", "rt", "rp", "s",
-            "samp", "select", "small", "span", "strong", "sub", "sup", "time", "tt", "u", "var", "wbr"
+            "A", "ABBR", "B", "BDI", "BDO", "BR", "BUTTON", "CITE", "CODE", "DATA", "DFN", "DEL", "EM", "I",
+            "IMG", "INPUT", "INS", "KBD", "LABEL", "MARK", "OBJECT", "OUTPUT", "Q", "RUBY", "RT", "RP", "S",
+            "SAMP", "SELECT", "SMALL", "SPAN", "STRONG", "SUB", "SUP", "TIME", "TT", "U", "VAR", "WBR"
         };
 
         /// <summary>

@@ -8,6 +8,8 @@ namespace Kampute.DocToolkit.Models
     using Kampute.DocToolkit;
     using Kampute.DocToolkit.Metadata;
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Represents a documentation model for a .NET class.
@@ -15,16 +17,19 @@ namespace Kampute.DocToolkit.Models
     /// <threadsafety static="true" instance="true"/>
     public class ClassModel : CompositeTypeModel<IClassType>
     {
+        private readonly Lazy<IReadOnlyCollection<ExtensionBlockModel>> extensionBlocks;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClassModel"/> class.
         /// </summary>
-        /// <param name="declaryingEntity">The object that declares the type, which is either an <see cref="AssemblyModel"/> for top-level types or a <see cref="TypeModel"/> for nested types.</param>
+        /// <param name="declaringEntity">The object that declares the type, which is either an <see cref="AssemblyModel"/> for top-level types or a <see cref="TypeModel"/> for nested types.</param>
         /// <param name="type">The metadata of the type represented by this instance.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> or <paramref name="declaryingEntity"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="declaryingEntity"/> is not an instance of <see cref="AssemblyModel"/> or <see cref="TypeModel"/>.</exception>
-        protected ClassModel(object declaryingEntity, IClassType type)
-            : base(declaryingEntity, type)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="type"/> or <paramref name="declaringEntity"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="declaringEntity"/> is not an instance of <see cref="AssemblyModel"/> or <see cref="TypeModel"/>.</exception>
+        protected ClassModel(object declaringEntity, IClassType type)
+            : base(declaringEntity, type)
         {
+            extensionBlocks = new(() => [.. Metadata.ExtensionBlocks.Select(b => new ExtensionBlockModel(this, b))]);
         }
 
         /// <summary>
@@ -45,7 +50,7 @@ namespace Kampute.DocToolkit.Models
         /// <param name="declaringType">The type that declares the type.</param>
         /// <param name="type">The metadata of the type represented by this instance.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaringType"/> or <paramref name="type"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> is not directedly nested within <paramref name="declaringType"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> is not directly nested within <paramref name="declaringType"/>.</exception>
         public ClassModel(TypeModel declaringType, IClassType type)
             : this((object)declaringType ?? throw new ArgumentNullException(nameof(declaringType)), type)
         {

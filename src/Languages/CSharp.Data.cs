@@ -114,6 +114,7 @@ namespace Kampute.DocToolkit.Languages
             ["descending"] = "descending",
             ["dynamic"] = "../builtin-types/reference-types",
             ["equals"] = "equals",
+            ["extension"] = "extension",
             ["field"] = "field",
             ["file"] = "file",
             ["from"] = "from-clause",
@@ -203,6 +204,20 @@ namespace Kampute.DocToolkit.Languages
             ["Decrement"] = "--",
             ["Implicit"] = "implicit",
             ["Explicit"] = "explicit",
+            ["UnsignedRightShift"] = ">>>",
+            ["AdditionAssignment"] = "+=",
+            ["SubtractionAssignment"] = "-=",
+            ["MultiplyAssignment"] = "*=",
+            ["DivisionAssignment"] = "/=",
+            ["ModulusAssignment"] = "%=",
+            ["AndAssignment"] = "&=",
+            ["OrAssignment"] = "|=",
+            ["ExclOrAssignment"] = "^=",
+            ["LeftShiftAssignment"] = "<<=",
+            ["RightShiftAssignment"] = ">>=",
+            ["UnsignedRightShiftAssignment"] = ">>>=",
+            ["IncrementAssignment"] = "++",
+            ["DecrementAssignment"] = "--",
         };
 
         /// <summary>

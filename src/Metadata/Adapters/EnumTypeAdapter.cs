@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Metadata.Adapters
 {
+    using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
     using System.Globalization;
@@ -43,8 +44,11 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentException("Type must be an enum.", nameof(enumType));
 
             underlyingType = new(() => MetadataProvider.GetMetadata(Enum.GetUnderlyingType(Reflection)));
-            fields = new(() => [.. GetValues()]);
+            fields = new(() => [.. GetValues().Select(Assembly.Repository.GetFieldMetadata)]);
         }
+
+        /// <inheritdoc/>
+        public bool IsFlagsEnum => HasCustomAttribute(AttributeNames.Flags);
 
         /// <inheritdoc/>
         public virtual IType UnderlyingType => underlyingType.Value;
@@ -83,10 +87,9 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <summary>
         /// Retrieves the fields representing the enum values.
         /// </summary>
-        /// <returns>An enumerable of <see cref="IField"/> representing the enum values.</returns>
-        protected virtual IEnumerable<IField> GetValues() => Reflection
+        /// <returns>An enumerable of <see cref="FieldInfo"/> representing the enum values.</returns>
+        protected virtual IEnumerable<FieldInfo> GetValues() => Reflection
             .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static)
-            .Where(field => field.IsLiteral)
-            .Select(Assembly.Repository.GetFieldMetadata);
+            .Where(static field => field.IsLiteral);
     }
 }

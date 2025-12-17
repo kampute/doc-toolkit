@@ -111,16 +111,25 @@ namespace Kampute.DocToolkit.Metadata
         /// <see langword="true"/> if the specified parameter can be used in place of the current parameter; otherwise, <see langword="false"/>.
         /// </returns>
         /// <remarks>
-        /// This method behaviour depends on the type of the current parameter:
+        /// This method evaluates type compatibility between parameters for scenarios such as method overrides, interface implementations, 
+        /// and overload resolution. The specified parameter can satisfy the current parameter if they have the same position and reference 
+        /// kind, and their types meet one of the following criteria:
         /// <list type="bullet">
-        ///   <item>
-        ///   When the current parameter has a non-generic type, this method returns <see langword="true"/> when the given parameter is an exact match.
-        ///   </item>
-        ///   <item>
-        ///   When the current parameter has an open generic type, this method returns <see langword="true"/> when the given parameter is a closed constructed
-        ///   type based on the same generic type definition.
-        ///   </item>
+        ///   <item>Both types are identical.</item>
+        ///   <item>Both types are decorated types (array, pointer, by-ref, or nullable) with identical modifiers and compatible element types.</item>
+        ///   <item>Both types are generic type parameters with identical constraints and declaring member ancestry.</item>
+        ///   <item>The current type is an open generic type parameter, and the specified type satisfies all of its constraints.</item>
         /// </list>
+        /// For return parameters of non-interface members, to support covariant return types in method overrides, the specified parameter can also 
+        /// satisfy the current parameter if any of the following conditions are met:
+        /// <list type="bullet">
+        ///   <item>The specified parameter's type is a subclass of the current parameter's type.</item>
+        ///   <item>The specified parameter's type implements the current parameter's interface type.</item>
+        /// </list>
+        /// <note type="caution" title="Important">
+        /// This method does not verify that the parameters belong to compatible members or contexts. The caller must ensure that the parameters 
+        /// are from related members, such as in method inheritance hierarchies.
+        /// </note>
         /// </remarks>
         bool IsSatisfiableBy(IParameter other);
     }

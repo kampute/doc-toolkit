@@ -74,5 +74,10 @@ namespace Kampute.DocToolkit
         /// The model represents an operator member or overloads.
         /// </summary>
         Operator,
+
+        /// <summary>
+        /// The model represents an extension block.
+        /// </summary>
+        ExtensionBlock,
     }
 }

@@ -190,15 +190,15 @@ namespace Kampute.DocToolkit.Support
         }
 
         /// <summary>
-        /// Replaces multiple characters in the given text with a single character.
+        /// Replaces multiple characters in the given string with a single character.
         /// </summary>
-        /// <param name="text">The text to process.</param>
+        /// <param name="text">The string to process.</param>
         /// <param name="charsToReplace">The characters to replace.</param>
         /// <param name="replacement">The character to replace the old characters with.</param>
         /// <param name="skipConsecutiveReplacements">Indicates whether to skip consecutive occurrences of the replacement character.</param>
-        /// <returns>The text with occurrences of the specified characters replaced by a single character.</returns>
+        /// <returns>A new string with the specified characters replaced.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
-        public static string ReplaceMany(this string text, ReadOnlySpan<char> charsToReplace, char replacement, bool skipConsecutiveReplacements = false)
+        public static string ReplaceChars(this string text, ReadOnlySpan<char> charsToReplace, char replacement, bool skipConsecutiveReplacements = false)
         {
             if (text is null)
                 throw new ArgumentNullException(nameof(text));
@@ -207,7 +207,7 @@ namespace Kampute.DocToolkit.Support
             if (size == 0 || charsToReplace.IsEmpty)
                 return text;
 
-            Span<char> result = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
+            var result = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
 
             var index = 0;
             var modified = false;
@@ -232,13 +232,13 @@ namespace Kampute.DocToolkit.Support
         }
 
         /// <summary>
-        /// Removes multiple characters from the given text.
+        /// Removes multiple characters from the given string.
         /// </summary>
-        /// <param name="text">The text to process.</param>
+        /// <param name="text">The string to process.</param>
         /// <param name="charsToRemove">The characters to remove.</param>
-        /// <returns>The text with occurrences of the specified characters removed.</returns>
+        /// <returns>A new string with the specified characters removed.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
-        public static string RemoveMany(this string text, ReadOnlySpan<char> charsToRemove)
+        public static string RemoveChars(this string text, ReadOnlySpan<char> charsToRemove)
         {
             if (text is null)
                 throw new ArgumentNullException(nameof(text));
@@ -247,7 +247,7 @@ namespace Kampute.DocToolkit.Support
             if (size == 0 || charsToRemove.IsEmpty)
                 return text;
 
-            Span<char> result = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
+            var result = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
 
             var index = 0;
             var textSpan = text.AsSpan();
@@ -262,10 +262,49 @@ namespace Kampute.DocToolkit.Support
         }
 
         /// <summary>
+        /// Translates multiple characters in the given string to corresponding characters.
+        /// </summary>
+        /// <param name="text">The string to process.</param>
+        /// <param name="fromChars">The characters to translate from.</param>
+        /// <param name="toChars">The characters to translate to.</param>
+        /// <returns>A new string with the specified characters translated.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when the lengths of <paramref name="fromChars"/> and <paramref name="toChars"/> are not the same.</exception>
+        public static string TranslateChars(this string text, ReadOnlySpan<char> fromChars, ReadOnlySpan<char> toChars)
+        {
+            if (text is null)
+                throw new ArgumentNullException(nameof(text));
+            if (fromChars.Length != toChars.Length)
+                throw new ArgumentException("The lengths of fromChars and toChars must be the same.", nameof(toChars));
+
+            var size = text.Length;
+            if (size == 0 || fromChars.IsEmpty)
+                return text;
+
+            var result = size <= MaxStackAllocSize ? stackalloc char[size] : new char[size];
+
+            var modified = false;
+            var textSpan = text.AsSpan();
+            for (var i = 0; i < size; ++i)
+            {
+                var c = textSpan[i];
+                var mappingIndex = fromChars.IndexOf(c);
+                if (mappingIndex != -1)
+                {
+                    c = toChars[mappingIndex];
+                    modified = true;
+                }
+                result[i] = c;
+            }
+
+            return modified ? new string(result) : text;
+        }
+
+        /// <summary>
         /// Converts a string to title case, where the first letter of each word is capitalized.
         /// </summary>
-        /// <param name="text">The text to convert.</param>
-        /// <returns>The text in title case.</returns>
+        /// <param name="text">The string to convert.</param>
+        /// <returns>A new string in title case.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
         public static string ToTitleCase(this string text)
         {
@@ -277,7 +316,7 @@ namespace Kampute.DocToolkit.Support
                 return string.Empty;
 
             var maxSize = size * 2;
-            Span<char> result = maxSize <= MaxStackAllocSize ? stackalloc char[maxSize] : new char[maxSize];
+            var result = maxSize <= MaxStackAllocSize ? stackalloc char[maxSize] : new char[maxSize];
 
             var index = 0;
             var textSpan = text.AsSpan();

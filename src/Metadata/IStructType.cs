@@ -19,11 +19,11 @@ namespace Kampute.DocToolkit.Metadata
         bool IsReadOnly { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the struct is a ref struct.
+        /// Gets a value indicating whether the struct a by-ref-like struct.
         /// </summary>
         /// <value>
-        /// <see langword="true"/> if the struct is a ref struct; otherwise, <see langword="false"/>.
+        /// <see langword="true"/> if the struct is a by-ref-like struct; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsRef { get; }
+        bool IsRefLike { get; }
     }
 }
