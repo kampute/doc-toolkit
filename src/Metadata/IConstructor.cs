@@ -13,12 +13,17 @@ namespace Kampute.DocToolkit.Metadata
     public interface IConstructor : ITypeMember, IWithParameters, IWithOverloads
     {
         /// <summary>
-        /// Gets a value indicating whether this constructor is the default public constructor of a type.
+        /// Gets a value indicating whether this constructor is the default constructor of a type.
         /// </summary>
         /// <value>
-        /// <see langword="true"/> if this constructor is a default public constructor; otherwise, <see langword="false"/>.
+        /// <see langword="true"/> if this constructor is a default constructor; otherwise, <see langword="false"/>.
         /// </value>
-        bool IsDefaultConstructor => !IsStatic && Visibility == MemberVisibility.Public && Parameters.Count == 0;
+        /// <remarks>
+        /// A constructor is considered a default constructor if it is not static, has no parameters, and has
+        /// public, protected, or protected internal visibility.
+        /// </remarks>
+        bool IsDefaultConstructor => !IsStatic && Parameters.Count == 0
+            && Visibility is MemberVisibility.Public or MemberVisibility.Protected or MemberVisibility.ProtectedInternal;
 
         /// <summary>
         /// Gets the constructor in the base class that has the same signature as this constructor, if any.

@@ -40,8 +40,22 @@ namespace Kampute.DocToolkit.Models
         protected CompositeTypeModel(object declaringEntity, ICompositeType type)
             : base(declaringEntity, type)
         {
+            constructors = new(() =>
+            {
+                if (Metadata.Constructors.Count == 0)
+                    return [];
+
+                var all = new List<ConstructorModel>(Metadata.Constructors.Count);
+                all.AddRange(Metadata.Constructors.Select(c => new ConstructorModel(this, c)));
+
+                // Omit the default constructor if it's the only one and has no documentation.
+                if (all.Count == 1 && all[0].Metadata.IsDefaultConstructor && all[0].Doc.IsEmpty)
+                    return [];
+
+                return all;
+            });
+
             fields = new(() => [.. Metadata.Fields.Select(f => new FieldModel(this, f))]);
-            constructors = new(() => [.. Metadata.Constructors.Select(c => new ConstructorModel(this, c))]);
             properties = new(() => [.. Metadata.Properties.Select(p => new PropertyModel(this, p))]);
             methods = new(() => [.. Metadata.Methods.Select(m => new MethodModel(this, m))]);
             events = new(() => [.. Metadata.Events.Select(e => new EventModel(this, e))]);
@@ -84,7 +98,7 @@ namespace Kampute.DocToolkit.Models
         /// The constructors in the collection are ordered by their number of parameters.
         /// </value>
         /// <remarks>
-        /// If the type only has a default public constructor without any documentation, the constructor is considered implicit
+        /// If the type only has a default constructor without any documentation, the constructor is considered implicit
         /// and the collection will be empty.
         /// </remarks>
         public IReadOnlyList<ConstructorModel> Constructors => constructors.Value;
