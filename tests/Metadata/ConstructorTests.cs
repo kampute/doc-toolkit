@@ -198,6 +198,19 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.CustomAttributes.Any(static a => a.Type.Name == "SetsRequiredMembersAttribute"), Is.True);
         }
 
+        [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = 3)] // public and protected constructors
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = 0)]
+        public int Overloads_HasExpectedCount(Type declaringType)
+        {
+            var constructorInfo = declaringType.GetConstructors(Acme.Bindings.AllDeclared).FirstOrDefault();
+            Assert.That(constructorInfo, Is.Not.Null);
+
+            var metadata = constructorInfo.GetMetadata();
+            Assert.That(metadata, Is.Not.Null);
+
+            return metadata.Overloads.Count();
+        }
+
         [TestCase(typeof(Uri), typeof(string), ExpectedResult = "M:System.Uri.#ctor(System.String)")]
         [TestCase(typeof(Acme.SampleConstructors), typeof(string), typeof(double), ExpectedResult = "M:Acme.SampleConstructors.#ctor(System.String,System.Double)")]
         public string CodeReference_HasExpectedValue(Type declaringType, params Type[] parameterTypes)

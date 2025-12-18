@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
+    using System.Linq;
 
     [TestFixture]
     public class OperatorTests
@@ -274,6 +275,21 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.Not.Null);
 
             return metadata.Return.Type.Name;
+        }
+
+        [TestCase(typeof(Acme.SampleOperators), "UnaryPlus", ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleOperators), "Addition", ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleOperators), "ExclusiveOr", ExpectedResult = 1)]
+        [TestCase(typeof(Acme.SampleOperators), "Acme.ISampleInterface.False", ExpectedResult = 0)]
+        public int Overloads_HasExpectedCount(Type declaringType, string operatorName)
+        {
+            var methodInfo = declaringType.GetMember(GetMethodName(operatorName), Acme.Bindings.AllDeclared).FirstOrDefault();
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var metadata = methodInfo.GetMetadata() as IOperator;
+            Assert.That(metadata, Is.Not.Null);
+
+            return metadata.Overloads.Count();
         }
 
         [TestCase(typeof(Acme.SampleOperators), "UnaryPlus", ExpectedResult = "M:Acme.SampleOperators.op_UnaryPlus(Acme.SampleOperators)")]

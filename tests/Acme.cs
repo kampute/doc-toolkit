@@ -233,6 +233,22 @@ namespace Acme
         public void operator --() { }
 
         /// <summary>
+        /// Xor operator.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator ^(SampleOperators x, SampleOperators y) => x;
+
+        /// <summary>
+        /// Xor operator with integer.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator ^(SampleOperators x, int y) => x;
+
+        /// <summary>
         /// Implicit conversion to string.
         /// </summary>
         /// <param name="x">The instance.</param>
@@ -1025,6 +1041,12 @@ namespace Acme
     /// </summary>
     public interface ISampleExtendedConstructedGenericInterface : ISampleExtendedGenericInterface<object, int, string>
     {
+        /// <summary>
+        /// An indexer.
+        /// </summary>
+        /// <param name="i">The index.</param>
+        /// <value>The indexed value.</value>
+        int this[int i] { get; }
     }
 
     /// <summary>

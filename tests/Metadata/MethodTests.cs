@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.Test.Metadata
     using NUnit.Framework;
     using System;
     using System.IO;
+    using System.Linq;
 
     [TestFixture]
     public class MethodTests
@@ -35,7 +36,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.GenericMethodWithGenericParameter), ExpectedResult = true)]
-        public bool IsGeneric_HasExpectedValue(Type declaringType, string methodName)
+        public bool IsGenericMethod_HasExpectedValue(Type declaringType, string methodName)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);
             Assert.That(methodInfo, Is.Not.Null);
@@ -273,6 +274,23 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.Not.Null);
 
             return metadata.Return.Type.Name;
+        }
+
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod), ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.OverloadedMethod), ExpectedResult = 1)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RefParamsMethod), ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.InterfaceMethodWithRefParam), ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithInParam", ExpectedResult = 0)]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithOutParam", ExpectedResult = 0)]
+        public int Overloads_HasExpectedCount(Type declaringType, string methodName)
+        {
+            var methodInfo = declaringType.GetMember(methodName, Acme.Bindings.AllDeclared).FirstOrDefault();
+            Assert.That(methodInfo, Is.Not.Null);
+
+            var metadata = methodInfo.GetMetadata() as IMethod;
+            Assert.That(metadata, Is.Not.Null);
+
+            return metadata.Overloads.Count();
         }
 
         [TestCase(typeof(Acme.SampleDerivedGenericClass<,,>), nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod), ExpectedResult = "M:Acme.SampleDerivedGenericClass`3.GenericMethod``1(`0,`1,`2,``0)")]
