@@ -381,32 +381,25 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                         continue;
 
                     var match = true;
-                    for (var i = 0; i < parameters.Length; ++i)
-                    {
-                        var parameter = parameters[i];
-                        var candidateParameter = candidateParameters[i];
-
-                        if (parameter.ParameterType.IsGenericMethodParameter)
-                        {
-                            if (candidateParameter.ParameterType.IsGenericMethodParameter)
-                                continue;
-
-                            match = false;
-                            break;
-                        }
-
-                        if (!AdapterHelper.HaveSameDeclarationScope(parameter.ParameterType, candidateParameter.ParameterType))
-                        {
-                            match = false;
-                            break;
-                        }
-                    }
+                    for (var i = 0; i < parameters.Length && match; ++i)
+                        match = ParametersMatch(parameters[i], candidateParameters[i]);
 
                     if (match)
                         return true;
                 }
 
                 return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool ParametersMatch(ParameterInfo parameter1, ParameterInfo parameter2)
+            {
+                if (parameter1.ParameterType.IsGenericMethodParameter != parameter2.ParameterType.IsGenericMethodParameter)
+                    return false;
+
+                return parameter1.ParameterType.IsGenericMethodParameter
+                    ? parameter1.ParameterType.GenericParameterPosition == parameter2.ParameterType.GenericParameterPosition
+                    : AdapterHelper.HaveSameDeclarationScope(parameter1.ParameterType, parameter2.ParameterType);
             }
         }
     }
