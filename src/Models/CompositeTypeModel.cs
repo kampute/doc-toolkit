@@ -98,8 +98,12 @@ namespace Kampute.DocToolkit.Models
         /// The constructors in the collection are ordered by their number of parameters.
         /// </value>
         /// <remarks>
-        /// If the type only has a default constructor without any documentation, the constructor is considered implicit
-        /// and the collection will be empty.
+        /// If a type defines only a default constructor and that constructor has no documentation, it is treated as
+        /// compiler-generated and omitted from the collection. This reduces clutter in the generated documentation by
+        /// hiding trivial constructors that add no useful information.
+        /// <note type="hint" title="Hint">
+        /// The <see cref="Metadata"/> property can still be used to access the default constructor’s metadata if needed.
+        /// </note>
         /// </remarks>
         public IReadOnlyList<ConstructorModel> Constructors => constructors.Value;
 
