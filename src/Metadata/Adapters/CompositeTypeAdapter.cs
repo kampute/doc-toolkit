@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An abstract adapter that wraps a composite <see cref="Type"/> such as a class or struct and provides metadata access.
@@ -313,24 +314,100 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <param name="method">The reflection information of the method to check.</param>
         /// <returns><see langword="true"/> if the method is is a compiler-generated bridge method; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// A compiler-generated bridge method is created by the C# compiler to handle explicit interface implementations that
+        /// involve 'in' parameters. These methods are not part of the original source code and should be excluded from metadata
+        /// representation.
+        /// <para>
+        /// This method checks for the presence of 'in' parameters and attempts to find a corresponding public method for the
+        /// explicit interface implementation. If such a method exists, it indicates that the explicit interface method is a
+        /// compiler-generated bridge method.
+        /// </para>
+        /// </remarks>
         protected virtual bool IsCompilerGeneratedBridgeMethod(MethodInfo method)
         {
             if (method is null)
                 throw new ArgumentNullException(nameof(method));
 
             var parameters = method.GetParameters();
+            if (!ContainsInParameter(parameters))
+                return false;
 
-            // Compiler-generated bridge methods are created for explicit interface implementations
-            // that have by-ref parameters (in, ref, out). These methods must have a corresponding
-            // public method with the same signature.
-            return parameters.Any(static p => p.ParameterType.IsByRef) && Reflection.GetMethod
-            (
-                name: method.Name.SubstringAfterLast('.'),
-                bindingAttr: BindingFlags.DeclaredOnly | BindingFlags.Public | (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance),
-                binder: null,
-                types: [.. parameters.Select(static p => p.ParameterType)],
-                modifiers: null
-            ) is not null;
+            var methodName = method.Name.SubstringAfterLastOrSelf('.'); // Exclude interface name
+            var bindingFlags = BindingFlags.DeclaredOnly | BindingFlags.Public | (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance);
+
+            return method.IsGenericMethod
+                ? HasMatchingPublicGenericMethod()
+                : HasMatchingPublicNonGenericMethod();
+
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool ContainsInParameter(ParameterInfo[] parameters)
+            {
+                for (var i = 0; i < parameters.Length; ++i)
+                {
+                    if (parameters[i].IsIn)
+                        return true;
+                }
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            bool HasMatchingPublicNonGenericMethod()
+            {
+                return Reflection.GetMethod
+                (
+                    name: methodName,
+                    bindingAttr: bindingFlags,
+                    binder: null,
+                    types: [.. parameters.Select(static p => p.ParameterType)],
+                    modifiers: null
+                ) is not null;
+            }
+
+            bool HasMatchingPublicGenericMethod()
+            {
+                var genericArity = method.GetGenericArguments().Length;
+                foreach (var candidate in Reflection.GetMember(methodName, bindingFlags))
+                {
+                    if (candidate is not MethodInfo { IsGenericMethod: true } candidateMethod)
+                        continue;
+
+                    if (candidateMethod.GetGenericArguments().Length != genericArity)
+                        continue;
+
+                    var candidateParameters = candidateMethod.GetParameters();
+                    if (candidateParameters.Length != parameters.Length)
+                        continue;
+
+                    var match = true;
+                    for (var i = 0; i < parameters.Length; ++i)
+                    {
+                        var parameter = parameters[i];
+                        var candidateParameter = candidateParameters[i];
+
+                        if (parameter.ParameterType.IsGenericMethodParameter)
+                        {
+                            if (candidateParameter.ParameterType.IsGenericMethodParameter)
+                                continue;
+
+                            match = false;
+                            break;
+                        }
+
+                        if (!AdapterHelper.HaveSameDeclarationScope(parameter.ParameterType, candidateParameter.ParameterType))
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match)
+                        return true;
+                }
+
+                return false;
+            }
         }
     }
 }

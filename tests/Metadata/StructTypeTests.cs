@@ -171,6 +171,9 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>.DeepInnerGenericStruct),
             nameof(Acme.ISampleInterface.InterfaceMethod),
+            nameof(Acme.ISampleInterface.InterfaceMethodWithInParam),
+            nameof(Acme.ISampleInterface.InterfaceGenericMethodWithInParam),
+            nameof(Acme.ISampleInterface.InterfaceGenericMethodWithInParam),
             nameof(System.Collections.Generic.IEnumerable<>.GetEnumerator),
             nameof(System.Collections.IEnumerable.GetEnumerator)
         )]

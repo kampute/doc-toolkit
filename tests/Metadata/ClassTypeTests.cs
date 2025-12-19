@@ -154,7 +154,10 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass),
             nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method),
-            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod)
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.GenericMethod),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.InterfaceMethodWithInParam),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.InterfaceGenericMethodWithInParam),
+            nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.InterfaceGenericMethodWithInParam)
         )]
         [TestCase(typeof(Acme.SampleExtensions),
             nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass),
