@@ -25,10 +25,11 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.InstanceOf<IConstructor>());
         }
 
-        [Test]
-        public void IsDefault_ReturnsTrueForPublicParameterlessConstructor()
+        [TestCase(typeof(Acme.SampleConstructors))]
+        [TestCase(typeof(Acme.SampleGenericClass<>))]
+        public void IsDefaultConstructor_ForInstanceParameterlessConstructor_ReturnsTrue(Type type)
         {
-            var constructorInfo = typeof(Acme.SampleGenericClass<>).GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes);
+            var constructorInfo = type.GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes);
             Assert.That(constructorInfo, Is.Not.Null);
 
             var metadata = constructorInfo.GetMetadata();
@@ -38,19 +39,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsDefault_ReturnsFalseForNonPublicParameterlessConstructor()
-        {
-            var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes);
-            Assert.That(constructorInfo, Is.Not.Null);
-
-            var metadata = constructorInfo.GetMetadata();
-            Assert.That(metadata, Is.Not.Null);
-
-            Assert.That(metadata.IsDefaultConstructor, Is.False);
-        }
-
-        [Test]
-        public void IsDefault_ReturnsFalseForPublicParameterizedConstructor()
+        public void IsDefaultConstructor_ForInstanceParameterizedConstructor_ReturnsFalse()
         {
             var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, [typeof(int)]);
             Assert.That(constructorInfo, Is.Not.Null);
@@ -207,6 +196,19 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.Not.Null);
 
             Assert.That(metadata.CustomAttributes.Any(static a => a.Type.Name == "SetsRequiredMembersAttribute"), Is.True);
+        }
+
+        [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = 3)] // public and protected constructors
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = 0)]
+        public int Overloads_HasExpectedCount(Type declaringType)
+        {
+            var constructorInfo = declaringType.GetConstructors(Acme.Bindings.AllDeclared).FirstOrDefault();
+            Assert.That(constructorInfo, Is.Not.Null);
+
+            var metadata = constructorInfo.GetMetadata();
+            Assert.That(metadata, Is.Not.Null);
+
+            return metadata.Overloads.Count();
         }
 
         [TestCase(typeof(Uri), typeof(string), ExpectedResult = "M:System.Uri.#ctor(System.String)")]

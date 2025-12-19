@@ -243,8 +243,26 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (type.IsInterface || type.IsEnum)
                 return false;
 
-            return type is IWithConstructors { HasConstructors: true } withConstructors
-                && withConstructors.Constructors.Any(static c => c.IsDefaultConstructor);
+            return IsAccessibleType(type)
+                && type is IWithConstructors { HasConstructors: true } typeWithConstructors
+                && typeWithConstructors.Constructors.Any(static c => c.IsPublic && c.IsDefaultConstructor);
+        }
+
+        /// <summary>
+        /// Determines whether the specified type and its declaring types are accessible.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns><see langword="true"/> if the type and its declaring types are accessible; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsAccessibleType(IType type)
+        {
+            for (var current = type; current is not null; current = current.DeclaringType)
+            {
+                if (!current.IsPublic || current is IClassType { IsAbstract: true })
+                    return false;
+            }
+
+            return true;
         }
     }
 }

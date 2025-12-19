@@ -9,7 +9,7 @@
         "stopOnIssues": true
     },
     "assemblies": [
-        "src/bin/Release/netstandard2.1/Kampute.DocToolkit.dll"
+        "src/bin/Release/**/Kampute.DocToolkit.dll"
     ],
     "topics": [
         "docs/**/*.md"

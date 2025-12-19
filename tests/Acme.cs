@@ -92,10 +92,27 @@ namespace Acme
         T InterfaceGenericMethod<T>(T value) where T : struct => value;
 
         /// <summary>
+        /// A generic method with an in parameter in the interface.
+        /// </summary>
+        /// <typeparam name="T1">The type parameter.</typeparam>
+        /// <param name="value">The in parameter.</param>
+        /// <returns>The value.</returns>
+        T1 InterfaceGenericMethodWithInParam<T1>(in T1 value) where T1 : struct => value;
+
+        /// <summary>
+        /// An overload of the generic method with an in parameter in the interface.
+        /// </summary>
+        /// <typeparam name="T2">The type parameter.</typeparam>
+        /// <param name="value">The in parameter.</param>
+        /// <param name="dummy">A dummy parameter to differentiate the overload.</param>
+        /// <returns>The value.</returns>
+        T2 InterfaceGenericMethodWithInParam<T2>(in T2 value, bool dummy) where T2 : struct => value;
+
+        /// <summary>
         /// A method with an in parameter.
         /// </summary>
-        /// <param name="i">The in parameter.</param>
-        void InterfaceMethodWithInParam(in int i) { }
+        /// <param name="dec">The in parameter.</param>
+        void InterfaceMethodWithInParam(in decimal dec) { }
 
         /// <summary>
         /// A method with a ref parameter.
@@ -231,6 +248,22 @@ namespace Acme
         /// Decrement operator.
         /// </summary>
         public void operator --() { }
+
+        /// <summary>
+        /// Xor operator.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator ^(SampleOperators x, SampleOperators y) => x;
+
+        /// <summary>
+        /// Xor operator with integer.
+        /// </summary>
+        /// <param name="x">The left operand.</param>
+        /// <param name="y">The right operand.</param>
+        /// <returns>The result.</returns>
+        public static SampleOperators operator ^(SampleOperators x, int y) => x;
 
         /// <summary>
         /// Implicit conversion to string.
@@ -371,10 +404,22 @@ namespace Acme
         public T InterfaceGenericMethod<T>(T value) where T : struct => value;
 
         /// <summary>
+        /// Implements the generic interface method with in parameter.
+        /// </summary>
+        /// <inheritdoc/>
+        public T1 InterfaceGenericMethodWithInParam<T1>(in T1 value) where T1 : struct => value;
+
+        /// <summary>
+        /// Implements an overload of the generic interface method with in parameter.
+        /// </summary>
+        /// <inheritdoc/>
+        public T2 InterfaceGenericMethodWithInParam<T2>(in T2 value, bool dummy) where T2 : struct => value;
+
+        /// <summary>
         /// Explicitly implements the interface method with in parameter.
         /// </summary>
         /// <inheritdoc/>
-        void ISampleInterface.InterfaceMethodWithInParam(in int i) { }
+        void ISampleInterface.InterfaceMethodWithInParam(in decimal dec) { }
 
         /// <summary>
         /// Explicitly implements the interface method with out parameter.
@@ -668,6 +713,24 @@ namespace Acme
                 void ISampleInterface.InterfaceMethod() { }
 
                 /// <summary>
+                /// Implements the interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                public void InterfaceMethodWithInParam(in decimal dec) { }
+
+                /// <summary>
+                /// Implements the generic interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                public T1 InterfaceGenericMethodWithInParam<T1>(in T1 value) where T1 : struct => value;
+
+                /// <summary>
+                /// Implements an overload of the generic interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                public T2 InterfaceGenericMethodWithInParam<T2>(in T2 value, bool dummy) where T2 : struct => value;
+
+                /// <summary>
                 /// Explicitly implements the static interface method.
                 /// </summary>
                 /// <inheritdoc/>
@@ -882,6 +945,24 @@ namespace Acme
                 static void ISampleInterface.InterfaceStaticMethod() { }
 
                 /// <summary>
+                /// Explicitly implements the interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                readonly void ISampleInterface.InterfaceMethodWithInParam(in decimal dec) { }
+
+                /// <summary>
+                /// Explicitly implements the generic interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                readonly T1 ISampleInterface.InterfaceGenericMethodWithInParam<T1>(in T1 value) where T1 : struct => value;
+
+                /// <summary>
+                /// Explicitly implements an overload of the generic interface method with in parameter.
+                /// </summary>
+                /// <inheritdoc/>
+                readonly T2 ISampleInterface.InterfaceGenericMethodWithInParam<T2>(in T2 value, bool dummy) where T2 : struct => value;
+
+                /// <summary>
                 /// Explicitly implements the GetEnumerator method.
                 /// </summary>
                 /// <returns>The enumerator.</returns>
@@ -1025,6 +1106,12 @@ namespace Acme
     /// </summary>
     public interface ISampleExtendedConstructedGenericInterface : ISampleExtendedGenericInterface<object, int, string>
     {
+        /// <summary>
+        /// An indexer.
+        /// </summary>
+        /// <param name="i">The index.</param>
+        /// <value>The indexed value.</value>
+        int this[int i] { get; }
     }
 
     /// <summary>

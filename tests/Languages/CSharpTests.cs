@@ -384,7 +384,7 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), ExpectedResult = "protected virtual void VirtualMethod(int i)")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.ToString), ExpectedResult = "public sealed override string ToString()")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethod", ExpectedResult = "void ISampleInterface.InterfaceMethod()")]
-        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithInParam", ExpectedResult = "void ISampleInterface.InterfaceMethodWithInParam(in int i)")]
+        [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithInParam", ExpectedResult = "void ISampleInterface.InterfaceMethodWithInParam(in decimal dec)")]
         [TestCase(typeof(Acme.SampleMethods), "Acme.ISampleInterface.InterfaceMethodWithOutParam", ExpectedResult = "void ISampleInterface.InterfaceMethodWithOutParam(out double d)")]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.InterfaceMethodWithRefParam), ExpectedResult = "public void InterfaceMethodWithRefParam(ref string s)")]
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), nameof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass.Method), ExpectedResult = "public abstract object Method(T t, U u, V v)")]

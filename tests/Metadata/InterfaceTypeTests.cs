@@ -105,6 +105,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.ISampleInterface),
             nameof(Acme.ISampleInterface.InterfaceMethod),
             nameof(Acme.ISampleInterface.InterfaceGenericMethod),
+            nameof(Acme.ISampleInterface.InterfaceGenericMethodWithInParam),
+            nameof(Acme.ISampleInterface.InterfaceGenericMethodWithInParam),
             nameof(Acme.ISampleInterface.InterfaceMethodWithInParam),
             nameof(Acme.ISampleInterface.InterfaceMethodWithOutParam),
             nameof(Acme.ISampleInterface.InterfaceMethodWithRefParam),

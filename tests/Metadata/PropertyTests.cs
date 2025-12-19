@@ -395,6 +395,19 @@ namespace Kampute.DocToolkit.Test.Metadata
             }
         }
 
+        [TestCase(typeof(Acme.SampleProperties), ExpectedResult = 1)]
+        [TestCase(typeof(Acme.ISampleExtendedConstructedGenericInterface), ExpectedResult = 0)]
+        public int Overloads_HasExpectedCount(Type declaringType)
+        {
+            var propertyInfo = declaringType.GetMember("Item", Acme.Bindings.AllDeclared).FirstOrDefault();
+            Assert.That(propertyInfo, Is.Not.Null);
+
+            var metadata = propertyInfo.GetMetadata() as IProperty;
+            Assert.That(metadata, Is.Not.Null);
+
+            return metadata.Overloads.Count();
+        }
+
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = "P:Acme.SampleProperties.RegularProperty")]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.Int32)")]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(string), typeof(int), ExpectedResult = "P:Acme.SampleProperties.Item(System.String,System.Int32)")]
