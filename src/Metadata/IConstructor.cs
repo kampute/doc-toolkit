@@ -19,11 +19,10 @@ namespace Kampute.DocToolkit.Metadata
         /// <see langword="true"/> if this constructor is a default constructor; otherwise, <see langword="false"/>.
         /// </value>
         /// <remarks>
-        /// A constructor is considered a default constructor if it is not static, has no parameters, and has
-        /// public, protected, or protected internal visibility.
+        /// A constructor is considered a default constructor if it is not static and has no parameters.
+        /// The visibility of the constructor is not considered.
         /// </remarks>
-        bool IsDefaultConstructor => !IsStatic && Parameters.Count == 0
-            && Visibility is MemberVisibility.Public or MemberVisibility.Protected or MemberVisibility.ProtectedInternal;
+        bool IsDefaultConstructor => !IsStatic && Parameters.Count == 0;
 
         /// <summary>
         /// Gets the constructor in the base class that has the same signature as this constructor, if any.

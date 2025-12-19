@@ -27,7 +27,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleConstructors))]
         [TestCase(typeof(Acme.SampleGenericClass<>))]
-        public void IsDefaultConstructor_ReturnsTrueForPublicOrProtectedParameterlessConstructor(Type type)
+        public void IsDefaultConstructor_ForInstanceParameterlessConstructor_ReturnsTrue(Type type)
         {
             var constructorInfo = type.GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes);
             Assert.That(constructorInfo, Is.Not.Null);
@@ -39,7 +39,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void IsDefaultConstructor_ReturnsFalseForParameterizedConstructor()
+        public void IsDefaultConstructor_ForInstanceParameterizedConstructor_ReturnsFalse()
         {
             var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, [typeof(int)]);
             Assert.That(constructorInfo, Is.Not.Null);
