@@ -716,7 +716,7 @@ namespace Acme
                 /// Implements the interface method with in parameter.
                 /// </summary>
                 /// <inheritdoc/>
-                public void InterfaceMethodWithInParam(in int i) { }
+                public void InterfaceMethodWithInParam(in decimal dec) { }
 
                 /// <summary>
                 /// Implements the generic interface method with in parameter.

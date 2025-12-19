@@ -312,16 +312,16 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Determines whether an explicit interface implementation is a compiler-generated bridge method.
         /// </summary>
         /// <param name="method">The reflection information of the method to check.</param>
-        /// <returns><see langword="true"/> if the method is is a compiler-generated bridge method; otherwise, <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> if the method is a compiler-generated bridge method; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="method"/> is <see langword="null"/>.</exception>
         /// <remarks>
         /// A compiler-generated bridge method is created by the C# compiler to handle explicit interface implementations that
         /// involve 'in' parameters. These methods are not part of the original source code and should be excluded from metadata
         /// representation.
         /// <para>
-        /// This method checks for the presence of 'in' parameters and attempts to find a corresponding public method for the
-        /// explicit interface implementation. If such a method exists, it indicates that the explicit interface method is a
-        /// compiler-generated bridge method.
+        /// This method checks for the presence of <c>in</c> parameters and attempts to find a corresponding public method for
+        /// the explicit interface implementation. If such a method exists, it indicates that the explicit interface method is
+        /// a compiler-generated bridge method.
         /// </para>
         /// </remarks>
         protected virtual bool IsCompilerGeneratedBridgeMethod(MethodInfo method)
