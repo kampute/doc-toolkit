@@ -85,7 +85,7 @@ namespace Kampute.DocToolkit
                 ? new TopicCollection(this, (_, topic) => ToScopedTopic(topic), topics)
                 : throw new ArgumentNullException(nameof(topics));
 
-            UrlTransformer = new ContextAwareUrlTransformer(this);
+            UrlTransformer = CreateUrlTransformer();
 
             namespaces = new(GetAllNamespaces);
             types = new(GetAllTypes);
@@ -215,6 +215,20 @@ namespace Kampute.DocToolkit
         /// </para>
         /// </remarks>
         protected virtual TopicModel ToScopedTopic(ITopic topic) => new(this, topic ?? throw new ArgumentNullException(nameof(topic)));
+
+        /// <summary>
+        /// Creates the URL transformer for the documentation context.
+        /// </summary>
+        /// <returns>The URL transformer to use for transforming non-API URLs in the documentation.</returns>
+        /// <remarks>
+        /// This method creates an implementation of <see cref="IUrlTransformer"/> for transforming non-API
+        /// site-root-relative URLs to absolute or document-relative URLs.
+        /// <para>
+        /// The default implementation returns an instance of the <see cref="ContextAwareUrlTransformer"/> class.
+        /// Override this method in derived classes to provide a custom URL transformer implementation if needed.
+        /// </para>
+        /// </remarks>
+        protected virtual IUrlTransformer CreateUrlTransformer() => new ContextAwareUrlTransformer(this);
 
         /// <summary>
         /// Retrieves all unique namespaces with exported types from the assemblies in the documentation context.

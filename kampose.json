@@ -6,10 +6,11 @@
             "recommended"
         ],
         "includeImplicitConstructors": true,
+        "verifyExternalLinks": false,
         "stopOnIssues": true
     },
     "assemblies": [
-        "src/bin/Release/**/Kampute.DocToolkit.dll"
+        "src/bin/**/Kampute.DocToolkit.dll"
     ],
     "topics": [
         "docs/**/*.md"

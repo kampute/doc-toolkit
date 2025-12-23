@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Test
     using Kampute.DocToolkit;
     using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.IO.Writers;
+    using Kampute.DocToolkit.Languages;
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Routing;
     using Kampute.DocToolkit.XmlDoc;
@@ -171,6 +172,70 @@ namespace Kampute.DocToolkit.Test
                 Assert.That(result, Is.False);
                 Assert.That(transformed, Is.Null);
             }
+        }
+
+        [Test]
+        public void DetermineNameQualifier_TypeMember_ReturnsDeclaringType()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>();
+            var typeMock = Mock.Of<IType>();
+
+            var result = docContext.DetermineNameQualifier(typeMock);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.DeclaringType));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_OperatorMember_ReturnsNone()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>();
+            var operatorMock = Mock.Of<IOperator>();
+
+            var result = docContext.DetermineNameQualifier(operatorMock);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.None));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_ExtensionMethod_ReturnsNone()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>();
+            var extensionMock = Mock.Of<IMethod>(m => m.IsExtension == true);
+
+            var result = docContext.DetermineNameQualifier(extensionMock);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.None));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_MemberInCurrentTypeScope_ReturnsNone()
+        {
+            var assembly = MockHelper.CreateAssembly("TestAssembly", ["Test.Namespace"]);
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>(assembly);
+            var typeModel = docContext.Types.First();
+            docContext.AddressProvider.BeginScope("test", typeModel);
+
+            var memberMock = Mock.Of<IMember>(m => m.DeclaringType == typeModel.Metadata);
+
+            var result = docContext.DetermineNameQualifier(memberMock);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.None));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_MemberNotInCurrentTypeScope_ReturnsDeclaringType()
+        {
+            var assembly = MockHelper.CreateAssembly("TestAssembly", ["Test.Namespace"]);
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>(assembly);
+            var typeModel = docContext.Types.First();
+            docContext.AddressProvider.BeginScope("test", typeModel);
+
+            var otherType = Mock.Of<IType>();
+            var memberMock = Mock.Of<IMember>(m => m.DeclaringType == otherType);
+
+            var result = docContext.DetermineNameQualifier(memberMock);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.DeclaringType));
         }
 
         private sealed class TestFormatter : IDocumentFormatter

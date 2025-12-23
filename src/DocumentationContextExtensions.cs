@@ -180,16 +180,27 @@ namespace Kampute.DocToolkit
             if (member is null)
                 throw new ArgumentNullException(nameof(member));
 
+            // Types always require declaring type qualification
             if (member is IType)
                 return NameQualifier.DeclaringType;
 
-            if (member is IWithExtensionBehavior { IsExtension: true } or IOperator)
+            // Members in the current type scope do not require qualification
+            if (IsMemberInCurrentTypeScope())
                 return NameQualifier.None;
 
-            return context.AddressProvider.ActiveScope.Model is TypeModel typeModel
-                && ReferenceEquals(typeModel.Metadata, member.DeclaringType)
-                    ? NameQualifier.None
-                    : NameQualifier.DeclaringType;
+            // Operators and extension methods do not require qualification
+            if (member is IOperator or IWithExtensionBehavior { IsExtension: true })
+                return NameQualifier.None;
+
+            // Otherwise, qualify with declaring type
+            return NameQualifier.DeclaringType;
+
+            bool IsMemberInCurrentTypeScope() => context.AddressProvider.ActiveScope.Model switch
+            {
+                TypeModel typeModel => ReferenceEquals(typeModel.Metadata, member.DeclaringType),
+                MemberModel memberModel => ReferenceEquals(memberModel.Metadata.DeclaringType, member.DeclaringType),
+                _ => false,
+            };
         }
     }
 }
