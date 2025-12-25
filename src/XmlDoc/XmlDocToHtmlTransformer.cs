@@ -23,7 +23,7 @@ namespace Kampute.DocToolkit.XmlDoc
     /// additional text processing capabilities during the transformation process, such as text escaping, formatting,
     /// and whitespace normalization.
     /// </remarks>
-    /// <seealso href="xmldoc-tags/xmldoc-to-html.md"/>
+    /// <seealso href="xmldoc-tags/xmldoc-to-html"/>
     public class XmlDocToHtmlTransformer : XmlDocTransformer
     {
         /// <summary>

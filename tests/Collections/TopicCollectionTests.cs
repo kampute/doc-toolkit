@@ -515,6 +515,129 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
+        public void TryFindByPartialId_WithNullId_ThrowsArgumentException()
+        {
+            var collection = new TopicCollection(context);
+
+            Assert.That(() => collection.TryFindByPartialId(null!, out _), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("id"));
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithEmptyId_ThrowsArgumentException()
+        {
+            var collection = new TopicCollection(context);
+
+            Assert.That(() => collection.TryFindByPartialId("", out _), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("id"));
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithNoMatches_ReturnsFalse()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopic("Topic1"),
+                CreateMockTopicWithChildren("Topic2", "Child1")
+            };
+
+            var result = collection.TryFindByPartialId("NonExistent", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(found, Is.Null);
+            }
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithExactMatch_ReturnsTrue()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopic("Topic1"),
+                CreateMockTopic("Topic2")
+            };
+
+            var result = collection.TryFindByPartialId("Topic1", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(found?.Id, Is.EqualTo("Topic1"));
+            }
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithPartialMatch_ReturnsTrue()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopicWithChildren("Parent", "Child")
+            };
+
+            var result = collection.TryFindByPartialId("Child", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(found?.Id, Is.EqualTo("Parent/Child"));
+            }
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithAmbiguousMatches_ReturnsFalse()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopicWithChildren("Parent1", "Child"),
+                CreateMockTopicWithChildren("Parent2", "Child")
+            };
+
+            var result = collection.TryFindByPartialId("Child", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(found, Is.Null);
+            }
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithNoSeparator_ReturnsFalse()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopic("ParentChild")
+            };
+
+            var result = collection.TryFindByPartialId("Child", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(found, Is.Null);
+            }
+        }
+
+        [Test]
+        public void TryFindByPartialId_WithNestedPartialMatch_ReturnsTrue()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopic("A/B/C")
+            };
+
+            var result = collection.TryFindByPartialId("C", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(found?.Id, Is.EqualTo("A/B/C"));
+            }
+        }
+
+        [Test]
         public void TryResolve_WithNullReference_ReturnsFalse()
         {
             var collection = new TopicCollection(context);
@@ -676,7 +799,7 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
-        public void TryResolve_WithRelativeTopicId_OutOfScope_ReturnsFalse()
+        public void TryResolve_WithUniqueRelativeTopicId_OutOfScope_ResolvesCorrectly()
         {
             var collection = new TopicCollection(context)
             {
@@ -687,8 +810,8 @@ namespace Kampute.DocToolkit.Test.Collections
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(result, Is.False);
-                Assert.That(resolvedTopic, Is.Null);
+                Assert.That(result, Is.True);
+                Assert.That(resolvedTopic?.Id, Is.EqualTo("guides/installation"));
             }
         }
 

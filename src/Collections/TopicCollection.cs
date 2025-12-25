@@ -249,6 +249,9 @@ namespace Kampute.DocToolkit.Collections
 
                 if (TryFindBySubpath(reference, out topic))
                     return true;
+
+                if (TryFindByPartialId(reference, out topic))
+                    return true;
             }
 
             topic = null;
@@ -303,13 +306,11 @@ namespace Kampute.DocToolkit.Collections
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException($"{nameof(filePath)} cannot be null or empty.", nameof(filePath));
 
-            if (!PathHelper.TryNormalizePath(filePath, out var subPath))
-            {
-                topic = null;
-                return false;
-            }
-
             topic = null;
+
+            if (!PathHelper.TryNormalizePath(filePath, out var subPath))
+                return false;
+
             foreach (var (sourceFilePath, fileBasedTopic) in topicsByPath)
             {
                 if (PathHelper.IsSubpath(sourceFilePath, subPath))
@@ -324,6 +325,41 @@ namespace Kampute.DocToolkit.Collections
                     topic = fileBasedTopic;
                 }
             }
+
+            return topic is not null;
+        }
+
+        /// <summary>
+        /// Attempts to find a topic in the topic hierarchy by its unqualified identifier.
+        /// </summary>
+        /// <param name="id">The unqualified identifier the topic to lookup.</param>
+        /// <param name="topic">When this method returns, contains the topic that uniquely matches the specified identifier; otherwise, <see langword="null"/> if no match or if ambiguous.</param>
+        /// <returns><see langword="true"/> if a unique matching topic was found; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is <see langword="null"/> or empty.</exception>
+        public bool TryFindByPartialId(string id, [NotNullWhen(true)] out TopicModel? topic)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException($"{nameof(id)} cannot be null or empty.", nameof(id));
+
+            topic = null;
+            foreach (var candidate in allTopics.Values)
+            {
+                if (!candidate.Id.EndsWith(id, StringComparison.Ordinal))
+                    continue;
+
+                if (candidate.Id.Length > id.Length && candidate.Id[candidate.Id.Length - id.Length - 1] != '/')
+                    continue;
+
+                if (topic is not null)
+                {
+                    // Ambiguous match
+                    topic = null;
+                    return false;
+                }
+
+                topic = candidate;
+            }
+
             return topic is not null;
         }
 

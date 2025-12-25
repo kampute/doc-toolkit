@@ -80,17 +80,16 @@ namespace Kampute.DocToolkit.XmlDoc.Comments
             if (context is null)
                 throw new ArgumentNullException(nameof(context));
 
-            if (!IsHyperlink || !Uri.TryCreate(Target, UriKind.Relative, out var relativeUrl))
+            if (IsCodeReference || Uri.IsWellFormedUriString(Target, UriKind.Absolute))
                 return this;
 
-            var href = relativeUrl.ToString();
+            if (!context.UrlTransformer.TryTransformUrl(Target, out var adjustedUrl))
+                return this;
 
-            if (IsEmpty && context.Topics.TryResolve(UriHelper.GetPathPart(href), out var topic))
+            if (IsEmpty && context.Topics.TryResolve(UriHelper.GetPathPart(Target), out var topic))
                 Content.Value = topic.Name;
 
-            return context.UrlTransformer.TryTransformUrl(href, out var adjustedUrl)
-                ? new SeeAlsoComment(adjustedUrl.ToString(), Content)
-                : this;
+            return new SeeAlsoComment(adjustedUrl.ToString(), Content);
         }
 
         /// <summary>

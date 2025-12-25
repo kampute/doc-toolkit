@@ -25,7 +25,7 @@ namespace Kampute.DocToolkit.XmlDoc
     /// <see cref="XsltTextTools"/> and <see cref="XsltMarkdownTools"/> extension methods, which provide specialized
     /// formatting for Markdown-specific elements beyond basic text processing.
     /// </remarks>
-    /// <seealso href="xmldoc-tags/xmldoc-to-markdown.md"/>
+    /// <seealso href="xmldoc-tags/xmldoc-to-markdown"/>
     public class XmlDocToMarkdownTransformer : XmlDocTransformer
     {
         /// <summary>

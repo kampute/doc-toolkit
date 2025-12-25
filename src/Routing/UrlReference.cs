@@ -84,7 +84,7 @@ namespace Kampute.DocToolkit.Routing
         /// A <see cref="Uri"/> representing the target URL, or <see langword="null"/> if the URL could not be resolved.
         /// </value>
         /// <remarks>
-        /// If the <see cref="SourceUrl"/> could not be resolved to a URL of an internal resource, this property will be <see langword="null"/>. 
+        /// If the <see cref="SourceUrl"/> could not be resolved to a URL of an internal resource, this property will be <see langword="null"/>.
         /// Common reasons for a <see langword="null"/> value include:
         /// <list type="bullet">
         ///   <item><description>The source string is not a well-formed absolute or relative URI.</description></item>
@@ -93,6 +93,13 @@ namespace Kampute.DocToolkit.Routing
         /// </list>
         /// When the <see cref="TargetUrl"/> is a relative URL, it is relative to the directory of the referencing model's
         /// documentation page as indicated by the <see cref="BaseDirectory"/> property.
+        /// <para>
+        /// <note type="caution" title="Caution">
+        /// A non-<see langword="null"/> <see cref="TargetUrl"/> indicates a resolved URL, but it does not guarantee that the URL points to
+        /// an  existing resource within the documentation. This is because the target resource may not have been generated yet or might not
+        /// be included in the documentation set at the time of URL resolution.
+        /// </note>
+        /// </para>
         /// </remarks>
         public Uri? TargetUrl { get; }
 

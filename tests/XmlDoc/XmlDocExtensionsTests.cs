@@ -17,6 +17,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
     {
         private string xmlFilePath = null!;
         private IXmlDocProvider xmlDocProvider = null!;
+        private ITypeMember testMember = null!;
 
         [SetUp]
         public void Setup()
@@ -27,14 +28,20 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 @"<?xml version='1.0' encoding='utf-8'?>
                 <doc>
                     <members>
-                        <member name='T:Acme.ISampleInterface'>
+                        <member name='T:Kampute.DocToolkit.Test.XmlDoc.XmlDocExtensionsTests.TestSample'>
                             <summary>A documented type but without member documentation.</summary>
                         </member>
-                        <member name='M:Acme.SampleDerivedGenericClass`3.GenericMethod``1(`0,`1,`2,``0)'>
+                        <member name='M:Kampute.DocToolkit.Test.XmlDoc.XmlDocExtensionsTests.TestSample.Member``1(``0)'>
                             <seealso href='https://example.com/'></seealso>
                             <exception cref='System.ArgumentNullException'></exception>
                             <permission cref='System.Security.Permissions.SecurityPermission'></permission>
                             <event cref='System.EventHandler'></event>
+                        </member>
+                        <member name='M:Kampute.DocToolkit.Test.XmlDoc.XmlDocExtensionsTests.TestSample.OverloadPresent'>
+                            <summary>Overload with documentation.</summary> 
+                            <overloads>
+                                <summary>Overloaded method.</summary>
+                            </overloads>
                         </member>
                     </members>
                 </doc>";
@@ -45,6 +52,8 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             var repository = new XmlDocRepository();
             repository.ImportFile(xmlFilePath);
             xmlDocProvider = new XmlDocProvider(repository);
+
+            testMember = typeof(TestSample).GetMethod(nameof(TestSample.Member))!.GetMetadata();
         }
 
         [TearDown]
@@ -57,9 +66,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [Test]
         public void InspectDocumentation_WithNullProvider_ThrowsArgumentNullException()
         {
-            var member = typeof(Acme.ISampleInterface).GetMetadata();
-
-            Assert.That(() => ((IXmlDocProvider)null!).InspectDocumentation(member),
+            Assert.That(() => ((IXmlDocProvider)null!).InspectDocumentation(testMember),
                 Throws.ArgumentNullException.With.Property("ParamName").EqualTo("xmlDocProvider"));
         }
 
@@ -73,9 +80,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [Test]
         public void InspectDocumentation_WithNoneOptions_ReturnsEmpty()
         {
-            var member = typeof(Acme.ISampleInterface).GetMetadata();
-
-            var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.None).ToList();
+            var issues = xmlDocProvider.InspectDocumentation(testMember, XmlDocInspectionOptions.None).ToList();
 
             Assert.That(issues, Is.Empty);
         }
@@ -83,21 +88,16 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [Test]
         public void InspectDocumentation_Documented_WithRequiredOnly_ReturnsNoIssues()
         {
-            var member = typeof(Acme.ISampleInterface).GetMetadata();
-
-            var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.Required).ToList();
+            var issues = xmlDocProvider.InspectDocumentation(typeof(TestSample).GetMetadata(), XmlDocInspectionOptions.Required).ToList();
 
             Assert.That(issues, Is.Empty);
         }
 
         [Test]
-        public void InspectDocumentation_MissingSummary_WithRequiredOption_ReportsIssue()
+        public void InspectDocumentation_MissingSummaryComment_WithRequiredOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var summaryIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Required)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Required)
                 .Where(static i => i.XmlTag == XmlDocTag.Summary)
                 .ToList();
 
@@ -105,18 +105,15 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(summaryIssues[0].IssueType, Is.EqualTo(XmlDocInspectionIssueType.MissingRequiredTag));
-                Assert.That(summaryIssues[0].Member, Is.EqualTo(member));
+                Assert.That(summaryIssues[0].Member, Is.EqualTo(testMember));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingTypeParam_WithRequiredOption_ReportsIssue()
+        public void InspectDocumentation_MissingTypeParamComment_WithRequiredOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var typeParamIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Required)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Required)
                 .Where(i => i.XmlTag == XmlDocTag.TypeParam)
                 .ToList();
 
@@ -124,19 +121,16 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(typeParamIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag));
-                Assert.That(typeParamIssues.All(i => i.Member == member));
+                Assert.That(typeParamIssues.All(i => i.Member == testMember));
                 Assert.That(typeParamIssues.All(i => i.TypeParameter is not null));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingParam_WithRequiredOption_ReportsIssue()
+        public void InspectDocumentation_MissingParamComment_WithRequiredOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var paramIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Required)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Required)
                 .Where(i => i.XmlTag == XmlDocTag.Param)
                 .ToList();
 
@@ -144,19 +138,16 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(paramIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag));
-                Assert.That(paramIssues.All(i => i.Member == member));
+                Assert.That(paramIssues.All(i => i.Member == testMember));
                 Assert.That(paramIssues.All(i => i.Parameter is not null));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingReturns_WithRequiredOption_ReportsIssue()
+        public void InspectDocumentation_MissingReturnsComment_WithRequiredOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var returnsIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Required)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Required)
                 .Where(i => i.XmlTag == XmlDocTag.Returns)
                 .ToList();
 
@@ -164,20 +155,17 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(returnsIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag));
-                Assert.That(returnsIssues.All(i => i.Member == member));
+                Assert.That(returnsIssues.All(i => i.Member == testMember));
                 Assert.That(returnsIssues.All(i => i.Parameter is not null));
             }
 
         }
 
         [Test]
-        public void InspectDocumentation_MissingRemarks_WithRemarksOption_ReportsIssue()
+        public void InspectDocumentation_MissingRemarksComment_WithRemarksOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var remarksIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Remarks)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Remarks)
                 .Where(i => i.XmlTag == XmlDocTag.Remarks)
                 .ToList();
 
@@ -185,18 +173,15 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(remarksIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag));
-                Assert.That(remarksIssues.All(i => i.Member == member));
+                Assert.That(remarksIssues.All(i => i.Member == testMember));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingExample_WithExampleOption_ReportsIssue()
+        public void InspectDocumentation_MissingExampleComment_WithExampleOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var exampleIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Example)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Example)
                 .Where(i => i.XmlTag == XmlDocTag.Example)
                 .ToList();
 
@@ -204,18 +189,15 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(exampleIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag));
-                Assert.That(exampleIssues.All(i => i.Member == member));
+                Assert.That(exampleIssues.All(i => i.Member == testMember));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingException_WithExceptionOption_ReportsIssue()
+        public void InspectDocumentation_MissingExceptionDescription_WithExceptionOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var exceptionIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Exception)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Exception)
                 .Where(i => i.XmlTag == XmlDocTag.Exception)
                 .ToList();
 
@@ -223,19 +205,16 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(exceptionIssues.All(i => i.IssueType == XmlDocInspectionIssueType.UndocumentedReference));
-                Assert.That(exceptionIssues.All(i => i.Member == member));
+                Assert.That(exceptionIssues.All(i => i.Member == testMember));
                 Assert.That(exceptionIssues.All(i => i.CodeReference is not null));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingPermission_WithPermissionOption_ReportsIssue()
+        public void InspectDocumentation_MissingPermissionDescription_WithPermissionOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var permissionIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Permission)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Permission)
                 .Where(i => i.XmlTag == XmlDocTag.Permission)
                 .ToList();
 
@@ -243,37 +222,31 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(permissionIssues.All(i => i.IssueType == XmlDocInspectionIssueType.UndocumentedReference));
-                Assert.That(permissionIssues.All(i => i.Member == member));
+                Assert.That(permissionIssues.All(i => i.Member == testMember));
                 Assert.That(permissionIssues.All(i => i.CodeReference is not null));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingEvent_WithEventOption_ReportsIssue()
+        public void InspectDocumentation_MissingEventDescription_WithEventOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var eventIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.Event)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.Event)
                 .Where(i => i.XmlTag == XmlDocTag.Event);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(eventIssues.All(i => i.IssueType == XmlDocInspectionIssueType.UndocumentedReference));
-                Assert.That(eventIssues.All(i => i.Member == member));
+                Assert.That(eventIssues.All(i => i.Member == testMember));
                 Assert.That(eventIssues.All(i => i.CodeReference is not null));
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingSeeAlso_WithSeeAlsoOption_ReportsIssue()
+        public void InspectDocumentation_MissingHyperlinkSeeAlsoDescription_WithSeeAlsoOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
             var seeAlsoIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.SeeAlso)
+                .InspectDocumentation(testMember, XmlDocInspectionOptions.SeeAlso)
                 .Where(static i => i.XmlTag == XmlDocTag.SeeAlso)
                 .ToList();
 
@@ -281,18 +254,18 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(seeAlsoIssues[0].IssueType, Is.EqualTo(XmlDocInspectionIssueType.UntitledSeeAlso));
-                Assert.That(seeAlsoIssues[0].Member, Is.EqualTo(member));
+                Assert.That(seeAlsoIssues[0].Member, Is.EqualTo(testMember));
                 Assert.That(seeAlsoIssues[0].Hyperlink, Is.Not.Null);
             }
         }
 
         [Test]
-        public void InspectDocumentation_MissingThreadSafety_WithThreadSafetyOption_ReportsIssue()
+        public void InspectDocumentation_MissingThreadSafetyComment_WithThreadSafetyOption_ReportsIssue()
         {
-            var member = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
+            var type = typeof(TestSample).GetMetadata<IClassType>();
 
             var threadSafetyIssues = xmlDocProvider
-                .InspectDocumentation(member, XmlDocInspectionOptions.ThreadSafety)
+                .InspectDocumentation(type, XmlDocInspectionOptions.ThreadSafety)
                 .Where(i => i.XmlTag == XmlDocTag.ThreadSafety)
                 .ToList();
 
@@ -300,15 +273,15 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(threadSafetyIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag));
-                Assert.That(threadSafetyIssues.All(i => i.Member == member));
+                Assert.That(threadSafetyIssues.All(i => i.Member == type));
             }
         }
 
         [Test]
         public void InspectDocumentation_MissingOverloads_WithOverloadsOption_ReportsIssue()
         {
-            var type = typeof(Acme.SampleMethods).GetMetadata<IClassType>();
-            var member = type.Methods.First(m => m.Name == nameof(Acme.SampleMethods.OverloadedMethod));
+            var type = typeof(TestSample).GetMetadata<IClassType>();
+            var member = type.Methods.First(m => m.Name == nameof(TestSample.OverloadAbsent));
 
             var overloadsIssues = xmlDocProvider
                 .InspectDocumentation(member, XmlDocInspectionOptions.Overloads)
@@ -323,12 +296,23 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         }
 
         [Test]
+        public void InspectDocumentation_HavingOverloads_WithOverloadsOption_ReportsNoIssue()
+        {
+            var type = typeof(TestSample).GetMetadata<IClassType>();
+            var member = type.Methods.First(m => m.Name == nameof(TestSample.OverloadPresent));
+
+            var overloadsIssues = xmlDocProvider
+                .InspectDocumentation(member, XmlDocInspectionOptions.Overloads)
+                .Where(i => i.XmlTag == XmlDocTag.Overloads)
+                .ToList();
+
+            Assert.That(overloadsIssues, Is.Empty);
+        }
+
+        [Test]
         public void InspectDocumentation_MultipleOptions_ReportsAllIssues()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
-            var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.Remarks | XmlDocInspectionOptions.Example).ToList();
+            var issues = xmlDocProvider.InspectDocumentation(testMember, XmlDocInspectionOptions.Remarks | XmlDocInspectionOptions.Example).ToList();
 
             using (Assert.EnterMultipleScope())
             {
@@ -340,10 +324,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [Test]
         public void InspectDocumentation_WithAllOptions_ReportsAllRelevantMissingTags()
         {
-            var type = typeof(Acme.SampleDerivedGenericClass<,,>).GetMetadata<IClassType>();
-            var member = type.Methods.First(static m => m.Name == nameof(Acme.SampleDerivedGenericClass<,,>.GenericMethod));
-
-            var issues = xmlDocProvider.InspectDocumentation(member, XmlDocInspectionOptions.All).ToList();
+            var issues = xmlDocProvider.InspectDocumentation(testMember, XmlDocInspectionOptions.All).ToList();
 
             using (Assert.EnterMultipleScope())
             {
@@ -420,6 +401,17 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 Assert.That(issues[0].XmlTag, Is.EqualTo(XmlDocTag.Summary));
                 Assert.That(issues[0].Member, Is.EqualTo(explicitConstructor));
             }
+        }
+
+        private static class TestSample
+        {
+            public static T Member<T>(T x) => throw new NotImplementedException();
+
+            public static void OverloadAbsent() => throw new NotImplementedException();
+            public static void OverloadAbsent(int x) => throw new NotImplementedException();
+
+            public static void OverloadPresent() => throw new NotImplementedException();
+            public static void OverloadPresent(int x) => throw new NotImplementedException();
         }
     }
 }
