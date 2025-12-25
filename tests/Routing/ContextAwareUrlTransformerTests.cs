@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.Test.Routing
     using Kampute.DocToolkit.Routing;
     using Kampute.DocToolkit.Topics;
     using NUnit.Framework;
+    using System;
     using System.IO;
 
     [TestFixture]
@@ -408,7 +409,7 @@ namespace Kampute.DocToolkit.Test.Routing
                 using (Assert.EnterMultipleScope())
                 {
                     Assert.That(result, Is.True);
-                    Assert.That(transformedUrl?.ToString(), Is.EqualTo("assets/license.txt"));
+                    Assert.That(transformedUrl, Is.EqualTo(new Uri("https://example.com/assets/license.txt")));
                 }
             }
             finally

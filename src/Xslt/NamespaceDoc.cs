@@ -13,8 +13,8 @@ namespace Kampute.DocToolkit.Xslt
     /// transform XML documentation. These utilities implement a declarative approach to transforming XML documentation
     /// into various output formats using XSLT stylesheets.
     /// </remarks>
-    /// <seealso href="xmldoc-to-html"/>
-    /// <seealso href="xmldoc-to-markdown"/>
+    /// <seealso href="xmldoc-tags/xmldoc-to-html"/>
+    /// <seealso href="xmldoc-tags/xmldoc-to-markdown"/>
     internal static class NamespaceDoc
     {
         // This class doesn't contain any code
