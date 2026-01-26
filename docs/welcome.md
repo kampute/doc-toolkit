@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/github/v/release/kampute/doc-toolkit?label=Version&color=darkred)](https://github.com/kampute/doc-toolkit/releases)
+
 # Welcome to DocToolkit
 
 DocToolkit is a .NET library that extracts metadata from .NET assemblies and transforms XML documentation comments into structured documentation models. Unlike traditional documentation generators that produce fixed output, DocToolkit provides the building blocks for creating custom documentation systems tailored to your specific needs.
