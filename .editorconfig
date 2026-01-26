@@ -1,6 +1,6 @@
 root = true
 
-file_header_template = Copyright (C) 2025 Kampute\n\nReleased under the terms of the MIT license.\nSee the LICENSE file in the project root for the full license text.
+file_header_template = Copyright (C) Kampute\n\nReleased under the terms of the MIT license.\nSee the LICENSE file in the project root for the full license text.
 
 [*.{cs,vb}]
 indent_size = 4

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Kampute
+// Copyright (C) Kampute
 //
 // Released under the terms of the MIT license.
 // See t        [TestCase("long\ttext\twith\ttabs\tthat\tneeds\twrapping", 15, false, ExpectedResult = "long\ttext\twith\ntabs\tthat\tneeds\nwrapping")]e LICENSE file in the project root for the full license text.
