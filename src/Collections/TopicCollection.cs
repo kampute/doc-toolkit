@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2025 Kampute
+﻿// Copyright (C) Kampute
 //
 // Released under the terms of the MIT license.
 // See the LICENSE file in the project root for the full license text.

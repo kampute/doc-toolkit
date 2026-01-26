@@ -7,7 +7,7 @@
     <Version>2.2.0</Version>
     <Company>Kampute</Company>
     <Authors>Kambiz Khojasteh</Authors>
-    <Copyright>Copyright (c) 2025 Kampute</Copyright>
+    <Copyright>Copyright (C) Kampute</Copyright>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
