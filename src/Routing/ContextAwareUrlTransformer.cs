@@ -96,16 +96,24 @@ namespace Kampute.DocToolkit.Routing
             var scope = Context.AddressProvider.ActiveScope;
 
             // Asset resolution
-            if
-            (
-                scope.Model is TopicModel currentTopic &&
-                currentTopic.Source is IFileBasedTopic sourceTopic &&
-                PathHelper.TryNormalizePath(Path.Combine(sourceTopic.FilePath, "..", urlPath), out var filePath) &&
-                File.Exists(filePath)
-            )
+            if (scope.Model is TopicModel currentTopic && currentTopic.Source is IFileBasedTopic sourceTopic)
             {
-                transformedUrl = currentTopic.Url.Combine("../" + urlString);
-                return true;
+                var topicDirectory = Path.GetDirectoryName(sourceTopic.FilePath) ?? string.Empty;
+                if (PathHelper.TryNormalizePath(Path.Combine(topicDirectory, urlPath), out var filePath) && File.Exists(filePath))
+                {
+                    if (scope.RootUrl.IsAbsoluteUri)
+                    {
+                        transformedUrl = scope.RootUrl.Combine(urlString);
+                    }
+                    else
+                    {
+                        var relativePath = "../" + scope.RootUrl + urlString;
+                        transformedUrl = currentTopic.Url.IsAbsoluteUri
+                            ? new Uri(currentTopic.Url, relativePath)
+                            : currentTopic.Url.Combine(relativePath);
+                    }
+                    return true;
+                }
             }
 
             // Site-relative resolution

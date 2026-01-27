@@ -386,7 +386,43 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [Test]
-        public void TryTransformUrl_WithFileBasedTopicAndExistingAsset_ReturnsAssetUrl()
+        public void TryTransformUrl_WithFileBasedTopicAndExistingAsset_SameFolder_ReturnsAssetUrl()
+        {
+            var directory = Path.GetTempPath();
+            var topicFile = Path.Combine(directory, "docs", "test-topic.md");
+            var assetFile = Path.Combine(directory, "docs", "license.txt");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(assetFile)!);
+                File.WriteAllText(assetFile, "fake license content");
+
+                var fileBasedTopic = new MarkdownFileTopic("TestTopic", topicFile);
+                using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
+                var transformer = new ContextAwareUrlTransformer(context);
+
+                context.Topics.TryGetById("TestTopic", out var contextualTopic);
+
+                using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
+
+                var result = transformer.TryTransformUrl("license.txt", out var transformedUrl);
+
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(result, Is.True);
+                    Assert.That(transformedUrl, Is.EqualTo(new Uri("https://example.com/license.txt")));
+                }
+            }
+            finally
+            {
+                if (File.Exists(assetFile))
+                    File.Delete(assetFile);
+                if (Directory.Exists(Path.GetDirectoryName(assetFile)!))
+                    Directory.Delete(Path.GetDirectoryName(assetFile)!);
+            }
+        }
+
+        [Test]
+        public void TryTransformUrl_WithFileBasedTopicAndExistingAsset_SiblingFolders_ReturnsAssetUrl()
         {
             var directory = Path.GetTempPath();
             var topicFile = Path.Combine(directory, "guides", "test-topic.md");
@@ -402,7 +438,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
-                using var _ = context.AddressProvider.BeginScope("test", contextualTopic);
+                using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
 
                 var result = transformer.TryTransformUrl("../assets/license.txt", out var transformedUrl);
 
@@ -410,6 +446,42 @@ namespace Kampute.DocToolkit.Test.Routing
                 {
                     Assert.That(result, Is.True);
                     Assert.That(transformedUrl, Is.EqualTo(new Uri("https://example.com/assets/license.txt")));
+                }
+            }
+            finally
+            {
+                if (File.Exists(assetFile))
+                    File.Delete(assetFile);
+                if (Directory.Exists(Path.GetDirectoryName(assetFile)!))
+                    Directory.Delete(Path.GetDirectoryName(assetFile)!);
+            }
+        }
+
+        [Test]
+        public void TryTransformUrl_WithFileBasedTopicAndExistingAsset_UnrelatedFolders_ReturnsAssetUrl()
+        {
+            var directory = Path.GetTempPath();
+            var topicFile = Path.Combine(directory, "topics/guides", "test-topic.md");
+            var assetFile = Path.Combine(directory, "assets/legals", "license.txt");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(assetFile)!);
+                File.WriteAllText(assetFile, "fake license content");
+
+                var fileBasedTopic = new MarkdownFileTopic("TestTopic", topicFile);
+                using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
+                var transformer = new ContextAwareUrlTransformer(context);
+
+                context.Topics.TryGetById("TestTopic", out var contextualTopic);
+
+                using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
+
+                var result = transformer.TryTransformUrl("../../assets/legals/license.txt", out var transformedUrl);
+
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(result, Is.True);
+                    Assert.That(transformedUrl, Is.EqualTo(new Uri("https://example.com/assets/legals/license.txt")));
                 }
             }
             finally
@@ -430,7 +502,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
-            using var _ = context.AddressProvider.BeginScope("test", contextualTopic);
+            using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
 
             var result = transformer.TryTransformUrl("../../../license.txt", out var transformedUrl);
 
@@ -457,14 +529,14 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 context.Topics.TryGetById("NonFileBasedTopic", out var contextualTopic);
 
-                using var _ = context.AddressProvider.BeginScope("test", contextualTopic);
+                using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
 
                 var result = transformer.TryTransformUrl("license.txt", out var transformedUrl);
 
                 using (Assert.EnterMultipleScope())
                 {
                     Assert.That(result, Is.True);
-                    Assert.That(transformedUrl?.ToString(), Is.EqualTo("../license.txt"));
+                    Assert.That(transformedUrl?.ToString(), Is.EqualTo("../../license.txt"));
                 }
             }
             finally
@@ -485,14 +557,14 @@ namespace Kampute.DocToolkit.Test.Routing
 
             context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
-            using var _ = context.AddressProvider.BeginScope("test", contextualTopic);
+            using var _ = context.AddressProvider.BeginScope("test/topics", contextualTopic);
 
             var result = transformer.TryTransformUrl("nonexistent.png", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.True);
-                Assert.That(transformedUrl?.ToString(), Is.EqualTo("../nonexistent.png"));
+                Assert.That(transformedUrl?.ToString(), Is.EqualTo("../../nonexistent.png"));
             }
         }
 
