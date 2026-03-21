@@ -6,6 +6,8 @@
 namespace Kampute.DocToolkit.Support
 {
     using System;
+    using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Runtime.CompilerServices;
 
@@ -210,6 +212,137 @@ namespace Kampute.DocToolkit.Support
             return maxConsecutiveBackticks >= DefaultFenceBackticks
                 ? maxConsecutiveBackticks + 1
                 : DefaultFenceBackticks;
+        }
+
+        /// <summary>
+        /// Enumerates all ATX-style headings in the given Markdown content, returning their text and corresponding levels.
+        /// </summary>
+        /// <param name="content">The Markdown content to inspect.</param>
+        /// <returns>An enumerable of tuples, each containing the level and text of a heading found in the content.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="content"/> is <see langword="null"/>.</exception>
+        public static IEnumerable<(int Level, string Heading)> EnumerateHeadings(string content)
+        {
+            if (content is null)
+                throw new ArgumentNullException(nameof(content));
+
+            var pos = 0;
+            var length = content.Length;
+            while (pos < length)
+            {
+                var lineStart = pos;
+                while (pos < length && content[pos] != '\n')
+                    pos++;
+
+                var line = content.AsSpan(lineStart, pos - lineStart).Trim();
+                if (pos < length)
+                    pos++;
+
+                if (!line.IsEmpty && line[0] == '#')
+                {
+                    var level = 1;
+                    while (level < line.Length && line[level] == '#')
+                        level++;
+
+                    var headingText = line[level..].Trim();
+                    if (!headingText.IsEmpty)
+                        yield return (level, headingText.ToString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// Attempts to find the first ATX-style heading that appears before any non-heading content in the given Markdown text.
+        /// </summary>
+        /// <param name="content">The Markdown content to inspect.</param>
+        /// <param name="heading">When this method returns, contains the heading text if found; otherwise, <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if a heading was found and it appears before any non-heading content; otherwise, <see langword="false"/>.</returns>
+        public static bool TryGetFirstHeading(ReadOnlySpan<char> content, [NotNullWhen(true)] out string? heading)
+        {
+            var pos = 0;
+            var length = content.Length;
+            while (pos < length)
+            {
+                var lineStart = pos;
+                while (pos < length && content[pos] != '\n')
+                    pos++;
+
+                var line = content[lineStart..pos].Trim();
+                if (pos < length)
+                    pos++; // Skip the newline character
+
+                if (line.IsEmpty)
+                    continue;
+
+                if (line[0] != '#')
+                    break;
+
+                var level = 1;
+                while (level < line.Length && line[level] == '#')
+                    level++;
+
+                var headingText = line[level..].TrimStart();
+                if (headingText.IsEmpty)
+                    break;
+
+                heading = headingText.ToString();
+                return true;
+            }
+
+            heading = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Attempts to extract and parse the front matter block from Markdown content.
+        /// </summary>
+        /// <param name="content">The Markdown content to inspect.</param>
+        /// <param name="frontMatter">When this method returns, contains the parsed front matter metadata if found; otherwise, an empty dictionary.</param>
+        /// <param name="contentStart">When this method returns, contains the index in <paramref name="content"/> at which the body content starts.</param>
+        /// <returns><see langword="true"/> if a front matter block was found and parsed; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="FormatException">Thrown when a front matter block is found but cannot be parsed as valid YAML.</exception>
+        /// <remarks>
+        /// Front matter must start at the very beginning of the document, delimited by <c>---</c> on its own line.
+        /// The closing delimiter may be either <c>---</c> or <c>...</c>.
+        /// </remarks>
+        public static bool TryExtractFrontMatter(ReadOnlySpan<char> content, out IReadOnlyDictionary<string, object?> frontMatter, out int contentStart)
+        {
+            frontMatter = Yaml.Empty;
+            contentStart = 0;
+
+            if (!content.StartsWith("---"))
+                return false;
+
+            var length = content.Length;
+
+            var pos = 3;
+            if (pos < length && content[pos] == '\r')
+                pos++;
+            if (pos >= length || content[pos] != '\n')
+                return false;
+
+            pos++;
+            var yamlStart = pos;
+
+            while (pos < length)
+            {
+                var lineStart = pos;
+                while (pos < length && content[pos] != '\n')
+                    pos++;
+
+                var lineEnd = (pos > lineStart && content[pos - 1] == '\r') ? pos - 1 : pos;
+                if (pos < length)
+                    pos++;
+
+                var line = content[lineStart..lineEnd];
+                if (line.Equals("---", StringComparison.Ordinal) || line.Equals("...", StringComparison.Ordinal))
+                {
+                    frontMatter = Yaml.Parse(content[yamlStart..lineStart].TrimEnd());
+                    contentStart = pos;
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
