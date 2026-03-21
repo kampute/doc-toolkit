@@ -39,6 +39,7 @@ namespace Kampute.DocToolkit.Test.Topics
         [TestCase("test-file.md", "Content before title\n# Title in the middle", ExpectedResult = "Test File")]
         [TestCase("test-file.md", "# First Title\n## Second level heading", ExpectedResult = "First Title")]
         [TestCase("test-file.md", "# Title with symbols: &@#!?", ExpectedResult = "Title with symbols: &@#!?")]
+        [TestCase("test-file.md", "---\ntitle: Front Matter Title\n---\n# Markdown Title", ExpectedResult = "Front Matter Title")]
         public string? Title_ReturnsExpectedTitle(string fileName, string content)
         {
             var path = Path.Combine(tempDir, fileName);

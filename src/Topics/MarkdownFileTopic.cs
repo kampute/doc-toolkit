@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Topics
 {
     using Kampute.DocToolkit.Support;
     using System;
+    using System.Collections.Generic;
     using System.IO;
 
     /// <summary>
@@ -20,6 +21,8 @@ namespace Kampute.DocToolkit.Topics
     /// <threadsafety static="true" instance="false"/>
     public class MarkdownFileTopic : FileTopic
     {
+        private readonly Lazy<MarkdownData> markdown;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MarkdownFileTopic"/> class.
         /// </summary>
@@ -32,7 +35,17 @@ namespace Kampute.DocToolkit.Topics
         public MarkdownFileTopic(string id, string path)
             : base(id, path)
         {
+            markdown = new(ParseMarkdown);
         }
+
+        /// <summary>
+        /// Gets the collection of front matter metadata associated with the Markdown file topic.
+        /// </summary>
+        /// <value>
+        /// A read-only dictionary containing the front matter metadata, where the keys are the metadata names
+        /// and the values are the corresponding metadata values.
+        /// </value>
+        public IReadOnlyDictionary<string, object?> FrontMatter => markdown.Value.FrontMatter;
 
         /// <summary>
         /// Gets the format of the content in the topic.
@@ -44,35 +57,31 @@ namespace Kampute.DocToolkit.Topics
         protected sealed override string ContentFormat => FileExtensions.Markdown;
 
         /// <summary>
+        /// Creates a <see cref="TextReader"/> to read the content of the source file, excluding any front matter.
+        /// </summary>
+        /// <param name="context">The documentation context that provides additional information for the operation.</param>
+        /// <returns>A <see cref="TextReader"/> for reading the content of the file specified by <see cref="FileTopic.FilePath"/>, starting after the front matter if present.</returns>
+        /// <exception cref="IOException">Thrown when an I/O error occurs while reading the file specified by <see cref="FileTopic.FilePath"/>.</exception>
+        protected override TextReader CreateContentReader(IDocumentationContext context) => new StringReader(markdown.Value.Content);
+
+        /// <summary>
         /// Extracts the title of the topic from the Markdown file.
         /// </summary>
         /// <returns>The title of the topic.</returns>
-        /// <exception cref="IOException">Thrown when an I/O error occurs while reading the file specified by <see cref="FileTopic.FilePath"/>.</exception>
         /// <remarks>
-        /// This method attempts to extract the first Markdown heading from the Markdown file. If the heading is not found,
-        /// it falls back to the default title generation from the topic's name.
+        /// This method starts by checking the front matter for a "title" entry. If a valid title exists, it uses that as the topic title. 
+        /// If not, it tries to extract the first Markdown heading from the file. If successful, that heading becomes the title. 
+        /// Otherwise, it reverts to the base class's default title generation logic.
         /// </remarks>
         protected override string GenerateTitle()
         {
             try
             {
-                using var reader = File.OpenText(FilePath);
+                if (FrontMatter.TryGetValue("title", out var rawTitle) && rawTitle is string title && !string.IsNullOrWhiteSpace(title))
+                    return title.Trim();
 
-                string? line;
-                while ((line = reader.ReadLine()) is not null)
-                {
-                    if (string.IsNullOrWhiteSpace(line))
-                        continue;
-
-                    if (!line.TrimStart(' ').StartsWith('#'))
-                        break;
-
-                    var title = line.TrimStart(['#', ' ']).TrimEnd();
-                    if (title.Length == 0)
-                        break;
-
-                    return title;
-                }
+                if (Markdown.TryGetFirstHeading(markdown.Value.Content, out var heading))
+                    return heading;
             }
             catch (Exception)
             {
@@ -80,6 +89,54 @@ namespace Kampute.DocToolkit.Topics
             }
 
             return base.GenerateTitle();
+        }
+
+        /// <summary>
+        /// Parses the Markdown file to extract the front matter and content.
+        /// </summary>
+        /// <returns>A <see cref="MarkdownData"/> struct containing the parsed front matter and content of the Markdown file.</returns>
+        /// <exception cref="IOException">Thrown when an I/O error occurs while reading the file specified by <see cref="FileTopic.FilePath"/>.</exception>
+        private MarkdownData ParseMarkdown()
+        {
+            var text = File.ReadAllText(FilePath);
+            return Markdown.TryExtractFrontMatter(text, out var frontMatter, out var contentStart)
+                ? new MarkdownData(frontMatter, text[contentStart..])
+                : new MarkdownData(Yaml.Empty, text);
+        }
+
+        /// <summary>
+        /// Represents the parsed front matter and content of a Markdown file topic.
+        /// </summary>
+        private sealed class MarkdownData
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MarkdownData"/> struct with the specified front matter and content.
+            /// </summary>
+            /// <param name="frontMatter">The front matter metadata extracted from the Markdown file.</param>
+            /// <param name="content">The content of the Markdown file, excluding any front matter.</param>
+            public MarkdownData(IReadOnlyDictionary<string, object?> frontMatter, string content)
+            {
+                FrontMatter = frontMatter ?? Yaml.Empty;
+                Content = content ?? string.Empty;
+            }
+
+            /// <summary>
+            /// Gets the front matter metadata extracted from the Markdown file.
+            /// </summary>
+            /// <value>
+            /// A read-only dictionary containing the front matter metadata, where the keys are the metadata names
+            /// and the values are the corresponding metadata values.
+            /// </value>
+            public IReadOnlyDictionary<string, object?> FrontMatter { get; }
+
+            /// <summary>
+            /// Gets the content of the Markdown file, excluding any front matter.
+            /// </summary>
+            /// <value>
+            /// The content of the Markdown file, excluding any front matter, which is intended to be rendered as 
+            /// the main body of the documentation topic.
+            /// </value>
+            public string Content { get; }
         }
     }
 }
