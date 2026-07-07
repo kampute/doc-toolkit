@@ -169,7 +169,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var assembly = universe.LoadFromPath(testAssemblyPath);
 
             Assert.That(assembly, Is.Not.Null);
-            Assert.That(assembly.GetName().Name, Is.Not.Null.Or.Empty);
+            Assert.That(assembly.GetName().Name, Is.Not.Null.And.Not.Empty);
         }
 
         [Test]
@@ -330,7 +330,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(assembly.GetName().Name, Is.Not.Null.Or.Empty);
+                Assert.That(assembly.GetName().Name, Is.Not.Null.And.Not.Empty);
                 Assert.That(assembly.GetName().Version, Is.Not.Null);
                 Assert.That(assembly.Modules, Is.Not.Empty);
             }
