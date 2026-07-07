@@ -1,3 +1,8 @@
+---
+title: Supported XML Documentation Tags
+summary: A reference guide detailing XML documentation tags supported by DocToolkit, including standard and extended tags.
+---
+
 # Supported XML Documentation Tags
 
 This reference guide details XML documentation tags supported by DocToolkit, and their usage.

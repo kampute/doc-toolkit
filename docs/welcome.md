@@ -1,3 +1,8 @@
+---
+title: home
+summary: A .NET library that provides extensible pipeline for generating .NET API documentation by transforming assembly metadata and XML documentation into structured models, with automatic cross-reference resolution, support for multiple output formats, and integration of conceptual topics.
+---
+
 [![Version](https://img.shields.io/github/v/release/kampute/doc-toolkit?label=Version&color=darkred)](https://github.com/kampute/doc-toolkit/releases)
 
 # Welcome to DocToolkit

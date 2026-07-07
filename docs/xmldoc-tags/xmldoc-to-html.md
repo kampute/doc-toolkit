@@ -1,4 +1,9 @@
-﻿# HTML Representation of XML Documentation Elements
+﻿---
+title: XML Documentation to HTML
+summary: A reference guide describing how DocToolkit transforms XML documentation elements to their corresponding HTML representations.
+---
+
+# HTML Representation of XML Documentation Elements
 
 ## Overview
 This reference describes how DocToolkit transforms XML documentation elements to their corresponding HTML representations.
