@@ -60,14 +60,14 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [Test]
-        public void TryTransformUrl_WithActiveScope_WhenTopicNotFound_ReturnsTransformedUrl()
+        public void TryTransformUrl_WithDocumentationRootMarker_ReturnsTransformedUrl()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
             var transformer = new ContextAwareUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("testTopic.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/testTopic.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -139,7 +139,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("special%20page.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/special%20page.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -156,7 +156,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("page.html?query=value&param=test", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/page.html?query=value&param=test", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -173,7 +173,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("page.html#section", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/page.html#section", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -190,7 +190,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("page.html?query=value#section", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/page.html?query=value#section", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -207,7 +207,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("api/namespace", null);
 
-            var result = transformer.TryTransformUrl("guide.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/guide.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -514,7 +514,7 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [Test]
-        public void TryTransformUrl_WithNonFileBasedTopicAndExistingAsset_FallsBackToSiteRelative()
+        public void TryTransformUrl_WithNonFileBasedTopicAndRelativeUrl_LeavesUrlUnchanged()
         {
             var directory = Path.GetTempPath();
             var assetFile = Path.Combine(directory, "assets", "license.txt");
@@ -535,8 +535,8 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 using (Assert.EnterMultipleScope())
                 {
-                    Assert.That(result, Is.True);
-                    Assert.That(transformedUrl?.ToString(), Is.EqualTo("../../license.txt"));
+                    Assert.That(result, Is.False);
+                    Assert.That(transformedUrl, Is.Null);
                 }
             }
             finally
@@ -549,7 +549,7 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [Test]
-        public void TryTransformUrl_WithFileBasedTopicAndNonExistingAsset_FallsBackToSiteRelative()
+        public void TryTransformUrl_WithFileBasedTopicAndNonExistingRelativeAsset_LeavesUrlUnchanged()
         {
             var fileBasedTopic = new MarkdownFileTopic("TestTopic", "/topics/test-topic.md");
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
@@ -563,18 +563,18 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(result, Is.True);
-                Assert.That(transformedUrl?.ToString(), Is.EqualTo("../../nonexistent.png"));
+                Assert.That(result, Is.False);
+                Assert.That(transformedUrl, Is.Null);
             }
         }
 
         [Test]
-        public void TryTransformUrl_WithNoActiveScope_FallsBackToSiteRelative()
+        public void TryTransformUrl_WithDocumentationRootMarker_ResolvesFromDocumentationRoot()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
             var transformer = new ContextAwareUrlTransformer(context);
 
-            var result = transformer.TryTransformUrl("some-asset.png", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/some-asset.png", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -648,7 +648,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("api/namespace/type/member", null);
 
-            var result = transformer.TryTransformUrl("guide.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/guide.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -682,7 +682,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("file%20with%20spaces.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/file%20with%20spaces.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -699,7 +699,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("файл.html", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/файл.html", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -716,7 +716,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("page.html#", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/page.html#", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -733,7 +733,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
-            var result = transformer.TryTransformUrl("page.html?", out var transformedUrl);
+            var result = transformer.TryTransformUrl("~/page.html?", out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {

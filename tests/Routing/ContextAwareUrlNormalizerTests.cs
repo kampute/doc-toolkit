@@ -52,20 +52,21 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [TestCase("api/namespace", "", ExpectedResult = null)]
-        [TestCase("api", "api", ExpectedResult = "../api")]
-        [TestCase("api", "page.html", ExpectedResult = "../page.html")]
+        [TestCase("api", "api", ExpectedResult = null)]
+        [TestCase("api", "~/page.html", ExpectedResult = "../page.html")]
         [TestCase("api", "/page.html", ExpectedResult = null)]
-        [TestCase("api", "api/page.html", ExpectedResult = "page.html")]
-        [TestCase("api/namespace", "page.html", ExpectedResult = "../../page.html")]
-        [TestCase("api/namespace", "api/page.html", ExpectedResult = "../page.html")]
-        [TestCase("api", "api/namespace/page.html", ExpectedResult = "namespace/page.html")]
-        [TestCase("api/namespace", "api/namespace/page.html", ExpectedResult = "page.html")]
-        [TestCase("api/namespace", "api/other-namespace/interface.html", ExpectedResult = "../other-namespace/interface.html")]
-        [TestCase("api/namespace", "api/other-namespace/interface.html?query=param", ExpectedResult = "../other-namespace/interface.html?query=param")]
-        [TestCase("api/namespace/classes", "api/page.html#fragment", ExpectedResult = "../../page.html#fragment")]
-        [TestCase("api/namespace/classes", "api/other-namespace/page.html?query=param#fragment", ExpectedResult = "../../other-namespace/page.html?query=param#fragment")]
-        [TestCase("api/namespace", "api/namespace/class", ExpectedResult = "class")]
-        [TestCase("api/namespace", "api/other-namespace/class", ExpectedResult = "../other-namespace/class")]
+        [TestCase("api", "~/api/page.html", ExpectedResult = "page.html")]
+        [TestCase("api/namespace", "~/api/page.html", ExpectedResult = "../page.html")]
+        [TestCase("api", "~/api/namespace/page.html", ExpectedResult = "namespace/page.html")]
+        [TestCase("api/namespace", "~/api/namespace/page.html", ExpectedResult = "page.html")]
+        [TestCase("api/namespace", "~/api/other-namespace/interface.html", ExpectedResult = "../other-namespace/interface.html")]
+        [TestCase("api/namespace", "~/api/other-namespace/interface.html?query=param", ExpectedResult = "../other-namespace/interface.html?query=param")]
+        [TestCase("api/namespace/classes", "~/api/page.html#fragment", ExpectedResult = "../../page.html#fragment")]
+        [TestCase("api/namespace/classes", "~/api/other-namespace/page.html?query=param#fragment", ExpectedResult = "../../other-namespace/page.html?query=param#fragment")]
+        [TestCase("api/namespace", "~/api/namespace/class", ExpectedResult = "class")]
+        [TestCase("api/namespace", "~/api/other-namespace/class", ExpectedResult = "../other-namespace/class")]
+        [TestCase("api/namespace", "~/api/../docs", ExpectedResult = "../../docs")]
+        [TestCase("api/namespace", "~/../docs", ExpectedResult = null)]
         [TestCase("api", "https://example.com/page?query=param#fragment", ExpectedResult = null)]
         public string? Scope_TryTransformSiteRelativeUrl_ReturnsExpectedUrl(string currentDir, string urlString)
         {
@@ -106,7 +107,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var outerPath = "api/namespace";
             var innerPath = "api/namespace/class";
-            var targetUrlString = "page.html";
+            var targetUrlString = "~/page.html";
 
             var normalizer = new ContextAwareUrlNormalizer();
             using (var outerScope = normalizer.BeginScope(outerPath, null))
@@ -152,7 +153,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public async Task AsyncOperations_MaintainCorrectContext()
         {
             var path = "api/namespace";
-            var targetUrlString = "page.html";
+            var targetUrlString = "~/page.html";
             var normalizer = new ContextAwareUrlNormalizer();
 
             using var scope = normalizer.BeginScope(path, null);
@@ -174,7 +175,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var path1 = "api/namespace";
             var path2 = "api/namespace/class";
-            var targetUrlString = "page.html";
+            var targetUrlString = "~/page.html";
             var normalizer = new ContextAwareUrlNormalizer();
 
             var task1 = Task.Run(async () =>

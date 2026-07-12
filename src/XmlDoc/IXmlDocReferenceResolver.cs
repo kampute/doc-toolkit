@@ -21,7 +21,7 @@ namespace Kampute.DocToolkit.XmlDoc
     ///   <item><description>Resolving name and URL of code references to types and members</description></item>
     ///   <item><description>Resolving title and URL of topic references to documentation topics</description></item>
     ///   <item><description>Resolving official documentation URLs to language-specific keywords</description></item>
-    ///   <item><description>Converting site-root-relative URLs to absolute or document-relative URLs</description></item>
+    ///   <item><description>Converting documentation-root-relative URLs to absolute or document-relative URLs</description></item>
     ///   <item><description>Formatting code blocks for display in documentation</description></item>
     ///   <item><description>Detecting and identifying programming languages for code snippets</description></item>
     /// </list>

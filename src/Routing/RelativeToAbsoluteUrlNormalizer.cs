@@ -10,11 +10,11 @@ namespace Kampute.DocToolkit.Routing
     using System.Runtime.CompilerServices;
 
     /// <summary>
-    /// Converts relative URLs to absolute URLs using a fixed base URL.
+    /// Converts documentation-root-relative URLs to absolute URLs using a fixed documentation root URL.
     /// </summary>
     /// <remarks>
-    /// This class provides a simple implementation of the URL adjustment infrastructure that converts all relative URLs to
-    /// absolute URLs by combining them with a configurable base URL.
+    /// This class provides a simple implementation of the URL adjustment infrastructure that converts documentation-root-relative
+    /// URLs to absolute URLs by combining them with a configurable documentation root URL.
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
     public sealed class RelativeToAbsoluteUrlNormalizer : DocumentUrlContextManager
@@ -77,48 +77,49 @@ namespace Kampute.DocToolkit.Routing
         protected override UrlContext CreateScope(string directory, IDocumentModel? model) => new AbsoluteUrlContext(this, directory, model);
 
         /// <summary>
-        /// Represents a disposable URL context that converts relative URLs to absolute URLs.
+        /// Represents a disposable URL context that converts documentation-root-relative URLs to absolute URLs.
         /// </summary>
         private sealed class AbsoluteUrlContext : UrlContext
         {
-            private readonly string rootUrlString;
+            private readonly string documentationRootUrlString;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="AbsoluteUrlContext"/> class.
             /// </summary>
-            /// <param name="owner">The owning normalizer instance.</param>
+            /// <param name="owner">The owning normalizer.</param>
             /// <param name="directory">The directory path of the document being rendered relative to the documentation root.</param>
             /// <param name="model">The document model associated with the current context or <see langword="null"/> if not applicable.</param>
             public AbsoluteUrlContext(RelativeToAbsoluteUrlNormalizer owner, string directory, IDocumentModel? model)
                 : base(owner, directory, model)
             {
                 RootUrl = owner.BaseUrl;
-                rootUrlString = owner.baseUrlString;
+                documentationRootUrlString = owner.baseUrlString;
             }
 
             /// <summary>
             /// Gets the absolute URL to the root of the documentation site for the current document.
             /// </summary>
             /// <value>
-            /// The URL that serves as the reference point for resolving relative URLs within the current document.
+            /// The configured absolute URL of the documentation root, including any path below the web site's root.
             /// </value>
             public override Uri RootUrl { get; }
 
             /// <summary>
-            /// Attempts to transform a site-relative URL string into an absolute URL.
+            /// Attempts to transform a documentation-root-relative URL into an absolute URL.
             /// </summary>
-            /// <param name="siteRelativeUrl">The URL string relative to site root to transform.</param>
+            /// <param name="documentationRelativeUrl">The URL beginning with <c>~/</c> to transform.</param>
             /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
             /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
-            public override bool TryTransformSiteRelativeUrl(string siteRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
+            /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
+            public override bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
             {
-                if (!IsSiteRelativeUrl(siteRelativeUrl))
+                if (!IsSiteRelativeUrl(documentationRelativeUrl, out var relativeUrl))
                 {
                     transformedUrl = null;
                     return false;
                 }
 
-                transformedUrl = rootUrlString + siteRelativeUrl;
+                transformedUrl = documentationRootUrlString + relativeUrl;
                 return true;
             }
         }
