@@ -14,10 +14,10 @@ namespace Kampute.DocToolkit.Routing
     using System.Text;
 
     /// <summary>
-    /// Normalizes documentation-root-relative URLs relative to the current document.
+    /// Manages URL contexts that resolve documentation-root-relative URLs relative to the current document.
     /// </summary>
     /// <remarks>
-    /// The normalizer calculates URLs from each rendered document to resources identified from the documentation root.
+    /// The manager calculates URLs from each rendered document to resources identified from the documentation root.
     /// <para>
     /// For example, if a document at <c>api/namespace/class.html</c> references another document at <c>api/other-namespace/interface.html</c>,
     /// the managed context produces <c>../other-namespace/interface.html</c>. In this case, the documentation root URL relative
@@ -26,14 +26,14 @@ namespace Kampute.DocToolkit.Routing
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
     /// <seealso cref="DocumentUrlContext"/>
-    public sealed class ContextAwareUrlNormalizer : DocumentUrlContextManager
+    public sealed class RelativeUrlContextManager : DocumentUrlContextManager
     {
         private readonly ConcurrentDictionary<string, DirectoryMetadata> directoryCache = [];
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ContextAwareUrlNormalizer"/> class.
+        /// Initializes a new instance of the <see cref="RelativeUrlContextManager"/> class.
         /// </summary>
-        public ContextAwareUrlNormalizer()
+        public RelativeUrlContextManager()
             : base()
         {
         }
@@ -43,28 +43,28 @@ namespace Kampute.DocToolkit.Routing
         /// </summary>
         /// <param name="directory">The relative directory path of the document being rendered within the documentation structure.</param>
         /// <param name="model">The document model being processed, or <see langword="null"/> if not applicable.</param>
-        /// <returns>A new <see cref="ContextAwareUrlContext"/> for the specified directory and model.</returns>
+        /// <returns>A new <see cref="RelativeUrlContext"/> for the specified directory and model.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected override UrlContext CreateScope(string directory, IDocumentModel? model)
         {
             var dirData = directoryCache.GetOrAdd(directory, static dir => new DirectoryMetadata(dir));
-            return new ContextAwareUrlContext(this, dirData, model);
+            return new RelativeUrlContext(this, dirData, model);
         }
 
         /// <summary>
         /// Represents a disposable URL context that converts documentation-root-relative URLs to document-relative URLs.
         /// </summary>
-        private sealed class ContextAwareUrlContext : UrlContext
+        private sealed class RelativeUrlContext : UrlContext
         {
             private readonly DirectoryMetadata directory;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="ContextAwareUrlContext"/> class.
+            /// Initializes a new instance of the <see cref="RelativeUrlContext"/> class.
             /// </summary>
-            /// <param name="owner">The owning normalizer.</param>
+            /// <param name="owner">The owning context manager.</param>
             /// <param name="directory">The directory metadata for URL resolution.</param>
             /// <param name="model">The document model associated with the current context or <see langword="null"/> if not applicable.</param>
-            public ContextAwareUrlContext(ContextAwareUrlNormalizer owner, DirectoryMetadata directory, IDocumentModel? model)
+            public RelativeUrlContext(RelativeUrlContextManager owner, DirectoryMetadata directory, IDocumentModel? model)
                 : base(owner, directory.Path, model)
             {
                 this.directory = directory;
@@ -77,26 +77,26 @@ namespace Kampute.DocToolkit.Routing
             /// A relative URL containing the parent segments needed to reach the documentation root, or an empty relative URL
             /// when the current document is already at that root.
             /// </value>
-            public override Uri RootUrl => directory.RelativeRootUrl;
+            public override Uri DocumentationRootUrl => directory.RelativeDocumentationRootUrl;
 
             /// <summary>
-            /// Attempts to transform a documentation-root-relative URL into a URL relative to the current document.
+            /// Attempts to resolve a documentation-root-relative URL into a URL relative to the current document.
             /// </summary>
-            /// <param name="documentationRelativeUrl">The URL beginning with <c>~/</c> to transform.</param>
-            /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
-            /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
+            /// <param name="url">The URL beginning with <c>~/</c> to resolve.</param>
+            /// <param name="resolvedUrl">When this method returns, contains the resolved URL if resolution succeeded; otherwise, <see langword="null"/>.</param>
+            /// <returns><see langword="true"/> if the URL was successfully resolved; otherwise, <see langword="false"/>.</returns>
             /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
-            public override bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
+            public override bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl)
             {
-                if (!IsSiteRelativeUrl(documentationRelativeUrl, out var relativeUrl))
+                if (!TryParseDocumentationRelativeUrl(url, out var relativeUrl))
                 {
-                    transformedUrl = null;
+                    resolvedUrl = null;
                     return false;
                 }
 
                 if (directory.Segments.Length == 0)
                 {
-                    transformedUrl = relativeUrl;
+                    resolvedUrl = relativeUrl;
                     return true;
                 }
 
@@ -113,7 +113,7 @@ namespace Kampute.DocToolkit.Routing
 
                 href.Append(resourceName).Append(urlSuffix);
 
-                transformedUrl = href.ToString();
+                resolvedUrl = href.ToString();
                 return true;
             }
 
@@ -174,7 +174,7 @@ namespace Kampute.DocToolkit.Routing
             /// <summary>
             /// The relative URL to navigate from this directory to the documentation root.
             /// </summary>
-            public readonly Uri RelativeRootUrl;
+            public readonly Uri RelativeDocumentationRootUrl;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="DirectoryMetadata"/> class.
@@ -187,7 +187,7 @@ namespace Kampute.DocToolkit.Routing
                 RelativeRootPath = Segments.Length > 0
                     ? string.Join(string.Empty, Enumerable.Repeat("../", Segments.Length))
                     : string.Empty;
-                RelativeRootUrl = string.IsNullOrEmpty(RelativeRootPath)
+                RelativeDocumentationRootUrl = string.IsNullOrEmpty(RelativeRootPath)
                     ? UriHelper.EmptyUri
                     : new RawUri(RelativeRootPath, UriKind.Relative);
             }

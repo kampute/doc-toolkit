@@ -23,14 +23,14 @@ namespace Kampute.DocToolkit.Routing
     /// </remarks>
     /// <seealso cref="IUrlTransformer"/>
     /// <seealso cref="IDocumentationContext"/>
-    public class ContextAwareUrlTransformer : IUrlTransformer
+    public class DocumentationUrlTransformer : IUrlTransformer
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ContextAwareUrlTransformer"/> class.
+        /// Initializes a new instance of the <see cref="DocumentationUrlTransformer"/> class.
         /// </summary>
         /// <param name="context">The documentation context to use for transforming URLs.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is <see langword="null"/>.</exception>
-        public ContextAwareUrlTransformer(IDocumentationContext context)
+        public DocumentationUrlTransformer(IDocumentationContext context)
         {
             Context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -89,7 +89,7 @@ namespace Kampute.DocToolkit.Routing
             var scope = Context.AddressProvider.ActiveScope;
 
             // Documentation-root-relative resolution
-            if (scope.TryTransformSiteRelativeUrl(urlString, out var scopedUrlString))
+            if (scope.TryResolveUrl(urlString, out var scopedUrlString))
             {
                 transformedUrl = new RawUri(scopedUrlString, UriKind.RelativeOrAbsolute);
                 return true;
@@ -109,13 +109,13 @@ namespace Kampute.DocToolkit.Routing
                 var topicDirectory = Path.GetDirectoryName(sourceTopic.FilePath) ?? string.Empty;
                 if (PathHelper.TryNormalizePath(Path.Combine(topicDirectory, urlPath), out var filePath) && File.Exists(filePath))
                 {
-                    if (scope.RootUrl.IsAbsoluteUri)
+                    if (scope.DocumentationRootUrl.IsAbsoluteUri)
                     {
-                        transformedUrl = scope.RootUrl.Combine(urlString);
+                        transformedUrl = scope.DocumentationRootUrl.Combine(urlString);
                     }
                     else
                     {
-                        var relativePath = "../" + scope.RootUrl + urlString;
+                        var relativePath = "../" + scope.DocumentationRootUrl + urlString;
                         transformedUrl = currentTopic.Url.IsAbsoluteUri
                             ? new Uri(currentTopic.Url, relativePath)
                             : currentTopic.Url.Combine(relativePath);

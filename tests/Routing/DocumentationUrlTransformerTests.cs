@@ -13,19 +13,19 @@ namespace Kampute.DocToolkit.Test.Routing
     using System.IO;
 
     [TestFixture]
-    public class ContextAwareUrlTransformerTests
+    public class DocumentationUrlTransformerTests
     {
         [Test]
         public void Constructor_WithNullContext_ThrowsArgumentNullException()
         {
-            Assert.That(static () => new ContextAwareUrlTransformer(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+            Assert.That(static () => new DocumentationUrlTransformer(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
         }
 
         [Test]
         public void Context_Property_ReturnsProvidedContext()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             Assert.That(transformer.Context, Is.SameAs(context));
         }
@@ -34,7 +34,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void MayTransformUrls_Property_Always_ReturnsTrue()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             Assert.That(transformer.MayTransformUrls, Is.True);
         }
@@ -44,7 +44,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var topic = MockTopicBuilder.Topic("TestTopic").Build();
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById(topic.Id, out var contextualTopic);
 
@@ -63,7 +63,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithDocumentationRootMarker_ReturnsTransformedUrl()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -81,7 +81,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithNullOrEmptyUrlString_ReturnsFalse(string? urlString)
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -98,7 +98,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithAbsoluteUrl_ReturnsFalse()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -118,7 +118,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithLeadingSpecialCharacters_ReturnsFalse(string urlString)
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -135,7 +135,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithSpecialCharactersInPath_HandlesCorrectly()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -152,7 +152,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithQueryString_PreservesQueryString()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -169,7 +169,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithFragment_PreservesFragment()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -186,7 +186,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithQueryStringAndFragment_PreservesBoth()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -203,7 +203,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_InNestedScope_AddsCorrectRelativePath()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("api/namespace", null);
 
@@ -221,7 +221,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var topic = MockTopicBuilder.Topic("TestTopic").Build();
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById(topic.Id, out var contextualTopic);
 
@@ -241,7 +241,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var topic = MockTopicBuilder.Topic("TestTopic").Build();
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById(topic.Id, out var contextualTopic);
 
@@ -261,7 +261,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var topic = MockTopicBuilder.Topic("TestTopic").Build();
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById(topic.Id, out var contextualTopic);
 
@@ -281,7 +281,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var topic = MockTopicBuilder.Topic("TestTopic").Build();
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById(topic.Id, out var contextualTopic);
 
@@ -302,7 +302,7 @@ namespace Kampute.DocToolkit.Test.Routing
             var topic = MockTopicBuilder.Topic("parent").WithChildren("child").Build();
 
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("parent/child", out var contextualChild);
 
@@ -323,7 +323,7 @@ namespace Kampute.DocToolkit.Test.Routing
             var topic = MockTopicBuilder.Topic("parent").WithChildren("child").Build();
 
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("parent", out var contextualParent);
             context.Topics.TryGetById("parent/child", out var contextualChild);
@@ -345,7 +345,7 @@ namespace Kampute.DocToolkit.Test.Routing
             var topic = MockTopicBuilder.Topic("parent").WithChildren("child1", "child2").Build();
 
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("parent", out var contextualParent);
             context.Topics.TryGetById("parent/child1", out var contextualChild1);
@@ -369,7 +369,7 @@ namespace Kampute.DocToolkit.Test.Routing
             var topic2 = MockTopicBuilder.Topic("Topic2").WithChildren("SubB").Build();
 
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic1, topic2]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("Topic1/SubA", out var contextualSubA);
             context.Topics.TryGetById("Topic2/SubB", out var contextualSubB);
@@ -398,7 +398,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 var fileBasedTopic = new MarkdownFileTopic("TestTopic", topicFile);
                 using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
-                var transformer = new ContextAwareUrlTransformer(context);
+                var transformer = new DocumentationUrlTransformer(context);
 
                 context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
@@ -434,7 +434,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 var fileBasedTopic = new MarkdownFileTopic("TestTopic", topicFile);
                 using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
-                var transformer = new ContextAwareUrlTransformer(context);
+                var transformer = new DocumentationUrlTransformer(context);
 
                 context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
@@ -470,7 +470,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 var fileBasedTopic = new MarkdownFileTopic("TestTopic", topicFile);
                 using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
-                var transformer = new ContextAwareUrlTransformer(context);
+                var transformer = new DocumentationUrlTransformer(context);
 
                 context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
@@ -498,7 +498,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var fileBasedTopic = new MarkdownFileTopic("TestTopic", "/topics/test-topic.md");
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
@@ -525,7 +525,7 @@ namespace Kampute.DocToolkit.Test.Routing
 
                 var nonFileBasedTopic = MockTopicBuilder.Topic("NonFileBasedTopic").Build();
                 using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([nonFileBasedTopic]);
-                var transformer = new ContextAwareUrlTransformer(context);
+                var transformer = new DocumentationUrlTransformer(context);
 
                 context.Topics.TryGetById("NonFileBasedTopic", out var contextualTopic);
 
@@ -553,7 +553,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var fileBasedTopic = new MarkdownFileTopic("TestTopic", "/topics/test-topic.md");
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([fileBasedTopic]);
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             context.Topics.TryGetById("TestTopic", out var contextualTopic);
 
@@ -572,7 +572,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithDocumentationRootMarker_ResolvesFromDocumentationRoot()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             var result = transformer.TryTransformUrl("~/some-asset.png", out var transformedUrl);
 
@@ -587,7 +587,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithEmptyPathAndQueryString_HandlesCorrectly()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -607,7 +607,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithDifferentAbsoluteSchemes_ReturnsFalse(string urlString)
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -627,7 +627,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithWhitespaceOnly_ReturnsFalse(string urlString)
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -644,7 +644,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithDeeplyNestedScope_AddsCorrectRelativePath()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("api/namespace/type/member", null);
 
@@ -661,7 +661,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithRelativePathInUrlWithoutTopicScope_ReturnsFalse()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("api/namespace", null);
 
@@ -678,7 +678,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithPercentEncodedCharacters_PreservesEncoding()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -695,7 +695,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithUnicodeCharacters_HandlesCorrectly()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -712,7 +712,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithEmptyFragment_PreservesEmptyFragment()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 
@@ -729,7 +729,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void TryTransformUrl_WithEmptyQueryString_PreservesEmptyQuery()
         {
             using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
-            var transformer = new ContextAwareUrlTransformer(context);
+            var transformer = new DocumentationUrlTransformer(context);
 
             using var _ = context.AddressProvider.BeginScope("test", null);
 

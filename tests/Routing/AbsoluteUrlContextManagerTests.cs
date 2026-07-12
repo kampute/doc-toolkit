@@ -11,14 +11,14 @@ namespace Kampute.DocToolkit.Test.Routing
     using System.Threading.Tasks;
 
     [TestFixture]
-    public class RelativeToAbsoluteUrlNormalizerTests
+    public class AbsoluteUrlContextManagerTests
     {
         [Test]
         public void Constructor_WithRelativeBaseUrl_ThrowsArgumentException()
         {
             var relativeUrl = new Uri("/docs/", UriKind.Relative);
 
-            Assert.That(() => new RelativeToAbsoluteUrlNormalizer(relativeUrl), Throws.ArgumentException);
+            Assert.That(() => new AbsoluteUrlContextManager(relativeUrl), Throws.ArgumentException);
         }
 
         [Test]
@@ -26,47 +26,47 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var baseUrl = new Uri("https://example.com/docs/");
 
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
 
-            Assert.That(normalizer.BaseUrl, Is.EqualTo(baseUrl));
+            Assert.That(manager.BaseUrl, Is.EqualTo(baseUrl));
         }
 
         [Test]
         public void Constructor_WithRelativeBaseUrlString_ThrowsArgumentException()
         {
-            Assert.Throws<ArgumentException>(static () => new RelativeToAbsoluteUrlNormalizer("docs/"));
+            Assert.Throws<ArgumentException>(static () => new AbsoluteUrlContextManager("docs/"));
         }
 
         [Test]
         public void Constructor_WithAbsoluteBaseUrlStringWithoutTrailingSlash_InitializesCorrectly()
         {
             var baseUrlString = "https://example.com/docs";
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrlString);
+            var manager = new AbsoluteUrlContextManager(baseUrlString);
 
-            Assert.That(normalizer.BaseUrl, Is.EqualTo(new Uri("https://example.com/docs/")));
+            Assert.That(manager.BaseUrl, Is.EqualTo(new Uri("https://example.com/docs/")));
         }
 
         [Test]
         public void Constructor_WithAbsoluteBaseUrlStringWithTrailingSlash_InitializesCorrectly()
         {
             var baseUrlString = "https://example.com/docs/";
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrlString);
+            var manager = new AbsoluteUrlContextManager(baseUrlString);
 
-            Assert.That(normalizer.BaseUrl, Is.EqualTo(new Uri("https://example.com/docs/")));
+            Assert.That(manager.BaseUrl, Is.EqualTo(new Uri("https://example.com/docs/")));
         }
 
         [Test]
         public void ActiveScope_WhenNoScopeActive_ReturnsDefaultScope()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
 
-            var scope = normalizer.ActiveScope;
+            var scope = manager.ActiveScope;
 
             Assert.That(scope, Is.Not.Null);
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(scope.RootUrl, Is.EqualTo(baseUrl));
+                Assert.That(scope.DocumentationRootUrl, Is.EqualTo(baseUrl));
                 Assert.That(scope.Directory, Is.Empty);
             }
         }
@@ -81,41 +81,41 @@ namespace Kampute.DocToolkit.Test.Routing
         [TestCase("~/api/../index.html", ExpectedResult = "https://example.com/docs/index.html")]
         [TestCase("~/../index.html", ExpectedResult = null)]
         [TestCase("https://other.com/api/index.html", ExpectedResult = null)]
-        public string? ActiveScope_TryTransformSiteRelativeUrl_ReturnsExpectedUrl(string uriString)
+        public string? ActiveScope_TryResolveUrl_ReturnsExpectedUrl(string uriString)
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
 
-            return normalizer.ActiveScope.TryTransformSiteRelativeUrl(uriString, out var transformedUrl) ? transformedUrl : null;
+            return manager.ActiveScope.TryResolveUrl(uriString, out var transformedUrl) ? transformedUrl : null;
         }
 
         [Test]
         public void BeginScope_ReturnsValidScope()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
             var directory = "some/dir";
 
-            var scope = normalizer.BeginScope(directory, null);
+            var scope = manager.BeginScope(directory, null);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(scope, Is.Not.Null);
-                Assert.That(scope, Is.SameAs(normalizer.ActiveScope));
+                Assert.That(scope, Is.SameAs(manager.ActiveScope));
                 Assert.That(scope.Directory, Is.EqualTo(directory));
             }
         }
 
         [Test]
-        public void Scope_TryTransformSiteRelativeUrl_UsesBaseUrl()
+        public void Scope_TryResolveUrl_UsesBaseUrl()
         {
             var baseUrl = new Uri("https://example.com/docs/");
             var relativeUrlString = "~/api/index.html";
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
             var expected = new Uri("https://example.com/docs/api/index.html");
 
-            using var scope = normalizer.BeginScope("some/dir", null);
-            var success = scope.TryTransformSiteRelativeUrl(relativeUrlString, out var transformedUrl);
+            using var scope = manager.BeginScope("some/dir", null);
+            var success = scope.TryResolveUrl(relativeUrlString, out var transformedUrl);
 
             using (Assert.EnterMultipleScope())
             {
@@ -128,71 +128,71 @@ namespace Kampute.DocToolkit.Test.Routing
         public void Scope_Dispose_RestoresPreviousScope()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
-            using var scope = normalizer.BeginScope("api/namespace", null);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+            using var scope = manager.BeginScope("api/namespace", null);
 
-            Assert.That(normalizer.ActiveScope, Is.SameAs(scope));
-            using (var nestedScope = normalizer.BeginScope("api/namespace/class", null))
+            Assert.That(manager.ActiveScope, Is.SameAs(scope));
+            using (var nestedScope = manager.BeginScope("api/namespace/class", null))
             {
-                Assert.That(normalizer.ActiveScope, Is.SameAs(nestedScope));
+                Assert.That(manager.ActiveScope, Is.SameAs(nestedScope));
             }
-            Assert.That(normalizer.ActiveScope, Is.SameAs(scope));
+            Assert.That(manager.ActiveScope, Is.SameAs(scope));
         }
 
         [Test]
         public void Scope_Dispose_CanBeCalledMultipleTimes()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
-            using var scope1 = normalizer.BeginScope("api", null);
-            var scope2 = normalizer.BeginScope("api/namespace", null);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+            using var scope1 = manager.BeginScope("api", null);
+            var scope2 = manager.BeginScope("api/namespace", null);
 
             scope2.Dispose();
             scope2.Dispose();
 
-            Assert.That(normalizer.ActiveScope, Is.SameAs(scope1));
+            Assert.That(manager.ActiveScope, Is.SameAs(scope1));
         }
 
         [Test]
         public void NestedScopes_WhenDisposed_CorrectlyRestorePreviousScopes()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
-            var originalScope = normalizer.ActiveScope;
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+            var originalScope = manager.ActiveScope;
 
-            using (var outerScope = normalizer.BeginScope("api/namespace", null))
+            using (var outerScope = manager.BeginScope("api/namespace", null))
             {
-                Assert.That(normalizer.ActiveScope, Is.SameAs(outerScope));
-                Assert.That(normalizer.ActiveScope.Directory, Is.EqualTo("api/namespace"));
+                Assert.That(manager.ActiveScope, Is.SameAs(outerScope));
+                Assert.That(manager.ActiveScope.Directory, Is.EqualTo("api/namespace"));
 
-                using (var innerScope = normalizer.BeginScope("api/namespace/class", null))
+                using (var innerScope = manager.BeginScope("api/namespace/class", null))
                 {
-                    Assert.That(normalizer.ActiveScope, Is.SameAs(innerScope));
-                    Assert.That(normalizer.ActiveScope.Directory, Is.EqualTo("api/namespace/class"));
+                    Assert.That(manager.ActiveScope, Is.SameAs(innerScope));
+                    Assert.That(manager.ActiveScope.Directory, Is.EqualTo("api/namespace/class"));
                 }
 
-                Assert.That(normalizer.ActiveScope, Is.SameAs(outerScope));
-                Assert.That(normalizer.ActiveScope.Directory, Is.EqualTo("api/namespace"));
+                Assert.That(manager.ActiveScope, Is.SameAs(outerScope));
+                Assert.That(manager.ActiveScope.Directory, Is.EqualTo("api/namespace"));
             }
 
-            Assert.That(normalizer.ActiveScope, Is.SameAs(originalScope));
-            Assert.That(normalizer.ActiveScope.Directory, Is.EqualTo(string.Empty));
+            Assert.That(manager.ActiveScope, Is.SameAs(originalScope));
+            Assert.That(manager.ActiveScope.Directory, Is.EqualTo(string.Empty));
         }
 
         [Test]
         public async Task AsyncOperations_MaintainCorrectContext()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
             var targetUrlString = "~/page.html";
 
-            using var scope = normalizer.BeginScope("api/namespace", null);
-            var success = scope.TryTransformSiteRelativeUrl(targetUrlString, out var initialResult);
+            using var scope = manager.BeginScope("api/namespace", null);
+            var success = scope.TryResolveUrl(targetUrlString, out var initialResult);
             Assert.That(success, Is.True);
 
             var asyncResult = await Task.Run(() =>
             {
-                return normalizer.ActiveScope.TryTransformSiteRelativeUrl(targetUrlString, out var result) ? result : null;
+                return manager.ActiveScope.TryResolveUrl(targetUrlString, out var result) ? result : null;
             });
 
             Assert.That(asyncResult, Is.EqualTo("https://example.com/docs/page.html"));
@@ -205,18 +205,18 @@ namespace Kampute.DocToolkit.Test.Routing
             var path1 = "api/namespace";
             var path2 = "api/namespace/class";
             var baseUrl = new Uri("https://example.com/docs/");
-            var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            var manager = new AbsoluteUrlContextManager(baseUrl);
 
             var task1 = Task.Run(async () =>
             {
-                using var scope = normalizer.BeginScope(path1, null);
+                using var scope = manager.BeginScope(path1, null);
                 await Task.Delay(50);
                 return scope.Directory;
             });
 
             var task2 = Task.Run(async () =>
             {
-                using var scope = normalizer.BeginScope(path2, null);
+                using var scope = manager.BeginScope(path2, null);
                 await Task.Delay(50);
                 return scope.Directory;
             });
