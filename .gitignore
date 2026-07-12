@@ -369,5 +369,11 @@ FodyWeavers.xsd
 *.pfx
 *.snk
 
+# AI Agents
+.agents/
+.codex/
+.claude/
+.junie/
+
 # Documentation Site
 .site/
