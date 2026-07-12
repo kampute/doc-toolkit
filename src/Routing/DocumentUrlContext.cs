@@ -45,7 +45,7 @@ namespace Kampute.DocToolkit.Routing
         /// <value>
         /// <see langword="true"/> if the current document is at the documentation root; otherwise, <see langword="false"/>.
         /// </value>
-        public bool IsRoot => Directory.Length == 0;
+        public bool IsDocumentationRoot => Directory.Length == 0;
 
         /// <summary>
         /// Gets the absolute or document-relative URL to the documentation root for the current context.
@@ -67,7 +67,7 @@ namespace Kampute.DocToolkit.Routing
         /// </list>
         /// </para>
         /// </remarks>
-        public abstract Uri RootUrl { get; }
+        public abstract Uri DocumentationRootUrl { get; }
 
         /// <summary>
         /// Gets the current document directory path relative to the documentation root.
@@ -91,20 +91,25 @@ namespace Kampute.DocToolkit.Routing
         public IDocumentModel? Model { get; }
 
         /// <summary>
-        /// Attempts to transform a documentation-root-relative URL into an absolute or document-relative URL.
+        /// Attempts to resolve a documentation-root-relative URL into an absolute or document-relative URL.
         /// </summary>
-        /// <param name="documentationRelativeUrl">
+        /// <param name="url">
         /// A URL beginning with <c>~/</c>, where the marker represents the documentation root rather than the web site's root.
         /// </param>
-        /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
-        /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
+        /// <param name="resolvedUrl">When this method returns, contains the resolved URL if resolution succeeded; otherwise, <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the URL was successfully resolved; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// A site-root-relative URL beginning with <c>/</c> is not transformed. Ordinary document-relative URLs
-        /// remain relative to the current document. Query strings and fragments are preserved. Dot segments are resolved within
-        /// the documentation root; a path that attempts to navigate above that root is not transformed.
+        /// <para>URLs are interpreted according to their prefix and the active document context:</para>
+        /// <list type="bullet">
+        /// <item><description>A documentation-root-relative URL beginning with <c>~/</c> is resolved from the documentation root.</description></item>
+        /// <item><description>A site-root-relative URL beginning with <c>/</c> is not resolved.</description></item>
+        /// <item><description>An ordinary document-relative URL is not resolved.</description></item>
+        /// <item><description>Query strings and fragments are preserved.</description></item>
+        /// <item><description>Dot segments are resolved within the documentation root; a path that navigates above that root is not resolved.</description></item>
+        /// </list>
         /// The operation does not change the active URL context or the associated document model.
         /// </remarks>
-        public abstract bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl);
+        public abstract bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl);
 
         /// <summary>
         /// Attempts to obtain a normalized path relative to the documentation root.
@@ -118,7 +123,7 @@ namespace Kampute.DocToolkit.Routing
         /// <see langword="true"/> when the URL has the documentation-root marker and remains within the documentation root;
         /// otherwise, <see langword="false"/>.
         /// </returns>
-        protected static bool IsSiteRelativeUrl(string urlString, [NotNullWhen(true)] out string? relativeUrl)
+        protected static bool TryParseDocumentationRelativeUrl(string urlString, [NotNullWhen(true)] out string? relativeUrl)
         {
             if (urlString is null || !urlString.StartsWith("~/", StringComparison.Ordinal))
             {

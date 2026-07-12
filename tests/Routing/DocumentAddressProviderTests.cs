@@ -269,12 +269,12 @@ namespace Kampute.DocToolkit.Test.Routing
         }
 
         [Test]
-        public void ActiveScope_Default_IsRoot()
+        public void ActiveScope_Default_IsDocumentationRoot()
         {
             var addressProvider = DocumentAddressProvider.Create<DotNetApiStrategy>([]);
 
             Assert.That(addressProvider.ActiveScope, Is.Not.Null);
-            Assert.That(addressProvider.ActiveScope.IsRoot, Is.True);
+            Assert.That(addressProvider.ActiveScope.IsDocumentationRoot, Is.True);
         }
 
         [Test]

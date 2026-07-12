@@ -49,7 +49,7 @@ namespace Kampute.DocToolkit.Routing
 
             Strategy = strategy;
             documentAssemblies = new(assemblies, ReferenceEqualityComparer<IAssembly>.Instance);
-            urlContext = baseUrl is null ? new ContextAwareUrlNormalizer() : new RelativeToAbsoluteUrlNormalizer(baseUrl);
+            urlContext = baseUrl is null ? new RelativeUrlContextManager() : new AbsoluteUrlContextManager(baseUrl);
         }
 
         /// <summary>
@@ -249,7 +249,7 @@ namespace Kampute.DocToolkit.Routing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Uri ToDocumentUrl(string documentationRelativePath)
         {
-            if (!ActiveScope.TryTransformSiteRelativeUrl("~/" + documentationRelativePath, out var documentUrl))
+            if (!ActiveScope.TryResolveUrl("~/" + documentationRelativePath, out var documentUrl))
                 documentUrl = documentationRelativePath;
 
             return new RawUri(documentUrl, UriKind.RelativeOrAbsolute);

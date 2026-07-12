@@ -224,11 +224,11 @@ namespace Kampute.DocToolkit
         /// This method creates an implementation of <see cref="IUrlTransformer"/> for transforming non-API
         /// documentation-root-relative URLs to absolute or document-relative URLs.
         /// <para>
-        /// The default implementation returns an instance of the <see cref="ContextAwareUrlTransformer"/> class.
+        /// The default implementation returns an instance of the <see cref="DocumentationUrlTransformer"/> class.
         /// Override this method in derived classes to provide a custom URL transformer implementation if needed.
         /// </para>
         /// </remarks>
-        protected virtual IUrlTransformer CreateUrlTransformer() => new ContextAwareUrlTransformer(this);
+        protected virtual IUrlTransformer CreateUrlTransformer() => new DocumentationUrlTransformer(this);
 
         /// <summary>
         /// Retrieves all unique namespaces with exported types from the assemblies in the documentation context.

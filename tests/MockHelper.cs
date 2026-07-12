@@ -72,7 +72,7 @@ namespace Kampute.DocToolkit.Test
         /// <returns>A mocked address provider.</returns>
         public static IDocumentAddressProvider CreateAddressProvider()
         {
-            var urlContext = new ContextAwareUrlNormalizer();
+            var urlContext = new RelativeUrlContextManager();
             var addressProviderMock = new Mock<IDocumentAddressProvider>();
             var addressProvider = addressProviderMock.Object;
 
@@ -86,7 +86,7 @@ namespace Kampute.DocToolkit.Test
                 .Returns((string ns, out string? path) =>
                 {
                     path = ns.ToLowerInvariant();
-                    if (!addressProvider.ActiveScope.IsRoot)
+                    if (!addressProvider.ActiveScope.IsDocumentationRoot)
                         path = $"{addressProvider.ActiveScope.Directory}/{path}";
 
                     return true;
@@ -98,7 +98,7 @@ namespace Kampute.DocToolkit.Test
                     if (member.IsDirectDeclaration)
                     {
                         path = member.CodeReference[2..].ReplaceChars(['`', '#'], '-').ToLowerInvariant();
-                        if (!addressProvider.ActiveScope.IsRoot)
+                        if (!addressProvider.ActiveScope.IsDocumentationRoot)
                             path = $"{addressProvider.ActiveScope.Directory}/{path}";
 
                         return true;
@@ -116,7 +116,7 @@ namespace Kampute.DocToolkit.Test
                     for (var current = topic; current is not null; current = current.ParentTopic)
                         segments.Add(current.Id);
 
-                    if (!addressProvider.ActiveScope.IsRoot)
+                    if (!addressProvider.ActiveScope.IsDocumentationRoot)
                         segments.Add(addressProvider.ActiveScope.Directory);
 
                     segments.Reverse();

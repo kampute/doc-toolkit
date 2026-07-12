@@ -17,17 +17,17 @@ namespace Kampute.DocToolkit.Routing
     /// URLs to absolute URLs by combining them with a configurable documentation root URL.
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
-    public sealed class RelativeToAbsoluteUrlNormalizer : DocumentUrlContextManager
+    public sealed class AbsoluteUrlContextManager : DocumentUrlContextManager
     {
         private readonly string baseUrlString;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RelativeToAbsoluteUrlNormalizer"/> class with the specified base URL.
+        /// Initializes a new instance of the <see cref="AbsoluteUrlContextManager"/> class with the specified base URL.
         /// </summary>
         /// <param name="baseUrl">The base URL to use for creating absolute URLs from relative URLs.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseUrl"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="baseUrl"/> is not an absolute URL.</exception>
-        public RelativeToAbsoluteUrlNormalizer(Uri baseUrl)
+        public AbsoluteUrlContextManager(Uri baseUrl)
             : base()
         {
             if (baseUrl is null)
@@ -40,12 +40,12 @@ namespace Kampute.DocToolkit.Routing
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RelativeToAbsoluteUrlNormalizer"/> class with the specified base URL string.
+        /// Initializes a new instance of the <see cref="AbsoluteUrlContextManager"/> class with the specified base URL string.
         /// </summary>
         /// <param name="baseUrlString">The base URL to use for creating absolute URLs from relative URLs.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="baseUrlString"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="baseUrlString"/> is not an absolute URL.</exception>
-        public RelativeToAbsoluteUrlNormalizer(string baseUrlString)
+        public AbsoluteUrlContextManager(string baseUrlString)
             : base()
         {
             if (baseUrlString is null)
@@ -86,13 +86,13 @@ namespace Kampute.DocToolkit.Routing
             /// <summary>
             /// Initializes a new instance of the <see cref="AbsoluteUrlContext"/> class.
             /// </summary>
-            /// <param name="owner">The owning normalizer.</param>
+            /// <param name="owner">The owning context manager.</param>
             /// <param name="directory">The directory path of the document being rendered relative to the documentation root.</param>
             /// <param name="model">The document model associated with the current context or <see langword="null"/> if not applicable.</param>
-            public AbsoluteUrlContext(RelativeToAbsoluteUrlNormalizer owner, string directory, IDocumentModel? model)
+            public AbsoluteUrlContext(AbsoluteUrlContextManager owner, string directory, IDocumentModel? model)
                 : base(owner, directory, model)
             {
-                RootUrl = owner.BaseUrl;
+                DocumentationRootUrl = owner.BaseUrl;
                 documentationRootUrlString = owner.baseUrlString;
             }
 
@@ -102,24 +102,24 @@ namespace Kampute.DocToolkit.Routing
             /// <value>
             /// The configured absolute URL of the documentation root, including any path below the web site's root.
             /// </value>
-            public override Uri RootUrl { get; }
+            public override Uri DocumentationRootUrl { get; }
 
             /// <summary>
-            /// Attempts to transform a documentation-root-relative URL into an absolute URL.
+            /// Attempts to resolve a documentation-root-relative URL into an absolute URL.
             /// </summary>
-            /// <param name="documentationRelativeUrl">The URL beginning with <c>~/</c> to transform.</param>
-            /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
-            /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
+            /// <param name="url">The URL beginning with <c>~/</c> to resolve.</param>
+            /// <param name="resolvedUrl">When this method returns, contains the resolved URL if resolution succeeded; otherwise, <see langword="null"/>.</param>
+            /// <returns><see langword="true"/> if the URL was successfully resolved; otherwise, <see langword="false"/>.</returns>
             /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
-            public override bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
+            public override bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl)
             {
-                if (!IsSiteRelativeUrl(documentationRelativeUrl, out var relativeUrl))
+                if (!TryParseDocumentationRelativeUrl(url, out var relativeUrl))
                 {
-                    transformedUrl = null;
+                    resolvedUrl = null;
                     return false;
                 }
 
-                transformedUrl = documentationRootUrlString + relativeUrl;
+                resolvedUrl = documentationRootUrlString + relativeUrl;
                 return true;
             }
         }
