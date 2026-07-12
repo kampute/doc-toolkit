@@ -121,24 +121,24 @@ namespace Kampute.DocToolkit.Support
         }
 
         /// <summary>
-        /// Determines if a sub-path is a valid sub-path of a full path.
+        /// Determines whether a subpath matches the end of a full path at a path-segment boundary.
         /// </summary>
-        /// <param name="fullPath">The full path to check against.</param>
         /// <param name="subPath">The sub-path to check.</param>
-        /// <returns><see langword="true"/> if the full path matches the sub-path; otherwise, <see langword="false"/>.</returns>
+        /// <param name="fullPath">The full path to check against.</param>
+        /// <returns><see langword="true"/> if <paramref name="subPath"/> matches the complete <paramref name="fullPath"/> or its trailing path segments; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="fullPath"/> or <paramref name="subPath"/> is <see langword="null"/>.</exception>
         /// <remarks>
-        /// This method checks if the <paramref name="subPath"/> is a valid sub-path of the <paramref name="fullPath"/>. The match is case-insensitive.
+        /// Matching is case-insensitive. An empty subpath matches only an empty full path.
         /// <note type="caution" title="Caution">
         /// The method assumes that both paths are normalized and use the same directory separator.
         /// </note>
         /// </remarks>
-        public static bool IsSubpath(string fullPath, string subPath)
+        public static bool IsSubpath(string subPath, string fullPath)
         {
-            if (fullPath is null)
-                throw new ArgumentNullException(nameof(fullPath));
             if (subPath is null)
                 throw new ArgumentNullException(nameof(subPath));
+            if (fullPath is null)
+                throw new ArgumentNullException(nameof(fullPath));
 
             if (fullPath.Length < subPath.Length)
                 return false;

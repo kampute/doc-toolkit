@@ -112,7 +112,7 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("another-file.txt", "file.txt", ExpectedResult = false)]
         public bool IsSubpath_ReturnsExpectedResult(string fullPath, string subPath)
         {
-            return PathHelper.IsSubpath(fullPath, subPath);
+            return PathHelper.IsSubpath(subPath, fullPath);
         }
 
         [TestCase("", ExpectedResult = false)]
