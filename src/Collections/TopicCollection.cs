@@ -313,7 +313,7 @@ namespace Kampute.DocToolkit.Collections
 
             foreach (var (sourceFilePath, fileBasedTopic) in topicsByPath)
             {
-                if (PathHelper.IsSubpath(sourceFilePath, subPath))
+                if (PathHelper.IsSubpath(subPath, sourceFilePath))
                 {
                     if (topic is not null)
                     {
