@@ -8,7 +8,6 @@ namespace Kampute.DocToolkit.Routing
     using Kampute.DocToolkit.Support;
     using System;
     using System.Diagnostics.CodeAnalysis;
-    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// Represents a disposable context that manages relative URL resolution within a document context.
@@ -41,24 +40,23 @@ namespace Kampute.DocToolkit.Routing
         }
 
         /// <summary>
-        /// Gets a value indicating whether the current document is at the root level of the documentation site.
+        /// Gets a value indicating whether the current document is at the documentation root.
         /// </summary>
         /// <value>
-        /// <see langword="true"/> if the current document is at the root level; otherwise, <see langword="false"/>.
+        /// <see langword="true"/> if the current document is at the documentation root; otherwise, <see langword="false"/>.
         /// </value>
         public bool IsRoot => Directory.Length == 0;
 
         /// <summary>
-        /// Gets the absolute or relative URL to the root of the documentation site for the current context.
+        /// Gets the absolute or document-relative URL to the documentation root for the current context.
         /// </summary>
         /// <value>
-        /// The URL that serves as the reference point for resolving relative URLs within the current context.
+        /// The URL that identifies the documentation root from the current document.
         /// </value>
         /// <remarks>
-        /// The <see cref="RootUrl"/> property serves as a critical reference point for constructing site-wide resource URLs
-        /// and cross-document navigation that works consistently regardless of the document's depth in the hierarchy. It is
-        /// especially useful for breadcrumb navigation and referencing shared resources like CSS, JavaScript files, and images
-        /// from documents at any level in the site hierarchy.
+        /// The documentation root may differ from the web site's root, such as when documentation is published below a repository
+        /// path. A relative value describes navigation from the current document to the documentation root; an absolute value
+        /// identifies the published documentation root directly.
         /// <para>
         /// When the root URL is a relative URL, it represents the path from the current document to the root of the documentation
         /// site. The following examples illustrate how a relative root URL is computed based on document location:
@@ -93,34 +91,59 @@ namespace Kampute.DocToolkit.Routing
         public IDocumentModel? Model { get; }
 
         /// <summary>
-        /// Attempts to transform a site-relative URL string into an absolute or document-relative URL based on the current context.
+        /// Attempts to transform a documentation-root-relative URL into an absolute or document-relative URL.
         /// </summary>
-        /// <param name="siteRelativeUrl">The URL string relative to site root to transform.</param>
+        /// <param name="documentationRelativeUrl">
+        /// A URL beginning with <c>~/</c>, where the marker represents the documentation root rather than the web site's root.
+        /// </param>
         /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
         /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
-        /// This method transforms URLs that are specified relative to the site root into URLs that work correctly when referenced
-        /// from the current context, regardless of the document's depth in the documentation hierarchy.
+        /// A site-root-relative URL beginning with <c>/</c> is not transformed. Ordinary document-relative URLs
+        /// remain relative to the current document. Query strings and fragments are preserved. Dot segments are resolved within
+        /// the documentation root; a path that attempts to navigate above that root is not transformed.
+        /// The operation does not change the active URL context or the associated document model.
         /// </remarks>
-        public abstract bool TryTransformSiteRelativeUrl(string siteRelativeUrl, [NotNullWhen(true)] out string? transformedUrl);
+        public abstract bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl);
+
+        /// <summary>
+        /// Attempts to obtain a normalized path relative to the documentation root.
+        /// </summary>
+        /// <param name="urlString">The marked documentation-root-relative URL.</param>
+        /// <param name="relativeUrl">
+        /// When this method returns, contains the normalized path without the <c>~/</c> marker, including any query string or
+        /// fragment; otherwise, <see langword="null"/>.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> when the URL has the documentation-root marker and remains within the documentation root;
+        /// otherwise, <see langword="false"/>.
+        /// </returns>
+        protected static bool IsSiteRelativeUrl(string urlString, [NotNullWhen(true)] out string? relativeUrl)
+        {
+            if (urlString is null || !urlString.StartsWith("~/", StringComparison.Ordinal))
+            {
+                relativeUrl = null;
+                return false;
+            }
+
+            var (path, suffix) = UriHelper.SplitPathAndSuffix(urlString[2..]);
+            if (UriHelper.IsAbsoluteOrRooted(path) || !PathHelper.TryNormalizePath(path, out var normalizedPath) || PathHelper.StartsWithDotSegment(normalizedPath))
+            {
+                relativeUrl = null;
+                return false;
+            }
+
+            relativeUrl = normalizedPath + suffix;
+            return true;
+        }
 
         /// <summary>
         /// Disposes the current instance and restores the previous URL context.
         /// </summary>
+        /// <remarks>
+        /// Disposing a nested context makes its parent context active again. Implementations may allow repeated disposal without
+        /// producing additional state changes.
+        /// </remarks>
         public abstract void Dispose();
-
-        /// <summary>
-        /// Determines whether the specified URL string is a site-relative URL.
-        /// </summary>
-        /// <param name="urlString">The URL string to check.</param>
-        /// <returns><see langword="true"/> if the URL is site-relative; otherwise, <see langword="false"/>.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static bool IsSiteRelativeUrl(string urlString)
-        {
-            return !string.IsNullOrEmpty(urlString)
-                && !UriHelper.IsQueryOrFragmentOnly(urlString)
-                && !UriHelper.IsAbsoluteOrRooted(urlString)
-                && !PathHelper.StartsWithDotSegment(urlString);
-        }
     }
 }

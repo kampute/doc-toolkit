@@ -1,4 +1,4 @@
-﻿// Copyright (C) Kampute
+// Copyright (C) Kampute
 //
 // Released under the terms of the MIT license.
 // See the LICENSE file in the project root for the full license text.
@@ -127,10 +127,10 @@ namespace Kampute.DocToolkit
         public IDocumentAddressProvider AddressProvider { get; }
 
         /// <summary>
-        /// Gets the object responsible for transforming non-API site-root-relative URLs to an absolute or document-relative URL.
+        /// Gets the object responsible for transforming non-API documentation-root-relative URLs to absolute or document-relative URLs.
         /// </summary>
         /// <value>
-        /// The object responsible for transforming non-API site-root-relative URLs to an absolute or document-relative URL.
+        /// The object responsible for transforming non-API documentation-root-relative URLs to absolute or document-relative URLs.
         /// </value>
         public IUrlTransformer UrlTransformer { get; }
 
@@ -222,7 +222,7 @@ namespace Kampute.DocToolkit
         /// <returns>The URL transformer to use for transforming non-API URLs in the documentation.</returns>
         /// <remarks>
         /// This method creates an implementation of <see cref="IUrlTransformer"/> for transforming non-API
-        /// site-root-relative URLs to absolute or document-relative URLs.
+        /// documentation-root-relative URLs to absolute or document-relative URLs.
         /// <para>
         /// The default implementation returns an instance of the <see cref="ContextAwareUrlTransformer"/> class.
         /// Override this method in derived classes to provide a custom URL transformer implementation if needed.

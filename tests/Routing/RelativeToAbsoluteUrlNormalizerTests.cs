@@ -75,8 +75,11 @@ namespace Kampute.DocToolkit.Test.Routing
         [TestCase("#section", ExpectedResult = null)]
         [TestCase("?query=param", ExpectedResult = null)]
         [TestCase("/other/api/index.html", ExpectedResult = null)]
-        [TestCase("api/index.html", ExpectedResult = "https://example.com/docs/api/index.html")]
-        [TestCase("api/namespace/class.html", ExpectedResult = "https://example.com/docs/api/namespace/class.html")]
+        [TestCase("api/index.html", ExpectedResult = null)]
+        [TestCase("~/api/index.html", ExpectedResult = "https://example.com/docs/api/index.html")]
+        [TestCase("~/api/namespace/class.html", ExpectedResult = "https://example.com/docs/api/namespace/class.html")]
+        [TestCase("~/api/../index.html", ExpectedResult = "https://example.com/docs/index.html")]
+        [TestCase("~/../index.html", ExpectedResult = null)]
         [TestCase("https://other.com/api/index.html", ExpectedResult = null)]
         public string? ActiveScope_TryTransformSiteRelativeUrl_ReturnsExpectedUrl(string uriString)
         {
@@ -107,7 +110,7 @@ namespace Kampute.DocToolkit.Test.Routing
         public void Scope_TryTransformSiteRelativeUrl_UsesBaseUrl()
         {
             var baseUrl = new Uri("https://example.com/docs/");
-            var relativeUrlString = "api/index.html";
+            var relativeUrlString = "~/api/index.html";
             var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
             var expected = new Uri("https://example.com/docs/api/index.html");
 
@@ -181,7 +184,7 @@ namespace Kampute.DocToolkit.Test.Routing
         {
             var baseUrl = new Uri("https://example.com/docs/");
             var normalizer = new RelativeToAbsoluteUrlNormalizer(baseUrl);
-            var targetUrlString = "page.html";
+            var targetUrlString = "~/page.html";
 
             using var scope = normalizer.BeginScope("api/namespace", null);
             var success = scope.TryTransformSiteRelativeUrl(targetUrlString, out var initialResult);

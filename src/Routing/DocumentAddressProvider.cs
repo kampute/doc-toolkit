@@ -1,4 +1,4 @@
-﻿// Copyright (C) Kampute
+// Copyright (C) Kampute
 //
 // Released under the terms of the MIT license.
 // See the LICENSE file in the project root for the full license text.
@@ -242,15 +242,15 @@ namespace Kampute.DocToolkit.Routing
         protected IRemoteApiDocUrlResolver? FindExternalProviderForMember(IMember member) => member is not null ? FindExternalProviderForNamespace(member.Namespace) : null;
 
         /// <summary>
-        /// Creates an absolute or document-relative URL from a site-relative URL string.
+        /// Creates an absolute or document-relative URL from a path relative to the documentation root.
         /// </summary>
-        /// <param name="siteRelativeUrl">The site-relative URL string to create an absolute or document-relative URL from.</param>
+        /// <param name="documentationRelativePath">The path relative to the documentation root.</param>
         /// <returns>A URL that correctly navigates from the current document's location to the target.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected Uri ToDocumentUrl(string siteRelativeUrl)
+        protected Uri ToDocumentUrl(string documentationRelativePath)
         {
-            if (!ActiveScope.TryTransformSiteRelativeUrl(siteRelativeUrl, out var documentUrl))
-                documentUrl = siteRelativeUrl;
+            if (!ActiveScope.TryTransformSiteRelativeUrl("~/" + documentationRelativePath, out var documentUrl))
+                documentUrl = documentationRelativePath;
 
             return new RawUri(documentUrl, UriKind.RelativeOrAbsolute);
         }

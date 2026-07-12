@@ -14,15 +14,14 @@ namespace Kampute.DocToolkit.Routing
     using System.Text;
 
     /// <summary>
-    /// Normalizes relative URLs based on the current document context to ensure proper navigation.
+    /// Normalizes documentation-root-relative URLs relative to the current document.
     /// </summary>
     /// <remarks>
-    /// This class adjusts relative URLs based on the location of the current document being rendered. It ensures that navigation remains
-    /// consistent regardless of the document hierarchy by calculating the correct relative path between documents.
+    /// The normalizer calculates URLs from each rendered document to resources identified from the documentation root.
     /// <para>
     /// For example, if a document at <c>api/namespace/class.html</c> references another document at <c>api/other-namespace/interface.html</c>,
-    /// this normalizer ensures the relative path is correctly calculated as <c>../other-namespace/interface.html</c>. In this case, the base
-    /// URL of the documentation site relative to the current document is <c>../../</c>.
+    /// the managed context produces <c>../other-namespace/interface.html</c>. In this case, the documentation root URL relative
+    /// to the current document is <c>../../</c>.
     /// </para>
     /// </remarks>
     /// <threadsafety static="true" instance="true"/>
@@ -53,7 +52,7 @@ namespace Kampute.DocToolkit.Routing
         }
 
         /// <summary>
-        /// Represents a disposable URL context that converts site-root-relative URLs to document-relative URLs.
+        /// Represents a disposable URL context that converts documentation-root-relative URLs to document-relative URLs.
         /// </summary>
         private sealed class ContextAwareUrlContext : UrlContext
         {
@@ -62,7 +61,7 @@ namespace Kampute.DocToolkit.Routing
             /// <summary>
             /// Initializes a new instance of the <see cref="ContextAwareUrlContext"/> class.
             /// </summary>
-            /// <param name="owner">The owning normalizer instance.</param>
+            /// <param name="owner">The owning normalizer.</param>
             /// <param name="directory">The directory metadata for URL resolution.</param>
             /// <param name="model">The document model associated with the current context or <see langword="null"/> if not applicable.</param>
             public ContextAwareUrlContext(ContextAwareUrlNormalizer owner, DirectoryMetadata directory, IDocumentModel? model)
@@ -75,19 +74,21 @@ namespace Kampute.DocToolkit.Routing
             /// Gets the relative URL to the root of the documentation site for the current context.
             /// </summary>
             /// <value>
-            /// The URL that serves as the reference point for resolving relative URLs within the current context.
+            /// A relative URL containing the parent segments needed to reach the documentation root, or an empty relative URL
+            /// when the current document is already at that root.
             /// </value>
             public override Uri RootUrl => directory.RelativeRootUrl;
 
             /// <summary>
-            /// Attempts to transform a site-relative URL string into a document-relative URL based on the current context.
+            /// Attempts to transform a documentation-root-relative URL into a URL relative to the current document.
             /// </summary>
-            /// <param name="siteRelativeUrl">The URL string relative to site root to transform.</param>
+            /// <param name="documentationRelativeUrl">The URL beginning with <c>~/</c> to transform.</param>
             /// <param name="transformedUrl">When this method returns, contains the transformed URL if the transformation succeeded; otherwise, <see langword="null"/>.</param>
             /// <returns><see langword="true"/> if the URL was successfully transformed; otherwise, <see langword="false"/>.</returns>
-            public override bool TryTransformSiteRelativeUrl(string siteRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
+            /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
+            public override bool TryTransformSiteRelativeUrl(string documentationRelativeUrl, [NotNullWhen(true)] out string? transformedUrl)
             {
-                if (!IsSiteRelativeUrl(siteRelativeUrl))
+                if (!IsSiteRelativeUrl(documentationRelativeUrl, out var relativeUrl))
                 {
                     transformedUrl = null;
                     return false;
@@ -95,16 +96,16 @@ namespace Kampute.DocToolkit.Routing
 
                 if (directory.Segments.Length == 0)
                 {
-                    transformedUrl = siteRelativeUrl;
+                    transformedUrl = relativeUrl;
                     return true;
                 }
 
                 using var reusable = StringBuilderPool.Shared.GetBuilder();
                 var href = reusable.Builder;
 
-                href.EnsureCapacity(directory.RelativeRootPath.Length + siteRelativeUrl.Length);
+                href.EnsureCapacity(directory.RelativeRootPath.Length + relativeUrl.Length);
 
-                var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(siteRelativeUrl);
+                var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(relativeUrl);
                 var (resourcePath, resourceName) = urlPath.SplitLast('/');
 
                 if (!EqualsIgnoreCase(directory.Path, resourcePath))
@@ -117,11 +118,11 @@ namespace Kampute.DocToolkit.Routing
             }
 
             /// <summary>
-            /// Converts a site-root-relative path to a document-relative path based on the current directory and appends
+            /// Converts a path relative to the documentation root to a document-relative path based on the current directory and appends
             /// it to the provided <see cref="StringBuilder"/>.
             /// </summary>
             /// <param name="sb">The <see cref="StringBuilder"/> to append the adjusted path to.</param>
-            /// <param name="relativePath">The path relative to site root to normalize.</param>
+            /// <param name="relativePath">The path relative to the documentation root to normalize.</param>
             private void AppendAdjustedRelativePath(StringBuilder sb, string relativePath)
             {
                 var targetSegments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);

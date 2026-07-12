@@ -106,10 +106,10 @@ namespace Kampute.DocToolkit
         IDocumentAddressProvider AddressProvider { get; }
 
         /// <summary>
-        /// Gets the object responsible for transforming non-API site-root-relative URLs to an absolute or document-relative URL.
+        /// Gets the object responsible for transforming non-API documentation-root-relative URLs to absolute or document-relative URLs.
         /// </summary>
         /// <value>
-        /// The object responsible for transforming non-API site-root-relative URLs to an absolute or document-relative URL.
+        /// The object responsible for transforming non-API documentation-root-relative URLs to absolute or document-relative URLs.
         /// </value>
         IUrlTransformer UrlTransformer { get; }
     }

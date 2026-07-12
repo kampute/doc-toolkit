@@ -14,12 +14,12 @@ namespace Kampute.DocToolkit.Routing
     using System.IO;
 
     /// <summary>
-    /// Provides a context-aware URL transformer for transforming non-API site-root-relative URLs into absolute or document-relative URLs.
+    /// Resolves documentation references according to their URL scope and the current document context.
     /// </summary>
     /// <remarks>
     /// This class implements the <see cref="IUrlTransformer"/> interface and is designed to work with a specific documentation context.
-    /// It allows for the transformation of URLs based on the current documentation context, ensuring that relative links are correctly
-    /// resolved to their target topics or resources.
+    /// Documentation-root-relative URLs use the <c>~/</c> marker. Site-root-relative URLs beginning with <c>/</c> and ordinary
+    /// document-relative URLs retain their standard URL meaning.
     /// </remarks>
     /// <seealso cref="IUrlTransformer"/>
     /// <seealso cref="IDocumentationContext"/>
@@ -66,15 +66,17 @@ namespace Kampute.DocToolkit.Routing
         /// <list type="bullet">
         ///   <item>Topic references are resolved to their corresponding URLs.</item>
         ///   <item>File references in topics are resolved to either absolute or document-relative URLs.</item>
-        ///   <item>URLs relative to the root of the documentation site are resolved to either absolute or document-relative URLs.</item>
+        ///   <item>URLs beginning with <c>~/</c> are resolved from the documentation root.</item>
         /// </list>
         /// The method will not transform the provided URL when it matches any of the following:
         /// <list type="bullet">
         ///   <item>Empty or consists only of white-space.</item>
         ///   <item>A query or fragment-only URL (for example, "#section" or "?q=1").</item>
-        ///   <item>An absolute or rooted URL (for example, starting with a scheme like "http:" or a leading "/").</item>
-        ///   <item>Neither a known topic, a topic-relative file reference, nor a site-root-relative URL.</item>
+        ///   <item>An absolute or site-root-relative URL (for example, starting with a scheme like "http:" or a leading "/").</item>
+        ///   <item>An unresolved document-relative URL without the <c>~/</c> marker.</item>
         /// </list>
+        /// Resolving a topic-relative file reference may read file-system metadata to determine whether the referenced file exists.
+        /// The operation does not create or modify files and does not change the active document URL context.
         /// </remarks>
         public virtual bool TryTransformUrl(string urlString, [NotNullWhen(true)] out Uri? transformedUrl)
         {
@@ -84,16 +86,22 @@ namespace Kampute.DocToolkit.Routing
                 return false;
             }
 
-            var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(urlString);
+            var scope = Context.AddressProvider.ActiveScope;
 
+            // Documentation-root-relative resolution
+            if (scope.TryTransformSiteRelativeUrl(urlString, out var scopedUrlString))
+            {
+                transformedUrl = new RawUri(scopedUrlString, UriKind.RelativeOrAbsolute);
+                return true;
+            }
+
+            var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(urlString);
             // Topic resolution
             if (Context.Topics.TryResolve(urlPath, out var topic))
             {
                 transformedUrl = string.IsNullOrEmpty(urlSuffix) ? topic.Url : topic.Url.Combine(urlSuffix);
                 return true;
             }
-
-            var scope = Context.AddressProvider.ActiveScope;
 
             // Asset resolution
             if (scope.Model is TopicModel currentTopic && currentTopic.Source is IFileBasedTopic sourceTopic)
@@ -114,14 +122,6 @@ namespace Kampute.DocToolkit.Routing
                     }
                     return true;
                 }
-            }
-
-            // Site-relative resolution
-            if (scope.TryTransformSiteRelativeUrl(urlPath, out var scopedUrlString))
-            {
-                var fullScopedUrlString = string.IsNullOrEmpty(urlSuffix) ? scopedUrlString : scopedUrlString + urlSuffix;
-                transformedUrl = new RawUri(fullScopedUrlString, UriKind.RelativeOrAbsolute);
-                return true;
             }
 
             transformedUrl = null;
