@@ -249,9 +249,7 @@ namespace Kampute.DocToolkit.Routing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected Uri ToDocumentUrl(string documentationRelativePath)
         {
-            if (!ActiveScope.TryResolveUrl("~/" + documentationRelativePath, out var documentUrl))
-                documentUrl = documentationRelativePath;
-
+            var documentUrl = ActiveScope.ResolveFromDocumentationRoot(documentationRelativePath);
             return new RawUri(documentUrl, UriKind.RelativeOrAbsolute);
         }
 

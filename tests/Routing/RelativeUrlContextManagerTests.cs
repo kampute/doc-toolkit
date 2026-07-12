@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Test.Routing
     using Kampute.DocToolkit.Routing;
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
+    using System;
     using System.Threading.Tasks;
 
     [TestFixture]
@@ -147,6 +148,35 @@ namespace Kampute.DocToolkit.Test.Routing
                 Assert.That(result4, Is.EqualTo("page.html"));
                 Assert.That(manager.ActiveScope.DocumentationRootUrl.ToString(), Is.Empty);
             }
+        }
+
+        [TestCase("", "page.html", ExpectedResult = "page.html")]
+        [TestCase("", "api/index.html", ExpectedResult = "api/index.html")]
+        [TestCase("", "", ExpectedResult = "")]
+        [TestCase("api", "page.html", ExpectedResult = "../page.html")]
+        [TestCase("api", "api/page.html", ExpectedResult = "page.html")]
+        [TestCase("api", "api/namespace/class.html", ExpectedResult = "namespace/class.html")]
+        [TestCase("api/namespace", "api/page.html", ExpectedResult = "../page.html")]
+        [TestCase("api/namespace", "api/namespace/page.html", ExpectedResult = "page.html")]
+        [TestCase("api/namespace", "api/other-namespace/interface.html", ExpectedResult = "../other-namespace/interface.html")]
+        [TestCase("api/namespace", "index.html", ExpectedResult = "../../index.html")]
+        [TestCase("api/namespace/class", "api/page.html", ExpectedResult = "../../page.html")]
+        [TestCase("api", "api/page.html?query=param", ExpectedResult = "page.html?query=param")]
+        [TestCase("api/namespace", "api/page.html#fragment", ExpectedResult = "../page.html#fragment")]
+        [TestCase("api/namespace", "api/page.html?query=param#fragment", ExpectedResult = "../page.html?query=param#fragment")]
+        public string Scope_ResolveFromDocumentationRoot_ReturnsRelativeUrl(string currentDir, string urlString)
+        {
+            var manager = new RelativeUrlContextManager();
+            using var scope = manager.BeginScope(currentDir, null);
+            return scope.ResolveFromDocumentationRoot(urlString);
+        }
+
+        [Test]
+        public void Scope_ResolveFromDocumentationRoot_WithNullUrlString_ThrowsArgumentNullException()
+        {
+            var manager = new RelativeUrlContextManager();
+            using var scope = manager.BeginScope("api/namespace", null);
+            Assert.Throws<ArgumentNullException>(() => scope.ResolveFromDocumentationRoot(null!));
         }
 
         [Test]
