@@ -153,6 +153,54 @@ namespace Kampute.DocToolkit.Test.Routing
             Assert.That(manager.ActiveScope, Is.SameAs(scope1));
         }
 
+        [TestCase("api/index.html", ExpectedResult = "https://example.com/docs/api/index.html")]
+        [TestCase("api/namespace/class.html", ExpectedResult = "https://example.com/docs/api/namespace/class.html")]
+        [TestCase("index.html", ExpectedResult = "https://example.com/docs/index.html")]
+        [TestCase("api/page.html?query=param", ExpectedResult = "https://example.com/docs/api/page.html?query=param")]
+        [TestCase("api/page.html#fragment", ExpectedResult = "https://example.com/docs/api/page.html#fragment")]
+        [TestCase("api/page.html?query=param#fragment", ExpectedResult = "https://example.com/docs/api/page.html?query=param#fragment")]
+        [TestCase("", ExpectedResult = "https://example.com/docs/")]
+        public string ActiveScope_ResolveFromDocumentationRoot_ReturnsAbsoluteUrl(string urlString)
+        {
+            var baseUrl = new Uri("https://example.com/docs/");
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+
+            return manager.ActiveScope.ResolveFromDocumentationRoot(urlString);
+        }
+
+        [Test]
+        public void ActiveScope_ResolveFromDocumentationRoot_WithNullUrlString_ThrowsArgumentNullException()
+        {
+            var baseUrl = new Uri("https://example.com/docs/");
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+
+            Assert.Throws<ArgumentNullException>(() => manager.ActiveScope.ResolveFromDocumentationRoot(null!));
+        }
+
+        [TestCase("api", "api/index.html", ExpectedResult = "https://example.com/docs/api/index.html")]
+        [TestCase("api/namespace", "api/namespace/class.html", ExpectedResult = "https://example.com/docs/api/namespace/class.html")]
+        [TestCase("api/namespace", "api/other-namespace/interface.html", ExpectedResult = "https://example.com/docs/api/other-namespace/interface.html")]
+        [TestCase("api/namespace", "index.html", ExpectedResult = "https://example.com/docs/index.html")]
+        [TestCase("api", "api/page.html?query=param#fragment", ExpectedResult = "https://example.com/docs/api/page.html?query=param#fragment")]
+        public string Scope_ResolveFromDocumentationRoot_ReturnsAbsoluteUrlIndependentOfCurrentDirectory(string currentDir, string urlString)
+        {
+            var baseUrl = new Uri("https://example.com/docs/");
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+
+            using var scope = manager.BeginScope(currentDir, null);
+            return scope.ResolveFromDocumentationRoot(urlString);
+        }
+
+        [Test]
+        public void Scope_ResolveFromDocumentationRoot_WithNullUrlString_ThrowsArgumentNullException()
+        {
+            var baseUrl = new Uri("https://example.com/docs/");
+            var manager = new AbsoluteUrlContextManager(baseUrl);
+
+            using var scope = manager.BeginScope("api/namespace", null);
+            Assert.Throws<ArgumentNullException>(() => scope.ResolveFromDocumentationRoot(null!));
+        }
+
         [Test]
         public void NestedScopes_WhenDisposed_CorrectlyRestorePreviousScopes()
         {

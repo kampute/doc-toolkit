@@ -8,7 +8,6 @@ namespace Kampute.DocToolkit.Routing
     using Kampute.DocToolkit.Support;
     using System;
     using System.Collections.Concurrent;
-    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Text;
@@ -80,32 +79,33 @@ namespace Kampute.DocToolkit.Routing
             public override Uri DocumentationRootUrl => directory.RelativeDocumentationRootUrl;
 
             /// <summary>
-            /// Attempts to resolve a documentation-root-relative URL into a URL relative to the current document.
+            /// Resolves a documentation-root-relative URL into a URL relative to the current document.
             /// </summary>
-            /// <param name="url">The URL beginning with <c>~/</c> to resolve.</param>
-            /// <param name="resolvedUrl">When this method returns, contains the resolved URL if resolution succeeded; otherwise, <see langword="null"/>.</param>
-            /// <returns><see langword="true"/> if the URL was successfully resolved; otherwise, <see langword="false"/>.</returns>
-            /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
-            public override bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl)
+            /// <param name="urlString">
+            /// A URL string relative to the documentation root (without the <c>~/</c> marker). The URL consists of a normalized path
+            /// component and may optionally include a query string and/or fragment.
+            /// </param>
+            /// <returns>A document-relative URL string that navigates from the current document's location to the target.</returns>
+            /// <remarks>
+            /// The method computes the relative path from the current document's directory to the target resource. If the target is in
+            /// the same directory as the current document, only the filename is returned. Query strings and fragments are preserved
+            /// in the result.
+            /// </remarks>
+            /// <exception cref="ArgumentNullException">Thrown when <paramref name="urlString"/> is <see langword="null"/>.</exception>
+            public override string ResolveFromDocumentationRoot(string urlString)
             {
-                if (!TryParseDocumentationRelativeUrl(url, out var relativeUrl))
-                {
-                    resolvedUrl = null;
-                    return false;
-                }
+                if (urlString is null)
+                    throw new ArgumentNullException(nameof(urlString));
 
                 if (directory.Segments.Length == 0)
-                {
-                    resolvedUrl = relativeUrl;
-                    return true;
-                }
+                    return urlString;
 
                 using var reusable = StringBuilderPool.Shared.GetBuilder();
                 var href = reusable.Builder;
 
-                href.EnsureCapacity(directory.RelativeRootPath.Length + relativeUrl.Length);
+                href.EnsureCapacity(directory.RelativeRootPath.Length + urlString.Length);
 
-                var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(relativeUrl);
+                var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(urlString);
                 var (resourcePath, resourceName) = urlPath.SplitLast('/');
 
                 if (!EqualsIgnoreCase(directory.Path, resourcePath))
@@ -113,8 +113,7 @@ namespace Kampute.DocToolkit.Routing
 
                 href.Append(resourceName).Append(urlSuffix);
 
-                resolvedUrl = href.ToString();
-                return true;
+                return href.ToString();
             }
 
             /// <summary>

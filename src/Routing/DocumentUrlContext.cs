@@ -91,6 +91,24 @@ namespace Kampute.DocToolkit.Routing
         public IDocumentModel? Model { get; }
 
         /// <summary>
+        /// Resolves a documentation-root-relative URL into an absolute or document-relative URL.
+        /// </summary>
+        /// <param name="urlString">
+        /// A URL string relative to the documentation root (without the <c>~/</c> marker). The URL consists of a normalized path
+        /// component and may optionally include a query string and/or fragment.
+        /// </param>
+        /// <returns>An absolute or document-relative URL string that correctly navigates from the current document's location to the target.</returns>
+        /// <remarks>
+        /// This method performs the core URL resolution logic based on the current document context. The input URL must be relative
+        /// to the documentation root with its path component already normalized (no <c>..</c> segments that escape the root).
+        /// <para>
+        /// Query strings and fragments in the URL are preserved in the resolved result.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="urlString"/> is <see langword="null"/>.</exception>
+        public abstract string ResolveFromDocumentationRoot(string urlString);
+
+        /// <summary>
         /// Attempts to resolve a documentation-root-relative URL into an absolute or document-relative URL.
         /// </summary>
         /// <param name="url">
@@ -107,38 +125,24 @@ namespace Kampute.DocToolkit.Routing
         /// <item><description>Query strings and fragments are preserved.</description></item>
         /// <item><description>Dot segments are resolved within the documentation root; a path that navigates above that root is not resolved.</description></item>
         /// </list>
-        /// The operation does not change the active URL context or the associated document model.
+        /// The operation preserves the query string and fragment components of the URL, if present.
         /// </remarks>
-        public abstract bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl);
-
-        /// <summary>
-        /// Attempts to obtain a normalized path relative to the documentation root.
-        /// </summary>
-        /// <param name="urlString">The marked documentation-root-relative URL.</param>
-        /// <param name="relativeUrl">
-        /// When this method returns, contains the normalized path without the <c>~/</c> marker, including any query string or
-        /// fragment; otherwise, <see langword="null"/>.
-        /// </param>
-        /// <returns>
-        /// <see langword="true"/> when the URL has the documentation-root marker and remains within the documentation root;
-        /// otherwise, <see langword="false"/>.
-        /// </returns>
-        protected static bool TryParseDocumentationRelativeUrl(string urlString, [NotNullWhen(true)] out string? relativeUrl)
+        public bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl)
         {
-            if (urlString is null || !urlString.StartsWith("~/", StringComparison.Ordinal))
+            if (url is null || !url.StartsWith("~/", StringComparison.Ordinal))
             {
-                relativeUrl = null;
+                resolvedUrl = null;
                 return false;
             }
 
-            var (path, suffix) = UriHelper.SplitPathAndSuffix(urlString[2..]);
+            var (path, suffix) = UriHelper.SplitPathAndSuffix(url[2..]);
             if (UriHelper.IsAbsoluteOrRooted(path) || !PathHelper.TryNormalizePath(path, out var normalizedPath) || PathHelper.StartsWithDotSegment(normalizedPath))
             {
-                relativeUrl = null;
+                resolvedUrl = null;
                 return false;
             }
 
-            relativeUrl = normalizedPath + suffix;
+            resolvedUrl = ResolveFromDocumentationRoot(normalizedPath + suffix);
             return true;
         }
 

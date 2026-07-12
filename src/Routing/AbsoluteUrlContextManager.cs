@@ -6,7 +6,6 @@
 namespace Kampute.DocToolkit.Routing
 {
     using System;
-    using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
     /// <summary>
@@ -105,22 +104,24 @@ namespace Kampute.DocToolkit.Routing
             public override Uri DocumentationRootUrl { get; }
 
             /// <summary>
-            /// Attempts to resolve a documentation-root-relative URL into an absolute URL.
+            /// Resolves a documentation-root-relative URL into an absolute URL.
             /// </summary>
-            /// <param name="url">The URL beginning with <c>~/</c> to resolve.</param>
-            /// <param name="resolvedUrl">When this method returns, contains the resolved URL if resolution succeeded; otherwise, <see langword="null"/>.</param>
-            /// <returns><see langword="true"/> if the URL was successfully resolved; otherwise, <see langword="false"/>.</returns>
-            /// <remarks>Query strings and fragments are preserved, and the active context is not changed.</remarks>
-            public override bool TryResolveUrl(string url, [NotNullWhen(true)] out string? resolvedUrl)
+            /// <param name="urlString">
+            /// A URL string relative to the documentation root (without the <c>~/</c> marker). The URL consists of a normalized path
+            /// component and may optionally include a query string and/or fragment.
+            /// </param>
+            /// <returns>An absolute URL string combining the base URL with the provided URL.</returns>
+            /// <remarks>
+            /// The method combines the configured documentation root URL with the provided URL string. Query strings and fragments
+            /// are preserved in the result.
+            /// </remarks>
+            /// <exception cref="ArgumentNullException">Thrown when <paramref name="urlString"/> is <see langword="null"/>.</exception>
+            public override string ResolveFromDocumentationRoot(string urlString)
             {
-                if (!TryParseDocumentationRelativeUrl(url, out var relativeUrl))
-                {
-                    resolvedUrl = null;
-                    return false;
-                }
+                if (urlString is null)
+                    throw new ArgumentNullException(nameof(urlString));
 
-                resolvedUrl = documentationRootUrlString + relativeUrl;
-                return true;
+                return documentationRootUrlString + urlString;
             }
         }
     }
