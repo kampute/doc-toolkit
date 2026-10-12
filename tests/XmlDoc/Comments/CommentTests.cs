@@ -53,6 +53,23 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
         }
 
         [Test]
+        public void Create_SelfClosingElement_ReturnsEmptyComment()
+        {
+            var comment = Comment.Create(XElement.Parse("<summary/>"));
+
+            Assert.That(comment, Is.SameAs(Comment.Empty));
+        }
+
+        [TestCase("<returns><see langword=\"null\"/></returns>")]
+        [TestCase("<summary><see cref=\"T:System.String\"/></summary>")]
+        public void IsEmpty_ElementContentWithoutText_ReturnsFalse(string xml)
+        {
+            var comment = Comment.Create(XElement.Parse(xml));
+
+            Assert.That(comment.IsEmpty, Is.False);
+        }
+
+        [Test]
         public void IsEmpty_WhitespaceContent_ReturnsTrue()
         {
             var element = XElement.Parse("<summary>   </summary>");
@@ -60,16 +77,6 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
             var comment = Comment.Create(element);
 
             Assert.That(comment.IsEmpty, Is.True);
-        }
-
-        [Test]
-        public void ToString_ReturnsXmlElementValue()
-        {
-            var element = XElement.Parse("<summary>Test content</summary>");
-
-            var comment = Comment.Create(element);
-
-            Assert.That(comment.ToString(), Is.EqualTo("Test content"));
         }
 
         [Test]

@@ -205,8 +205,9 @@ namespace Kampute.DocToolkit.Test
             xmlDocReferenceResolverMock.Setup(static r => r.GetKeywordUrl(It.IsAny<string>())).Returns<string>(static kw => $"https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/{kw}");
             xmlDocReferenceResolverMock.Setup(static r => r.GetCodeReferenceUrl(It.IsAny<string>())).Returns<string>(static cref => $"https://learn.microsoft.com/dotnet/api/{cref[2..].ToLowerInvariant()}");
             xmlDocReferenceResolverMock.Setup(static r => r.GetCodeReferenceTitle(It.IsAny<string>())).Returns<string>(static cref => cref[2..]);
-            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicUrl(It.IsAny<string>())).Returns<string>(static href => href);
-            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicTitle(It.IsAny<string>())).Returns<string>(static href => $"Title of {href}");
+            // Like the context-aware resolver, only relative topic references resolve; absolute URLs are returned unchanged and have no title.
+            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicUrl(It.IsAny<string>())).Returns<string>(static href => Uri.IsWellFormedUriString(href, UriKind.Absolute) ? href : $"https://example.com/{href}");
+            xmlDocReferenceResolverMock.Setup(static r => r.GetTopicTitle(It.IsAny<string>())).Returns<string>(static href => Uri.IsWellFormedUriString(href, UriKind.Absolute) ? string.Empty : $"Title of {href}");
 
             return xmlDocReferenceResolverMock.Object;
         }

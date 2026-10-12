@@ -122,7 +122,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             {
                 Assert.That(typeParamIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag));
                 Assert.That(typeParamIssues.All(i => i.Member == testMember));
-                Assert.That(typeParamIssues.All(i => i.TypeParameter is not null));
+                Assert.That(typeParamIssues.Select(static i => i.TypeParameter?.Name), Is.EqualTo(new[] { "T" }));
             }
         }
 
@@ -139,7 +139,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             {
                 Assert.That(paramIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingRequiredTag));
                 Assert.That(paramIssues.All(i => i.Member == testMember));
-                Assert.That(paramIssues.All(i => i.Parameter is not null));
+                Assert.That(paramIssues.Select(static i => i.Parameter?.Name), Is.EqualTo(new[] { "x" }));
             }
         }
 
@@ -288,6 +288,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 .Where(i => i.XmlTag == XmlDocTag.Overloads)
                 .ToList();
 
+            Assert.That(overloadsIssues, Has.Count.EqualTo(1));
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(overloadsIssues.All(i => i.IssueType == XmlDocInspectionIssueType.MissingOptionalTag));
@@ -307,6 +308,46 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 .ToList();
 
             Assert.That(overloadsIssues, Is.Empty);
+        }
+
+        [Test]
+        public void InspectDocumentation_OverloadsDocumentedOnAnotherOverload_WithOverloadsOption_ReportsNoIssue()
+        {
+            var type = typeof(TestSample).GetMetadata<IClassType>();
+            var member = type.Methods.Single(static m => m.Name == nameof(TestSample.OverloadPresent) && m.Parameters.Count == 1);
+
+            var overloadsIssues = xmlDocProvider
+                .InspectDocumentation(member, XmlDocInspectionOptions.Overloads)
+                .Where(i => i.XmlTag == XmlDocTag.Overloads)
+                .ToList();
+
+            Assert.That(overloadsIssues, Is.Empty);
+        }
+
+        [Test]
+        public void InspectDocumentation_MissingValueComment_WithValueOption_ReportsIssue()
+        {
+            var property = typeof(TestSample).GetProperty(nameof(TestSample.Property))!.GetMetadata();
+
+            var issues = xmlDocProvider.InspectDocumentation(property, XmlDocInspectionOptions.Value).ToList();
+
+            Assert.That(issues, Has.Count.EqualTo(1));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(issues[0].IssueType, Is.EqualTo(XmlDocInspectionIssueType.MissingOptionalTag));
+                Assert.That(issues[0].XmlTag, Is.EqualTo(XmlDocTag.Value));
+                Assert.That(issues[0].Member, Is.EqualTo(property));
+            }
+        }
+
+        [Test]
+        public void Inspect_WithNullArguments_ThrowsArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => ((XmlDocEntry)null!).Inspect(testMember), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("doc"));
+                Assert.That(() => XmlDocEntry.Empty.Inspect(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+            }
         }
 
         [Test]
@@ -412,6 +453,8 @@ namespace Kampute.DocToolkit.Test.XmlDoc
 
             public static void OverloadPresent() => throw new NotImplementedException();
             public static void OverloadPresent(int x) => throw new NotImplementedException();
+
+            public static int Property => 0;
         }
     }
 }

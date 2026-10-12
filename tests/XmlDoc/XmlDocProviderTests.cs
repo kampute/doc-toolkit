@@ -26,6 +26,8 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         }
 
         [TestCase("Acme", ExpectedResult = "Documentation for the Acme namespace.")]
+        [TestCase("System", ExpectedResult = null)] // No NamespaceDoc type documented
+        [TestCase(" ", ExpectedResult = null)]
         public string? TryGetNamespaceDoc_ReturnsCorrectDoc(string ns)
         {
             return xmlDocProvider.TryGetNamespaceDoc(ns, out var doc) ? doc.Summary.ToString().Trim() : null;
@@ -181,6 +183,35 @@ namespace Kampute.DocToolkit.Test.XmlDoc
                 Assert.That(doc.Summary.ToString().Trim(), Is.EqualTo("An instance extension property."));
                 Assert.That(doc.ExtensionBlock.Summary.ToString().Trim(), Is.EqualTo("Extension members for non-generic interface."));
             }
+        }
+
+        [Test]
+        public void TryGetMemberDoc_WithUndocumentedOrNullMember_ReturnsFalse()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(xmlDocProvider.TryGetMemberDoc(typeof(object).GetMetadata(), out var undocumented), Is.False);
+                Assert.That(undocumented, Is.Null);
+                Assert.That(xmlDocProvider.TryGetMemberDoc(null!, out var none), Is.False);
+                Assert.That(none, Is.Null);
+            }
+        }
+
+        [Test]
+        public void TryGetMemberDoc_ForExtensionMethodRequestedTwice_AddsExtensionBlockDocOnce()
+        {
+            var extensionMethod = typeof(Acme.SampleExtensions).GetMetadata<IClassType>()
+                .Methods.First(static method => method.Name == "InstanceExtensionMethod");
+
+            var repository = new XmlDocRepository();
+            repository.ImportFile(Path.ChangeExtension(GetType().Assembly.Location, ".xml"));
+            var provider = new XmlDocProvider(repository);
+
+            provider.TryGetMemberDoc(extensionMethod, out _);
+            provider.TryGetMemberDoc(extensionMethod, out _);
+
+            repository.TryGetXmlDoc(extensionMethod.CodeReference, out var xmlDoc);
+            Assert.That(xmlDoc!.Elements("extensionblock"), Has.Exactly(1).Items);
         }
 
         [Test]

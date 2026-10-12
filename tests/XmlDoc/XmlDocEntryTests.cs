@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Test.XmlDoc
 {
+    using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.XmlDoc;
     using NUnit.Framework;
     using System.Linq;
@@ -177,6 +178,78 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         public void ExtensionBlock_ReturnsExpectedDocumentation()
         {
             Assert.That(doc.ExtensionBlock.Summary.ToString(), Is.EqualTo("Test extension block summary"));
+        }
+
+        [Test]
+        public void MissingTags_ReturnEmptyComments()
+        {
+            var entry = new XmlDocEntry(XElement.Parse("<member/>"));
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(entry.IsEmpty, Is.True);
+                Assert.That(entry.Summary.IsEmpty, Is.True);
+                Assert.That(entry.ReturnDescription.IsEmpty, Is.True);
+                Assert.That(entry.Exceptions, Is.Empty);
+                Assert.That(entry.Parameters, Is.Empty);
+                Assert.That(entry.Overloads, Is.SameAs(XmlDocEntry.Empty));
+                Assert.That(entry.ExtensionBlock, Is.SameAs(XmlDocEntry.Empty));
+            }
+        }
+
+        [Test]
+        public void WithContext_ReturnsCopyAssociatedWithContext()
+        {
+            using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
+
+            var copy = doc.WithContext(context);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(copy, Is.Not.SameAs(doc));
+                Assert.That(copy.Context, Is.SameAs(context));
+                Assert.That(doc.Context, Is.Null);
+                Assert.That(copy.Summary.ToString(), Is.EqualTo("Test summary"));
+                Assert.That(copy.WithContext(context), Is.SameAs(copy));
+                Assert.That(XmlDocEntry.Empty.WithContext(context), Is.SameAs(XmlDocEntry.Empty));
+            }
+        }
+
+        [Test]
+        public void WithContext_WithNullContext_ThrowsArgumentNullException()
+        {
+            Assert.That(() => doc.WithContext(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WithContext_NestedEntriesOfCopy_AreAssociatedWithContext(bool accessNestedEntriesBeforeCopy)
+        {
+            using var context = MockHelper.CreateDocumentationContext<HtmlFormat>();
+            if (accessNestedEntriesBeforeCopy)
+                _ = (doc.Overloads, doc.ExtensionBlock);
+
+            var copy = doc.WithContext(context);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(copy.Overloads.Context, Is.SameAs(context));
+                Assert.That(copy.ExtensionBlock.Context, Is.SameAs(context));
+            }
+        }
+
+        [Test]
+        public void SeeAlso_WithContext_ResolvesRelativeHyperlinks()
+        {
+            var topic = MockTopicBuilder.Topic("guide", "Guide").Build();
+            using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
+            var entry = new XmlDocEntry(XElement.Parse("<member><seealso href='guide'/></member>"));
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(entry.SeeAlso.Single().Target, Is.EqualTo("guide"));
+                Assert.That(entry.WithContext(context).SeeAlso.Single().Target, Is.EqualTo("https://example.com/guide"));
+            }
         }
     }
 }

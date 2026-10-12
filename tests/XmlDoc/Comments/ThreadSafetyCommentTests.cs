@@ -134,15 +134,16 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
         }
 
         [Test]
-        public void Create_ValidElement_ReturnsThreadSafetyComment()
+        public void Create_SelfClosingElementWithAttributes_ReturnsThreadSafetyComment()
         {
-            var element = XElement.Parse("<threadsafety static=\"true\" instance=\"true\"></threadsafety>");
+            var element = XElement.Parse("<threadsafety static=\"true\" instance=\"true\"/>");
 
             var comment = ThreadSafetyComment.Create(element);
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(comment, Is.Not.Null);
+                Assert.That(comment, Is.Not.SameAs(ThreadSafetyComment.Empty));
+                Assert.That(comment.IsEmpty, Is.False);
                 Assert.That(comment.IsStaticSafe, Is.True);
                 Assert.That(comment.IsInstanceSafe, Is.True);
             }

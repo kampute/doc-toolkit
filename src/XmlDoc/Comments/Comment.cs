@@ -54,7 +54,11 @@ namespace Kampute.DocToolkit.XmlDoc.Comments
         /// <value>
         /// <see langword="true"/> if the comment is without content; otherwise, <see langword="false"/>.
         /// </value>
-        public virtual bool IsEmpty => element.IsEmpty || string.IsNullOrWhiteSpace(element.Value);
+        /// <remarks>
+        /// A comment has content if it contains any non-whitespace text or any child element, such as a <c>see</c> tag
+        /// that renders as text.
+        /// </remarks>
+        public virtual bool IsEmpty => element.IsEmpty || (!element.HasElements && string.IsNullOrWhiteSpace(element.Value));
 
         /// <summary>
         /// Converts the comment to its string representation without formatting.

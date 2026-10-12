@@ -86,10 +86,11 @@ namespace Kampute.DocToolkit.XmlDoc.Comments
             if (!context.UrlTransformer.TryTransformUrl(Target, out var adjustedUrl))
                 return this;
 
+            var content = Content;
             if (IsEmpty && context.Topics.TryResolve(UriHelper.GetPathPart(Target), out var topic))
-                Content.Value = topic.Name;
+                content = new XElement(Content) { Value = topic.Name };
 
-            return new SeeAlsoComment(adjustedUrl.ToString(), Content);
+            return new SeeAlsoComment(adjustedUrl.ToString(), content);
         }
 
         /// <summary>
