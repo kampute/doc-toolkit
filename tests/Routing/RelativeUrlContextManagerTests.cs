@@ -164,6 +164,8 @@ namespace Kampute.DocToolkit.Test.Routing
         [TestCase("api", "api/page.html?query=param", ExpectedResult = "page.html?query=param")]
         [TestCase("api/namespace", "api/page.html#fragment", ExpectedResult = "../page.html#fragment")]
         [TestCase("api/namespace", "api/page.html?query=param#fragment", ExpectedResult = "../page.html?query=param#fragment")]
+        [TestCase("API", "api/page.html", ExpectedResult = "../api/page.html")]
+        [TestCase("API/namespace", "api/other-namespace/page.html", ExpectedResult = "../../api/other-namespace/page.html")]
         public string Scope_ResolveFromDocumentationRoot_ReturnsRelativeUrl(string currentDir, string urlString)
         {
             var manager = new RelativeUrlContextManager();

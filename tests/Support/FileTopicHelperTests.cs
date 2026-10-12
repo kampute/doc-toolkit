@@ -159,6 +159,24 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
+        public void ConstructHierarchyByDirectory_WithDirectoryPathsDifferingInCase_EstablishesRelationship()
+        {
+            var topics = new List<FileTopic>
+            {
+                new("guides", Path.Combine("Docs", "guides.md")),
+                new("intro", Path.Combine("docs", "guides", "intro.md"))
+            };
+
+            var topLevelTopics = FileTopicHelper.ConstructHierarchyByDirectory(topics).ToList();
+
+            Assert.That(topLevelTopics, Has.Count.EqualTo(1));
+            Assert.That(topLevelTopics[0].Id, Is.EqualTo("guides"));
+
+            var childTopic = topics.First(static t => t.Id == "intro");
+            Assert.That(childTopic.ParentTopic?.Id, Is.EqualTo("guides"));
+        }
+
+        [Test]
         public void ConstructHierarchyByDirectory_WithDifferentFileExtensions_EstablishesRelationship()
         {
             var topics = new List<FileTopic>
@@ -392,6 +410,24 @@ namespace Kampute.DocToolkit.Test.Support
                 Assert.That(introTopic.ParentTopic, Is.EqualTo(indexTopic));
                 Assert.That(advancedTopic.ParentTopic, Is.EqualTo(indexTopic));
             }
+        }
+
+        [Test]
+        public void ConstructHierarchyByIndexFile_WithDirectoryPathsDifferingInCase_EstablishesHierarchy()
+        {
+            var topics = new List<FileTopic>
+            {
+                new("index", Path.Combine("Guides", "index.md")),
+                new("intro", Path.Combine("guides", "intro.md"))
+            };
+
+            var topLevelTopics = FileTopicHelper.ConstructHierarchyByIndexFile(topics, "index").ToList();
+
+            Assert.That(topLevelTopics, Has.Count.EqualTo(1));
+            Assert.That(topLevelTopics[0].Id, Is.EqualTo("index"));
+
+            var introTopic = topics.First(static t => t.Id == "intro");
+            Assert.That(introTopic.ParentTopic?.Id, Is.EqualTo("index"));
         }
 
         [Test]
