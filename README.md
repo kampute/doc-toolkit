@@ -13,7 +13,7 @@ DocToolkit separates metadata extraction from output generation, giving you full
 ## Key Features
 
 - **Specialized TextWriters**: Built-in HTML and Markdown TextWriter wrappers with minification support
-- **Customizable URL Management**: Built-in support for Azure DevOps Wiki, Microsoft Docs, and DocFx
+- **Customizable URL Management**: Built-in support for Azure DevOps Wiki, GitLab Wiki, Microsoft Docs, and DocFx
 - **Conceptual Topics**: Support for standalone documentation topics beyond API reference
 - **Extensible**: Add custom URL schemes, XML transformations, and output formats
 

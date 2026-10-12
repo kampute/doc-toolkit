@@ -5,7 +5,6 @@
 
 namespace Kampute.DocToolkit
 {
-    using Kampute.DocToolkit.Languages;
     using Kampute.DocToolkit.Routing;
     using Kampute.DocToolkit.Support;
 
@@ -25,13 +24,8 @@ namespace Kampute.DocToolkit
     /// </list>
     /// </remarks>
     /// <seealso cref="DevOpsWikiStrategy"/>
-    public class DevOpsWikiOptions : AddressingOptions
+    public class DevOpsWikiOptions : MarkdownAddressingOptions
     {
-        private IProgrammingLanguage language = Languages.Language.Default;
-
-        private string mainTopicId = string.Empty;
-        private string apiTopicId = string.Empty;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="DevOpsWikiOptions"/> class.
         /// </summary>
@@ -41,52 +35,6 @@ namespace Kampute.DocToolkit
             // Although page references in Azure DevOps Wiki are without extensions,
             // we still use the file extension for compatibility with other Markdown-based systems.
             OmitExtensionInUrls = false;
-        }
-
-        /// <summary>
-        /// Gets or sets the programming language formatter to be used for formatting member names.
-        /// </summary>
-        /// <value>
-        /// The <see cref="IProgrammingLanguage"/> instance that defines the syntax rules for formatting member names.
-        /// </value>
-        public IProgrammingLanguage Language
-        {
-            get => language;
-            set => language = value ?? Languages.Language.Default;
-        }
-
-        /// <summary>
-        /// Gets or sets the identifier of the topic that should serve as the main entry point for the documentation.
-        /// </summary>
-        /// <value>
-        /// The identifier of the topic that should serve as the main entry point for the documentation.
-        /// </value>
-        /// <remarks>
-        /// When this property is not empty, the topic with the specified identifier is used as the main topic of the documentation,
-        /// and all other pages are placed under it. If the documentation context has no topic with this identifier, the addressing
-        /// strategy throws an <see cref="System.ArgumentException"/> when it resolves page addresses.
-        /// </remarks>
-        public string MainTopicId
-        {
-            get => mainTopicId;
-            set => mainTopicId = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-        }
-
-        /// <summary>
-        /// Gets or sets the identifier of the topic that should serve as the introduction or overview of the API references.
-        /// </summary>
-        /// <value>
-        /// The identifier of the topic that should serve as the introduction or overview of the API references.
-        /// </value>
-        /// <remarks>
-        /// When this property is not empty, the topic with the specified identifier is used as the API topic of the documentation,
-        /// and all API references are placed under it. If the documentation context has no topic with this identifier, the addressing
-        /// strategy throws an <see cref="System.ArgumentException"/> when it resolves API reference addresses.
-        /// </remarks>
-        public string ApiTopicId
-        {
-            get => apiTopicId;
-            set => apiTopicId = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
     }
 }
