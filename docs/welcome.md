@@ -73,7 +73,7 @@ Extend the `DocumentPageRenderer` class to define how documentation models are c
 ```csharp
 public class MyDocumentRenderer : DocumentPageRenderer
 {
-    protected override void Render(TextWriter writer, PageCategory category, IModel model)
+    protected override void Render(TextWriter writer, PageCategory category, IDocumentModel model)
     {
         // Convert the documentation model to your desired output format
         // The model contains all extracted metadata and processed XML comments
