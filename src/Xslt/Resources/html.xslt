@@ -145,7 +145,7 @@
             </xsl:otherwise>
           </xsl:choose>
         </xsl:variable>
-        <a href="{@href}" class="see-link">
+        <a href="{$url}" class="see-link">
           <xsl:choose>
             <xsl:when test="string-length($text) > 0">
               <xsl:value-of select="$text"/>

@@ -319,11 +319,11 @@ Notes (`note` elements) are wrapped in a `<blockquote>` element with the class `
 ```html
 <blockquote class="note" role="note">
   <div class="note-content">This is an important detail to remember.</div>
-</div>
+</blockquote>
 ```
 
 ### Note with Type
-Notes can have different types (info, tip, security, etc.) specified via the `type` attribute. The type is added as a data attribute to the `<div>` element.
+Notes can have different types (info, tip, security, etc.) specified via the `type` attribute. The type is added as a data attribute to the `<blockquote>` element.
 
 ###### XML Input:
 ```xml
@@ -372,7 +372,7 @@ Notes can contain complex content including paragraphs, lists, and other element
 <blockquote class="note" role="note" data-type="tip" aria-label="Tip">
   <div class="note-title" aria-hidden="true">Tip</div>
   <div class="note-content">
-    You can optimize performance by:
+    <p>You can optimize performance by:</p>
     <ul class="list-items">
       <li>Using indexes</li>
       <li>Caching results</li>

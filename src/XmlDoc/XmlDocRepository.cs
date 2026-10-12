@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.XmlDoc
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Support;
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
@@ -136,6 +137,10 @@ namespace Kampute.DocToolkit.XmlDoc
         /// <param name="includeDir">The directory to search for the included files.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="document"/> or <paramref name="includeDir"/> is <see langword="null"/>.</exception>
         /// <exception cref="FileNotFoundException">Thrown when an included file is not found and no error handler is provided.</exception>
+        /// <remarks>
+        /// Each <c>include</c> element is replaced by all the elements that the XPath expression of its <c>path</c> attribute selects
+        /// from the file named by its <c>file</c> attribute, in document order.
+        /// </remarks>
         public virtual void ResolveIncludes(XDocument document, string includeDir)
         {
             if (document is null)
@@ -174,14 +179,14 @@ namespace Kampute.DocToolkit.XmlDoc
                     continue;
                 }
 
-                var element = includedDocument.XPathSelectElement(includeXPath);
-                if (element is null)
+                var elements = includedDocument.XPathSelectElements(includeXPath).ToList();
+                if (elements.Count == 0)
                 {
                     ErrorHandler?.IncludeMemberNotFound(includeElement.Parent!);
                     continue;
                 }
 
-                includeElement.ReplaceWith(element);
+                includeElement.ReplaceWith(elements);
             }
         }
 
@@ -218,9 +223,24 @@ namespace Kampute.DocToolkit.XmlDoc
         /// This method attempts to resolve each <c>inheritdoc</c> element by finding the base member's documentation and merging it
         /// into the current element.
         /// <para>
-        /// If an <c>inheritdoc</c> element has a <c>cref</c> or <c>path</c> attribute, it uses that to find the base member. If not, it attempts to infer
+        /// If an <c>inheritdoc</c> element has a <c>cref</c> attribute, it uses that to find the base member. If not, it attempts to infer
         /// the inherited member from the current element's <c>name</c> attribute. If the base member's documentation is found, its child elements are copied
         /// into the current element, and the <c>inheritdoc</c> element is removed.
+        /// </para>
+        /// <para>
+        /// If an <c>inheritdoc</c> element has a <c>path</c> attribute, only the elements its XPath expression selects from the base member's documentation
+        /// are copied. The expression is evaluated against a document whose root element is the base member's <c>member</c> element, with that element as
+        /// the context node; a rooted expression is taken relative to the <c>member</c> element, so <c>/summary</c> and <c>summary</c> both select the
+        /// base member's summary. An invalid expression, or one that selects no elements, inherits nothing.
+        /// </para>
+        /// <para>
+        /// Inherited elements do not override locally defined elements. An inherited element is skipped when the current
+        /// element locally defines an element with the same name that refers to the same target through its <c>name</c>, <c>cref</c>, or <c>href</c> attribute,
+        /// or, for elements without such an attribute, any element with the same name.
+        /// </para>
+        /// <para>
+        /// Distinct inherited elements are preserved even when they refer to the same target, such as multiple exception conditions for
+        /// the same exception type. Identical inherited elements are copied only once.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="element"/> is <see langword="null"/>.</exception>
@@ -229,18 +249,27 @@ namespace Kampute.DocToolkit.XmlDoc
             if (element is null)
                 throw new ArgumentNullException(nameof(element));
 
+            var localComments = element.Elements().ToList();
             var resolved = false;
-            var foundElements = new HashSet<XElement>();
+            var foundElements = new HashSet<(XElement, string?)>();
             foreach (var inheritDoc in element.Elements("inheritdoc").ToList())
             {
                 inheritDoc.Remove();
-                if (TryResolveInheritedElement(element, inheritDoc, out var inheritedElement) && foundElements.Add(inheritedElement))
-                {
-                    foreach (var comment in inheritedElement.Elements())
-                        element.Add(new XElement(comment));
+                if (!TryResolveInheritedElement(element, inheritDoc, out var inheritedElement))
+                    continue;
 
-                    resolved = true;
+                var path = inheritDoc.Attribute("path")?.Value;
+                if (!foundElements.Add((inheritedElement, path)))
+                    continue;
+
+                var comments = path is null ? [.. inheritedElement.Elements()] : SelectElements(inheritedElement, path);
+                foreach (var comment in comments)
+                {
+                    if (!IsDefined(localComments, comment) && !element.Elements(comment.Name).Any(existing => XElement.DeepEquals(existing, comment)))
+                        element.Add(new XElement(comment));
                 }
+
+                resolved |= path is null || comments.Count != 0;
             }
             return resolved;
         }
@@ -263,16 +292,6 @@ namespace Kampute.DocToolkit.XmlDoc
             if (inheritDoc.TryGetAttributeValue("cref", out var cref))
                 return TryGetXmlDoc(cref, out inheritedElement);
 
-            if (inheritDoc.TryGetAttributeValue("path", out var expression))
-            {
-                inheritedElement = element.Document?.XPathSelectElement(expression);
-                if (inheritedElement is null)
-                    return false;
-                if (inheritedElement.Name != "member")
-                    inheritedElement = inheritedElement.Parent!;
-                return true;
-            }
-
             if (element.TryGetAttributeValue("name", out cref) && CodeReference.ResolveMember(cref) is IMember member)
             {
                 var baseMember = member.GetInheritedMember()?.GetMemberDefinition();
@@ -282,6 +301,43 @@ namespace Kampute.DocToolkit.XmlDoc
 
             inheritedElement = null;
             return false;
+        }
+
+        /// <summary>
+        /// Selects the elements of the specified inherited documentation that match the specified XPath expression.
+        /// </summary>
+        /// <param name="inheritedElement">The <c>member</c> element of the inherited documentation.</param>
+        /// <param name="path">The XPath expression of the <c>path</c> attribute of an <c>inheritdoc</c> element.</param>
+        /// <returns>The selected elements, or an empty list if the expression is invalid or selects no elements.</returns>
+        private static List<XElement> SelectElements(XElement inheritedElement, string path)
+        {
+            // As Roslyn does when expanding inheritdoc, make a rooted expression start below the root <member> element.
+            if (path.StartsWith('/'))
+                path = "/*" + path;
+
+            var root = new XDocument(new XElement(inheritedElement)).Root!;
+            try
+            {
+                return root.XPathEvaluate(path) is IEnumerable nodes ? [.. nodes.OfType<XElement>()] : [];
+            }
+            catch (XPathException)
+            {
+                return [];
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the specified elements define a comment with the same name and target as the specified comment.
+        /// </summary>
+        /// <param name="elements">The elements to search for a comment with the same name and target.</param>
+        /// <param name="comment">The comment element to look for.</param>
+        /// <returns><see langword="true"/> if <paramref name="elements"/> contain a comment with the same name and target as <paramref name="comment"/>; otherwise, <see langword="false"/>.</returns>
+        private static bool IsDefined(IEnumerable<XElement> elements, XElement comment)
+        {
+            var target = GetTarget(comment);
+            return elements.Any(existing => existing.Name == comment.Name && GetTarget(existing) == target);
+
+            static string? GetTarget(XElement e) => (e.Attribute("name") ?? e.Attribute("cref") ?? e.Attribute("href"))?.Value;
         }
     }
 }

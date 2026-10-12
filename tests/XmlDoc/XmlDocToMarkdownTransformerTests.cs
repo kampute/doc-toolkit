@@ -19,7 +19,12 @@ namespace Kampute.DocToolkit.Test.XmlDoc
         [TestCase("<see langword=\"null\"/>", ExpectedResult = "[`null`](https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null)")]
         [TestCase("<see cref=\"T:System.String\"/>", ExpectedResult = "[System.String](https://learn.microsoft.com/dotnet/api/system.string)")]
         [TestCase("<see href=\"https://example.com\">Example</see>", ExpectedResult = "[Example](https://example.com)")]
-        [TestCase("<see href=\"topic\"/>", ExpectedResult = "[Title of topic](topic)")]
+        [TestCase("<see href=\"topic\"/>", ExpectedResult = "[Title of topic](https://example.com/topic)")]
+        [TestCase("<code>a ``` b</code>", ExpectedResult = "\n````csharp\na ``` b\n````\n")] // Fence longer than any backtick run in the code
+        [TestCase("<para># not a heading</para>", ExpectedResult = "\\# not a heading")] // Line markers are escaped at line start
+        [TestCase("<para>- not a list</para>", ExpectedResult = "\\- not a list")]
+        [TestCase("<see href=\"https://docs.example.com\"/>", ExpectedResult = "[https://docs.example.com](https://docs.example.com)")]
+        [TestCase("<see cref=\"T:System.DateTime\">Explicit text</see>", ExpectedResult = "[Explicit text](https://learn.microsoft.com/dotnet/api/system.datetime)")]
         [TestCase("<list type=\"bullet\"><item><description>First</description></item><item><description>Second</description></item></list>", ExpectedResult = "\n\n- First\n- Second\n\n")]
         [TestCase("<list type=\"bullet\"><item><term>First</term><description>First description</description></item><item><term>Second</term><description>Second description</description></item></list>", ExpectedResult = "\n\n- **First** \u2013 First description\n- **Second** \u2013 Second description\n\n")]
         [TestCase("<list type=\"number\"><item><description>First</description></item><item><description>Second</description></item></list>", ExpectedResult = "\n\n1. First\n2. Second\n\n")]

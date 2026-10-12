@@ -110,13 +110,8 @@ namespace Kampute.DocToolkit.XmlDoc
             events = other.events;
             seeAlso = other.seeAlso;
 
-            overloads = other.overloads.IsValueCreated && !ReferenceEquals(other.overloads.Value, Empty)
-                ? new(() => new XmlDocEntry(other.overloads.Value, context))
-                : other.overloads;
-
-            extensionBlock = other.extensionBlock.IsValueCreated && !ReferenceEquals(other.extensionBlock.Value, Empty)
-                ? new(() => new XmlDocEntry(other.extensionBlock.Value, context))
-                : other.extensionBlock;
+            overloads = new(() => other.overloads.Value.WithContext(context));
+            extensionBlock = new(() => other.extensionBlock.Value.WithContext(context));
         }
 
         /// <summary>

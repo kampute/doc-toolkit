@@ -92,6 +92,31 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
         }
 
         [Test]
+        public void WithResolvedHyperlink_WithResolvableRelativeUrlAndEmptyComment_LeavesOriginalCommentUnchanged()
+        {
+            var topic = MockTopicBuilder.Topic("api-guide", "API Guide").Build();
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
+            var element = XElement.Parse("<seealso href=\"api-guide\"/>");
+            SeeAlsoComment.TryCreate(element, out var seeAlso);
+
+            seeAlso!.WithResolvedHyperlink(docContext);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(seeAlso.IsEmpty, Is.True);
+                Assert.That(element.Value, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void WithResolvedHyperlink_WithNullContext_ThrowsArgumentNullException()
+        {
+            SeeAlsoComment.TryCreate(XElement.Parse("<seealso href=\"api-guide\"/>"), out var seeAlso);
+
+            Assert.That(() => seeAlso!.WithResolvedHyperlink(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+        }
+
+        [Test]
         public void WithResolvedHyperlink_WithResolvableChildTopicUrl_UpdatesHrefAttribute()
         {
             var parentTopic = MockTopicBuilder.Topic("parent", "Parent Guide").WithChild("child", "Child Guide").Build();
@@ -144,6 +169,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
 
             using (Assert.EnterMultipleScope())
             {
+                Assert.That(comment.Target, Is.EqualTo("T:System.String"));
                 Assert.That(comment.IsCodeReference, Is.True);
                 Assert.That(comment.IsHyperlink, Is.False);
             }
@@ -164,8 +190,21 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
 
             using (Assert.EnterMultipleScope())
             {
+                Assert.That(comment.Target, Is.EqualTo("http://example.com"));
                 Assert.That(comment.IsHyperlink, Is.True);
                 Assert.That(comment.IsCodeReference, Is.False);
+            }
+        }
+
+        [Test]
+        public void TryCreate_WithoutCrefOrHref_ReturnsFalse()
+        {
+            var result = SeeAlsoComment.TryCreate(XElement.Parse("<seealso langword=\"null\"/>"), out var comment);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(comment, Is.Null);
             }
         }
 
@@ -175,6 +214,7 @@ namespace Kampute.DocToolkit.Test.XmlDoc.Comments
             var elements = new[]
             {
                 XElement.Parse("<seealso cref=\"T:System.String\"/>"),
+                XElement.Parse("<seealso/>"),
                 XElement.Parse("<seealso href=\"http://example.com\"/>"),
             };
 
