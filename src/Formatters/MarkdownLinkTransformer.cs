@@ -64,10 +64,13 @@ namespace Kampute.DocToolkit.Formatters
 
             string ReplaceUrl(Match match)
             {
-                var urlString = match.Groups[1].Value;
-                return urlTransformer.TryTransformUrl(urlString, out var replacementUrl)
-                    ? match.Value.Replace(urlString, replacementUrl.ToString())
-                    : match.Value;
+                var urlGroup = match.Groups[1];
+                if (!urlTransformer.TryTransformUrl(urlGroup.Value, out var replacementUrl))
+                    return match.Value;
+
+                // Replace only the URL, leaving any link text, label, or title that happens to contain it unchanged.
+                var urlStart = urlGroup.Index - match.Index;
+                return match.Value[..urlStart] + replacementUrl.ToString() + match.Value[(urlStart + urlGroup.Length)..];
             }
         }
 

@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -279,6 +280,18 @@ namespace Kampute.DocToolkit.Test.IO.Writers
         }
 
         [Test]
+        public void WriteStartElement_WithQuoteInAttributeValueAndValuelessAttribute_WritesExpectedHtml()
+        {
+            using var writer = new HtmlWriter(new StringWriter());
+
+            writer.WriteStartElement("div",
+                HtmlWriter.Attribute("title", "Say \"Hi\""),
+                HtmlWriter.Attribute("hidden"));
+
+            Assert.That(writer.ToString(), Is.EqualTo("<div title=\"Say &quot;Hi&quot;\" hidden>"));
+        }
+
+        [Test]
         public void WriteEndElement_WritesExpectedHtml()
         {
             using var writer = new HtmlWriter(new StringWriter());
@@ -287,6 +300,53 @@ namespace Kampute.DocToolkit.Test.IO.Writers
             writer.WriteEndElement();
 
             Assert.That(writer.ToString(), Is.EqualTo("<div></div>"));
+        }
+
+        [Test]
+        public void WriteEndElement_WithoutOpenElement_ThrowsInvalidOperationException()
+        {
+            using var writer = new HtmlWriter(new StringWriter());
+
+            Assert.That(writer.WriteEndElement, Throws.InvalidOperationException);
+        }
+
+        [TestCase(0)]
+        [TestCase(7)]
+        public void WriteHeading_WithLevelOutOfRange_ThrowsArgumentOutOfRangeException(int level)
+        {
+            using var writer = new HtmlWriter(new StringWriter());
+
+            Assert.That(() => writer.WriteHeading(level, "Heading"), Throws.TypeOf<ArgumentOutOfRangeException>().With.Property("ParamName").EqualTo("level"));
+        }
+
+        private static IEnumerable<TestCaseData> InvalidArgumentCalls()
+        {
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteLink(null!, "text")), typeof(ArgumentNullException), "url").SetName("WriteLink_NullUrl");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteImage(null!)), typeof(ArgumentNullException), "imageUrl").SetName("WriteImage_NullUrl");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteStrong((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteStrong_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteEmphasis((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteEmphasis_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteHeading(1, (Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteHeading_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteParagraph((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteParagraph_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteBlockquote((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteBlockquote_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteList(1, null!)), typeof(ArgumentNullException), "itemContentHandler").SetName("WriteList_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteList(-1, (_, _) => { })), typeof(ArgumentOutOfRangeException), "count").SetName("WriteList_NegativeCount");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteList((IReadOnlyList<object>)null!)), typeof(ArgumentNullException), "items").SetName("WriteList_NullItems");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteTable(null!, 1, (_, _, _) => { })), typeof(ArgumentNullException), "columns").SetName("WriteTable_NullColumns");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteTable(["A"], 1, null!)), typeof(ArgumentNullException), "cellContentHandler").SetName("WriteTable_NullHandler");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteTable(["A"], -1, (_, _, _) => { })), typeof(ArgumentOutOfRangeException), "rowCount").SetName("WriteTable_NegativeRowCount");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteTable(["A"], (IReadOnlyList<IReadOnlyList<object>>)null!)), typeof(ArgumentNullException), "rows").SetName("WriteTable_NullRows");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteInlineElement(string.Empty)), typeof(ArgumentException), "tagName").SetName("WriteInlineElement_EmptyTagName");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteInlineElement("img", null!)), typeof(ArgumentNullException), "attributes").SetName("WriteInlineElement_NullAttributes");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteStartElement(string.Empty)), typeof(ArgumentException), "tagName").SetName("WriteStartElement_EmptyTagName");
+            yield return new TestCaseData((Action<HtmlWriter>)(w => w.WriteStartElement("div", null!)), typeof(ArgumentNullException), "attributes").SetName("WriteStartElement_NullAttributes");
+        }
+
+        [TestCaseSource(nameof(InvalidArgumentCalls))]
+        public void WriteMethod_WithInvalidArgument_ThrowsDocumentedException(Action<HtmlWriter> call, Type exceptionType, string paramName)
+        {
+            using var writer = new HtmlWriter(new StringWriter());
+
+            Assert.That(() => call(writer), Throws.TypeOf(exceptionType).With.Property("ParamName").EqualTo(paramName));
         }
 
         [Test]

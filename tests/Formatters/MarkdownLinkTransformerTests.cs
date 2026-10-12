@@ -21,6 +21,9 @@ namespace Kampute.DocToolkit.Test.Formatters
         [TestCase("[Home](home.md \"Home Page\")", ExpectedResult = "[Home](index.md \"Home Page\")")]
         [TestCase("[Image](image.jpg 'Image')", ExpectedResult = "[Image](images/image.jpg 'Image')")]
         [TestCase("[Other](other.md)", ExpectedResult = "[Other](other.md)")]
+        [TestCase("[home.md](home.md)", ExpectedResult = "[home.md](index.md)")] // Only the URL changes, not link text that contains it
+        [TestCase("[See home.md](home.md \"home.md\")", ExpectedResult = "[See home.md](index.md \"home.md\")")]
+        [TestCase("[home.md]: home.md", ExpectedResult = "[home.md]: index.md")]
         [TestCase("[home-link]: home.md", ExpectedResult = "[home-link]: index.md")]
         [TestCase("[image-link]: image.jpg", ExpectedResult = "[image-link]: images/image.jpg")]
         [TestCase("[home-link]: home.md \"Home Page\"", ExpectedResult = "[home-link]: index.md \"Home Page\"")]

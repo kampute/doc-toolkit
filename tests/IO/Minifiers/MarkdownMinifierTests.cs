@@ -33,6 +33,26 @@ namespace Kampute.DocToolkit.Test.IO.Minifiers
             return writer.ToString();
         }
 
+        // Lines indented by four or more columns (a tab counts as four) after a blank line form an indented code block, whose
+        // content is kept as written (CommonMark 0.31, section 4.4), unless they continue a list item (section 5.2)
+        [TestCase("Paragraph\n\n    code   with  spaces\n\n\n    more\tcode\n\nAfter", ExpectedResult = "Paragraph\n\n    code   with  spaces\n\n\n    more\tcode\n\nAfter")]
+        [TestCase("Text\n\n\tcode  x\n", ExpectedResult = "Text\n\n\tcode  x")]
+        [TestCase("    code  x", ExpectedResult = "    code  x")]
+        [TestCase("Text\n\n    code  x\nlazy   text", ExpectedResult = "Text\n\n    code  x\nlazy text")]
+        [TestCase("    code\n\n\n\nAfter", ExpectedResult = "    code\n\nAfter")]
+        [TestCase("- item\n\nParagraph\n\n    code  x", ExpectedResult = "- item\n\nParagraph\n\n    code  x")]
+        [TestCase("Paragraph\n    continued   text", ExpectedResult = "Paragraph\n    continued text")]
+        [TestCase("- item\n\n    continued   text", ExpectedResult = "- item\n\n    continued text")]
+        [TestCase("1. item\n\n    continued   text", ExpectedResult = "1. item\n\n    continued text")]
+        public string WriteMinifiedMarkdown_WithIndentedCode(string text)
+        {
+            using var writer = new MarkdownMinifier(new StringWriter());
+
+            writer.Write(text);
+
+            return writer.ToString();
+        }
+
         [Test]
         public void Dispose_WhenLeaveOpenIsFalse_ClosesUnderlyingWriter()
         {

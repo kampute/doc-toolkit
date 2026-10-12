@@ -27,7 +27,7 @@ namespace Kampute.DocToolkit.IO.Writers
     /// <example>
     /// The following example demonstrates the key features of <see cref="MarkdownWriter"/>:
     /// <code>
-    /// using var writer = new MarkdownDocumentWriter(Console.Out, leaveOpen: true);
+    /// using var writer = new MarkdownWriter(Console.Out, leaveOpen: true);
     ///
     /// // Write a heading
     /// writer.WriteHeading(1, "Title");
@@ -53,7 +53,7 @@ namespace Kampute.DocToolkit.IO.Writers
     /// <code language="md">
     /// # Title
     ///
-    /// This is a paragraph with **bold text**
+    /// This is a paragraph with **bold** text.
     ///
     /// &gt; This is a blockquote.
     ///
@@ -70,6 +70,8 @@ namespace Kampute.DocToolkit.IO.Writers
     {
         private int emptyLineCount = 2;
         private int whitespaceCount = 0;
+        private bool insideTable = false;
+        private int leadingDigits = 0;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MarkdownWriter"/> class.
@@ -116,6 +118,8 @@ namespace Kampute.DocToolkit.IO.Writers
         {
             base.WriteSafe(value);
 
+            Markdown.IsOrderedListDelimiter(value, emptyLineCount > 0, ref leadingDigits);
+
             if (value == '\n')
             {
                 emptyLineCount++;
@@ -139,7 +143,7 @@ namespace Kampute.DocToolkit.IO.Writers
         /// <inheritdoc/>
         public override void Write(char value)
         {
-            if (Markdown.NeedsEncoding(value, excludeLineMarkers: emptyLineCount == 0))
+            if (Markdown.NeedsEncoding(value, excludeLineMarkers: emptyLineCount == 0) || (value is '|' && insideTable) || (value is '.' or ')' && leadingDigits > 0))
                 WriteSafe('\\');
 
             WriteSafe(value);
@@ -255,9 +259,38 @@ namespace Kampute.DocToolkit.IO.Writers
             if (text is null)
                 throw new ArgumentNullException(nameof(text));
 
-            WriteSafe('`');
-            Write(text);
-            WriteSafe('`');
+            // Backslash escapes are not recognized inside code spans, so the text is written as is between fences
+            // that are longer than any run of backticks in the text. A space is added inside the fences when the
+            // text starts or ends with a backtick, or starts and ends with a space, because one space is stripped
+            // from each side of the code span content.
+            var fence = new string('`', GetLongestBacktickRun(text) + 1);
+            var padded = text.Length > 0 && (text[0] is '`' || text[^1] is '`' || (text[0] is ' ' && text[^1] is ' ' && text.AsSpan().Trim(' ').Length > 0));
+
+            WriteSafe(fence);
+            if (padded)
+                WriteSafe(' ');
+            foreach (var c in text)
+            {
+                if (c is '|' && insideTable)
+                    WriteSafe('\\');
+                WriteSafe(c);
+            }
+            if (padded)
+                WriteSafe(' ');
+            WriteSafe(fence);
+
+            static int GetLongestBacktickRun(string text)
+            {
+                var longest = 0;
+                var current = 0;
+                foreach (var c in text)
+                {
+                    current = c is '`' ? current + 1 : 0;
+                    if (current > longest)
+                        longest = current;
+                }
+                return longest;
+            }
         }
 
         /// <summary>
@@ -422,32 +455,40 @@ namespace Kampute.DocToolkit.IO.Writers
 
             EnsureEmptyLine();
 
-            WriteSafe('|');
-            for (var i = 0; i < columns.Count; ++i)
-            {
-                WriteSafe(' ');
-                Write(columns[i] ?? string.Empty);
-                WriteSafe(' ');
-                WriteSafe('|');
-            }
-            WriteLine();
-
-            WriteSafe('|');
-            for (var i = 0; i < columns.Count; ++i)
-                WriteSafe(" --- |");
-            WriteLine();
-
-            for (var row = 0; row < rowCount; ++row)
+            insideTable = true;
+            try
             {
                 WriteSafe('|');
-                for (var col = 0; col < columns.Count; ++col)
+                for (var i = 0; i < columns.Count; ++i)
                 {
                     WriteSafe(' ');
-                    cellContentHandler(this, row, col);
+                    Write(columns[i] ?? string.Empty);
                     WriteSafe(' ');
                     WriteSafe('|');
                 }
                 WriteLine();
+
+                WriteSafe('|');
+                for (var i = 0; i < columns.Count; ++i)
+                    WriteSafe(" --- |");
+                WriteLine();
+
+                for (var row = 0; row < rowCount; ++row)
+                {
+                    WriteSafe('|');
+                    for (var col = 0; col < columns.Count; ++col)
+                    {
+                        WriteSafe(' ');
+                        cellContentHandler(this, row, col);
+                        WriteSafe(' ');
+                        WriteSafe('|');
+                    }
+                    WriteLine();
+                }
+            }
+            finally
+            {
+                insideTable = false;
             }
 
             EnsureEmptyLine();

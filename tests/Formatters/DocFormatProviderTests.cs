@@ -16,7 +16,8 @@ namespace Kampute.DocToolkit.Test.Formatters
     public class DocFormatProviderTests
     {
         [SetUp]
-        public void Setup()
+        [TearDown]
+        public void ResetTestRegistrations()
         {
             DocFormatProvider.Unregister<TestDocFormatter>();
             DocFormatProvider.Unregister<AnotherTestDocFormatter>();
@@ -121,14 +122,19 @@ namespace Kampute.DocToolkit.Test.Formatters
         }
 
         [Test]
-        public void GetFormatterByExtension_ReturnsCorrectFormatter()
+        public void GetRequiredFormatterByExtension_ForRegisteredExtension_ReturnsFormatter()
         {
             DocFormatProvider.Register(static ext => new TestDocFormatter(ext), ".test");
 
-            var formatter = DocFormatProvider.GetFormatterByExtension(".test");
+            var formatter = DocFormatProvider.GetRequiredFormatterByExtension(".test");
 
             Assert.That(formatter, Is.TypeOf<TestDocFormatter>());
-            Assert.That(formatter.FileExtension, Is.EqualTo(".test"));
+        }
+
+        [Test]
+        public void GetRequiredFormatterByExtension_ForUnregisteredExtension_ThrowsNotSupportedException()
+        {
+            Assert.That(() => DocFormatProvider.GetRequiredFormatterByExtension(".unknown"), Throws.TypeOf<NotSupportedException>());
         }
 
         [Test]

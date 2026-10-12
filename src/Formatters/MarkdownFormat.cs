@@ -42,6 +42,7 @@ namespace Kampute.DocToolkit.Formatters
         /// </summary>
         /// <param name="fileExtension">The file extension of the documentation files for the HTML format.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileExtension"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="fileExtension"/> is empty.</exception>
         public MarkdownFormat(string fileExtension)
             : base(fileExtension)
         {

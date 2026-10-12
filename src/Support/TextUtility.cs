@@ -154,7 +154,7 @@ namespace Kampute.DocToolkit.Support
             if (previousWasWhitespace && trim && index > 0)
                 index--;
 
-            return index != size ? newTextSpan[..index].ToString() : text;
+            return newTextSpan[..index].SequenceEqual(text) ? text : newTextSpan[..index].ToString();
         }
 
         /// <summary>

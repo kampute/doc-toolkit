@@ -22,6 +22,7 @@ namespace Kampute.DocToolkit.Test.Formatters
         [TestCase("<a href=index.html>Home</a>", ExpectedResult = "<a href=pages/index.html>Home</a>")]
         [TestCase("<img src=image.jpg alt=\"Image\">", ExpectedResult = "<img src=images/image.jpg alt=\"Image\">")]
         [TestCase("<a href=\"other.html\">Other</a>", ExpectedResult = "<a href=\"other.html\">Other</a>")]
+        [TestCase("<a href=\"ref\">ref</a>", ExpectedResult = "<a href=\"pages/ref.html\">ref</a>")] // The URL is part of the attribute name
         [TestCase("<img src='other.jpg' alt='Image'>", ExpectedResult = "<img src='other.jpg' alt='Image'>")]
         [TestCase("<div data-url=\"index.html\">Content</div>", ExpectedResult = "<div data-url=\"index.html\">Content</div>")]
         [TestCase(@"
@@ -67,6 +68,7 @@ namespace Kampute.DocToolkit.Test.Formatters
                 { "index.html", new Uri("pages/index.html", UriKind.Relative) },
                 { "about.html", new Uri("pages/about.html", UriKind.Relative) },
                 { "image.jpg", new Uri("images/image.jpg", UriKind.Relative) },
+                { "ref", new Uri("pages/ref.html", UriKind.Relative) },
             };
 
             linkTransformer.Transform(reader, writer, urlMapper);

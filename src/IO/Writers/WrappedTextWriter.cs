@@ -43,7 +43,7 @@ namespace Kampute.DocToolkit.IO.Writers
         protected WrappedTextWriter(TextWriter writer, bool leaveOpen)
         {
             UnderlyingWriter = writer ?? throw new ArgumentNullException(nameof(writer));
-            CoreNewLine = writer.NewLine.ToCharArray();
+            base.NewLine = writer.NewLine;
             this.leaveOpen = leaveOpen;
         }
 
@@ -76,7 +76,7 @@ namespace Kampute.DocToolkit.IO.Writers
             set
             {
                 UnderlyingWriter.NewLine = value;
-                CoreNewLine = UnderlyingWriter.NewLine.ToCharArray();
+                base.NewLine = UnderlyingWriter.NewLine;
             }
 #pragma warning restore CS8765 // Nullability of parameter doesn't match overridden member
         }

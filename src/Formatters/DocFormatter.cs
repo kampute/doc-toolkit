@@ -29,11 +29,14 @@ namespace Kampute.DocToolkit.Formatters
         /// Initializes a new instance of the <see cref="DocFormatter"/> class.
         /// </summary>
         /// <param name="fileExtension">The file extension of the documentation files in the target format.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileExtension"/> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileExtension"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="fileExtension"/> is empty.</exception>
         protected DocFormatter(string fileExtension)
         {
-            if (string.IsNullOrEmpty(fileExtension))
-                throw new ArgumentException($"{nameof(fileExtension)} cannot be null or empty.", nameof(fileExtension));
+            if (fileExtension is null)
+                throw new ArgumentNullException(nameof(fileExtension));
+            if (fileExtension.Length == 0)
+                throw new ArgumentException($"{nameof(fileExtension)} cannot be empty.", nameof(fileExtension));
 
             TextTransformers = new TextTransformerRegistry(fileExtension);
         }

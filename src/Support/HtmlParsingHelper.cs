@@ -23,60 +23,129 @@ namespace Kampute.DocToolkit.Support
         /// This parameter is passed uninitialized.
         /// </param>
         /// <returns><see langword="true"/> if the content was successfully extracted; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// The content is taken from the first opening tag up to its matching closing tag, so nested elements with the same tag name
+        /// are part of the content. Tag-like text in comments, quoted attributes, and raw text elements is not treated as markup.
+        /// </remarks>
         public static bool TryExtractTagContent(string html, string tagName, [NotNullWhen(true)] out string? content)
         {
+            content = null;
             if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(tagName))
-            {
-                content = null;
                 return false;
+
+            var index = 0;
+            var contentStartIndex = 0;
+            var depth = 0;
+            string? rawTextTag = null;
+            while (TryReadTag(out var name, out var isClosing, out var tagIndex))
+            {
+                if (!name.Equals(tagName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!isClosing)
+                {
+                    if (depth++ == 0)
+                        contentStartIndex = index;
+                    continue;
+                }
+
+                if (depth > 0 && --depth == 0)
+                {
+                    content = html[contentStartIndex..tagIndex];
+                    return true;
+                }
             }
 
-            var contentStartIndex = FindContentStartIndex($"<{tagName}");
-            if (contentStartIndex == -1)
-            {
-                content = null;
-                return false;
-            }
+            return false;
 
-            var contentEndIndex = html.IndexOf($"</{tagName}>", contentStartIndex, StringComparison.OrdinalIgnoreCase);
-            if (contentEndIndex == -1)
+            bool TryReadTag(out ReadOnlySpan<char> name, out bool isClosing, out int tagIndex)
             {
-                content = null;
-                return false;
-            }
+                name = default;
+                isClosing = false;
+                tagIndex = -1;
 
-            content = html[contentStartIndex..contentEndIndex];
-            return true;
-
-            int FindContentStartIndex(string openTag)
-            {
-                var index = 0;
                 while (index < html.Length)
                 {
-                    index = html.IndexOf(openTag, index, StringComparison.OrdinalIgnoreCase);
-                    if (index == -1)
-                        return -1;
+                    tagIndex = rawTextTag is null
+                        ? html.IndexOf('<', index)
+                        : html.IndexOf("</" + rawTextTag, index, StringComparison.OrdinalIgnoreCase);
+                    if (tagIndex == -1)
+                        return false;
 
-                    index += openTag.Length;
-                    if (index >= html.Length)
-                        return -1;
+                    if (rawTextTag is null && html.AsSpan(tagIndex).StartsWith("<!--", StringComparison.Ordinal))
+                    {
+                        var commentEnd = html.IndexOf("-->", tagIndex + 4, StringComparison.Ordinal);
+                        if (commentEnd == -1)
+                            return false;
 
-                    var c = html[index];
-                    if (c is '>')
-                        return index + 1;
+                        index = commentEnd + 3;
+                        continue;
+                    }
 
-                    var found = char.IsWhiteSpace(c);
+                    index = tagIndex + 1;
+                    isClosing = index < html.Length && html[index] is '/';
+                    if (isClosing)
+                        index++;
 
-                    index = html.IndexOf('>', index + 1);
-                    if (index == -1)
-                        return -1;
+                    var nameStart = index;
+                    while (index < html.Length && !char.IsWhiteSpace(html[index]) && html[index] is not ('>' or '/'))
+                        index++;
+                    name = html.AsSpan(nameStart, index - nameStart);
 
-                    index++;
-                    if (found)
-                        return index;
+                    var quote = '\0';
+                    var foundEnd = false;
+                    while (index < html.Length)
+                    {
+                        var c = html[index++];
+                        if (quote != '\0')
+                        {
+                            if (c == quote)
+                                quote = '\0';
+                        }
+                        else if (c is '"' or '\'')
+                        {
+                            quote = c;
+                        }
+                        else if (c is '>')
+                        {
+                            foundEnd = true;
+                            break;
+                        }
+                    }
+                    if (!foundEnd)
+                        return false;
+
+                    if (rawTextTag is not null)
+                    {
+                        if (!name.Equals(rawTextTag, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        rawTextTag = null;
+                    }
+                    else if (!isClosing && IsRawTextElement(name))
+                    {
+                        rawTextTag = name.ToString();
+                    }
+
+                    return true;
                 }
-                return -1;
+
+                return false;
             }
         }
+
+        /// <summary>
+        /// Determines whether an HTML element's text is parsed without recognizing nested tags.
+        /// </summary>
+        /// <param name="name">The element's tag name.</param>
+        /// <returns><see langword="true"/> if only the matching closing tag is recognized; otherwise, <see langword="false"/>.</returns>
+        private static bool IsRawTextElement(ReadOnlySpan<char> name)
+            => name.Equals("script", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("style", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("title", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("textarea", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("xmp", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("iframe", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("noembed", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("noframes", StringComparison.OrdinalIgnoreCase);
     }
 }
