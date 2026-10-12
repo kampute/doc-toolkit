@@ -89,6 +89,16 @@ namespace Kampute.DocToolkit.Test
             return strategy.TryResolveTopicAddress(topic, out var address) ? address.RelativeFilePath : null;
         }
 
+        [Test]
+        [SetCulture("tr-TR")]
+        public void TryResolveTopicAddress_UnderCultureWithSpecialCasing_LowercasesInvariantly()
+        {
+            var strategy = new DotNetApiStrategy();
+            var topic = MockTopicBuilder.Topic("Introduction").Build();
+
+            Assert.That(strategy.TryResolveTopicAddress(topic, out var address) ? address.RelativeUrl : null, Is.EqualTo("introduction.html"));
+        }
+
         [TestCase("API Reference", ExpectedResult = "reference-guide/api-reference.html")]
         [TestCase("v2_Migration", ExpectedResult = "reference-guide/v2_migration.html")]
         public string? TryResolveAddress_CodeReference_Topic_WithParent_ReturnsExpectedUrl(string topicId)

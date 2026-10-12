@@ -102,8 +102,10 @@ namespace Kampute.DocToolkit
         {
             if (context is null)
                 throw new ArgumentNullException(nameof(context));
-            if (string.IsNullOrEmpty(filePath))
-                throw new ArgumentException($"'{nameof(filePath)}' cannot be null or empty.", nameof(filePath));
+            if (filePath is null)
+                throw new ArgumentNullException(nameof(filePath));
+            if (filePath.Length == 0)
+                throw new ArgumentException($"'{nameof(filePath)}' cannot be empty.", nameof(filePath));
 
             return context.ContentFormatter.TextTransformers.CanTransform(Path.GetExtension(filePath));
         }
@@ -131,8 +133,10 @@ namespace Kampute.DocToolkit
                 throw new ArgumentNullException(nameof(context));
             if (fileExtension is null)
                 throw new ArgumentNullException(nameof(fileExtension));
+            if (text is null)
+                throw new ArgumentNullException(nameof(text));
 
-            if (string.IsNullOrEmpty(text))
+            if (text.Length == 0)
             {
                 transformedText = string.Empty;
                 return true;

@@ -14,6 +14,22 @@ namespace Kampute.DocToolkit.Test.Topics
     public class AdHocTopicTests
     {
         [Test]
+        public void Constructor_WithNullContentWriter_ThrowsArgumentNullException()
+        {
+            Assert.That(() => new AdHocTopic("TestTopic", null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("contentWriter"));
+        }
+
+        [Test]
+        public void Render_WithNullContext_ThrowsArgumentNullException()
+        {
+            var adHocTopic = new AdHocTopic("TestTopic", static (w, c) => w.Write("content"));
+
+            using var textWriter = new StringWriter();
+
+            Assert.That(() => adHocTopic.Render(textWriter, null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+        }
+
+        [Test]
         public void Render_OutputsExpectedContent()
         {
             var adHocTopic = new AdHocTopic("TestTopic", static (w, c) => w.WriteLink(new("https://example.com/"), "Example"));

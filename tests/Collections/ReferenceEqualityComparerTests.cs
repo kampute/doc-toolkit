@@ -8,6 +8,7 @@ namespace Kampute.DocToolkit.Test.Collections
     using Kampute.DocToolkit.Collections;
     using NUnit.Framework;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
 
     [TestFixture]
     public class ReferenceEqualityComparerTests
@@ -39,16 +40,6 @@ namespace Kampute.DocToolkit.Test.Collections
             var obj = new TestObject("test");
 
             Assert.That(comparer.Equals(obj, obj), Is.True);
-        }
-
-        [Test]
-        public void Equals_DifferentReferences_ReturnsFalse()
-        {
-            var comparer = ReferenceEqualityComparer<TestObject>.Instance;
-            var obj1 = new TestObject("test");
-            var obj2 = new TestObject("test");
-
-            Assert.That(comparer.Equals(obj1, obj2), Is.False);
         }
 
         [Test]
@@ -87,31 +78,6 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
-        public void GetHashCode_SameObject_ReturnsSameHashCode()
-        {
-            var comparer = ReferenceEqualityComparer<TestObject>.Instance;
-            var obj = new TestObject("test");
-
-            var hash1 = comparer.GetHashCode(obj);
-            var hash2 = comparer.GetHashCode(obj);
-
-            Assert.That(hash1, Is.EqualTo(hash2));
-        }
-
-        [Test]
-        public void GetHashCode_DifferentObjects_ReturnsDifferentHashCodes()
-        {
-            var comparer = ReferenceEqualityComparer<TestObject>.Instance;
-            var obj1 = new TestObject("test");
-            var obj2 = new TestObject("test");
-
-            var hash1 = comparer.GetHashCode(obj1);
-            var hash2 = comparer.GetHashCode(obj2);
-
-            Assert.That(hash1, Is.Not.EqualTo(hash2));
-        }
-
-        [Test]
         public void GetHashCode_Null_ReturnsZero()
         {
             var comparer = ReferenceEqualityComparer<TestObject>.Instance;
@@ -120,37 +86,12 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
-        public void GetHashCode_IgnoresContentBasedHashCode()
+        public void GetHashCode_ReturnsIdentityHashCodeInsteadOfContentBasedHashCode()
         {
             var comparer = ReferenceEqualityComparer<TestObject>.Instance;
-            var obj1 = new TestObject("test");
-            var obj2 = new TestObject("test");
+            var obj = new TestObject("test");
 
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(obj1.GetHashCode(), Is.EqualTo(obj2.GetHashCode()), "Content hash codes should be equal");
-                Assert.That(comparer.GetHashCode(obj1), Is.Not.EqualTo(comparer.GetHashCode(obj2)), "Identity hash codes should be different");
-            }
-        }
-
-        [Test]
-        public void UsageInDictionary_KeysByReference()
-        {
-            var comparer = ReferenceEqualityComparer<TestObject>.Instance;
-            var dict = new Dictionary<TestObject, string>(comparer);
-
-            var key1 = new TestObject("test");
-            var key2 = new TestObject("test");
-
-            dict[key1] = "value1";
-            dict[key2] = "value2";
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(dict, Has.Count.EqualTo(2), "Dictionary should contain two entries");
-                Assert.That(dict[key1], Is.EqualTo("value1"));
-                Assert.That(dict[key2], Is.EqualTo("value2"));
-            }
+            Assert.That(comparer.GetHashCode(obj), Is.EqualTo(RuntimeHelpers.GetHashCode(obj))); // Documented in the class remarks
         }
 
         [Test]

@@ -23,6 +23,7 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("https://example.com/", "param", "value with spaces", UriKind.Absolute, ExpectedResult = "https://example.com/?param=value+with+spaces")]
         [TestCase("https://example.com/", "param", "special:/?#[]@!$&'()*+,;=", UriKind.Absolute, ExpectedResult = "https://example.com/?param=special%3A%2F%3F%23%5B%5D%40!%24%26%27()*%2B%2C%3B%3D")]
         [TestCase("https://example.com/", "param", "", UriKind.Absolute, ExpectedResult = "https://example.com/?param=")]
+        [TestCase("https://example.com/", "a b&c", "value", UriKind.Absolute, ExpectedResult = "https://example.com/?a+b%26c=value")]
         public string WithQueryParameter_ReturnsExpectedUri(string uriString, string paramName, string paramValue, UriKind uriKind)
         {
             var url = new Uri(uriString, uriKind);
@@ -74,6 +75,8 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("docs/page", "#section", UriKind.Relative, ExpectedResult = "docs/page#section")]
         [TestCase("docs/page#base", "#section", UriKind.Relative, ExpectedResult = "docs/page#section")]
         [TestCase("docs/page#base", "", UriKind.Relative, ExpectedResult = "docs/page#base")]
+        [TestCase("docs/page#base", "?param=value", UriKind.Relative, ExpectedResult = "docs/page?param=value#base")]
+        [TestCase("https://example.com/docs/page#base", "other", UriKind.Absolute, ExpectedResult = "https://example.com/docs/page/other#base")]
         // Multiple components
         [TestCase("docs/page?base=value#section", "other?param=value#fragment", UriKind.Relative, ExpectedResult = "docs/page/other?base=value&param=value#fragment")]
         [TestCase("docs/page?base=value#section", "/other?param=value#fragment", UriKind.Relative, ExpectedResult = "/other?base=value&param=value#fragment")]
@@ -97,6 +100,36 @@ namespace Kampute.DocToolkit.Test.Support
             var baseUri = new Uri(baseUriString, uriKind);
             var result = baseUri.Combine(relativeUri);
             return result.ToString();
+        }
+
+        [TestCase("https://example.com/docs/", "../../page.html", UriKind.Absolute)]
+        [TestCase("/docs/", "../../page.html", UriKind.Relative)]
+        public void Combine_WhenNavigatingBeyondRoot_ThrowsArgumentException(string baseUriString, string relativeUri, UriKind uriKind)
+        {
+            var baseUri = new Uri(baseUriString, uriKind);
+
+            Assert.That(() => baseUri.Combine(relativeUri), Throws.ArgumentException.With.Property("ParamName").EqualTo("relativeUri"));
+        }
+
+        private static IEnumerable<TestCaseData> InvalidArgumentCalls()
+        {
+            var uri = new Uri("https://example.com/");
+            yield return new TestCaseData((Action)(() => UriHelper.WithQueryParameter(null!, "p", "v")), typeof(ArgumentNullException), "uri").SetName("WithQueryParameter_NullUri");
+            yield return new TestCaseData((Action)(() => uri.WithQueryParameter("", "v")), typeof(ArgumentException), "paramName").SetName("WithQueryParameter_EmptyName");
+            yield return new TestCaseData((Action)(() => uri.WithQueryParameter("p", null!)), typeof(ArgumentNullException), "paramValue").SetName("WithQueryParameter_NullValue");
+            yield return new TestCaseData((Action)(() => UriHelper.WithFragment(null!, "f")), typeof(ArgumentNullException), "uri").SetName("WithFragment_NullUri");
+            yield return new TestCaseData((Action)(() => UriHelper.WithoutFragment(null!)), typeof(ArgumentNullException), "uri").SetName("WithoutFragment_NullUri");
+            yield return new TestCaseData((Action)(() => UriHelper.Combine(null!, "page.html")), typeof(ArgumentNullException), "baseUri").SetName("Combine_NullBaseUri");
+            yield return new TestCaseData((Action)(() => UriHelper.ToQueryString(null!)), typeof(ArgumentNullException), "queryParameters").SetName("ToQueryString_NullParameters");
+            yield return new TestCaseData((Action)(() => UriHelper.SplitPathAndSuffix(null!)), typeof(ArgumentNullException), "uriString").SetName("SplitPathAndSuffix_NullString");
+            yield return new TestCaseData((Action)(() => UriHelper.IsAbsoluteOrRooted(null!)), typeof(ArgumentNullException), "uriString").SetName("IsAbsoluteOrRooted_NullString");
+            yield return new TestCaseData((Action)(() => UriHelper.IsQueryOrFragmentOnly(null!)), typeof(ArgumentNullException), "uriString").SetName("IsQueryOrFragmentOnly_NullString");
+        }
+
+        [TestCaseSource(nameof(InvalidArgumentCalls))]
+        public void Method_WithInvalidArgument_ThrowsDocumentedException(Action call, Type exceptionType, string paramName)
+        {
+            Assert.That(() => call(), Throws.TypeOf(exceptionType).With.Property("ParamName").EqualTo(paramName));
         }
 
         [Test]

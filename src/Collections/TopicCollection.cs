@@ -134,7 +134,7 @@ namespace Kampute.DocToolkit.Collections
             rootTopics.Add(contextualTopic);
             allTopics.Add(contextualTopic.Id, contextualTopic);
             if (topLevelTopic is IFileBasedTopic fileTopic)
-                topicsByPath.TryAdd(NormalizePathFormat(fileTopic.FilePath), contextualTopic);
+                topicsByPath.TryAdd(NormalizeFilePath(fileTopic.FilePath), contextualTopic);
 
             AddSubtopics(contextualTopic);
             return true;
@@ -145,13 +145,11 @@ namespace Kampute.DocToolkit.Collections
                 {
                     allTopics.TryAdd(subtopic.Id, subtopic);
                     if (subtopic.Source is IFileBasedTopic fileSubtopic)
-                        topicsByPath.TryAdd(NormalizePathFormat(fileSubtopic.FilePath), subtopic);
+                        topicsByPath.TryAdd(NormalizeFilePath(fileSubtopic.FilePath), subtopic);
                     if (subtopic.Subtopics.Count > 0)
                         AddSubtopics(subtopic);
                 }
             }
-
-            static string NormalizePathFormat(string path) => path.Replace('\\', '/');
         }
 
         /// <summary>
@@ -171,8 +169,7 @@ namespace Kampute.DocToolkit.Collections
             if (ReferenceEquals(topLevelTopic.Context, Context) && rootTopics.Remove(topLevelTopic))
             {
                 allTopics.Remove(topLevelTopic.Id);
-                if (topLevelTopic is IFileBasedTopic fileTopic)
-                    topicsByPath.Remove(fileTopic.FilePath);
+                RemoveFilePath(topLevelTopic);
 
                 RemoveSubtopics(topLevelTopic);
                 return true;
@@ -185,11 +182,20 @@ namespace Kampute.DocToolkit.Collections
                 foreach (var subtopic in topic.Subtopics)
                 {
                     allTopics.Remove(subtopic.Id);
-                    if (subtopic is IFileBasedTopic fileTopic)
-                        topicsByPath.Remove(fileTopic.FilePath);
+                    RemoveFilePath(subtopic);
                     if (subtopic.Subtopics.Count > 0)
                         RemoveSubtopics(subtopic);
                 }
+            }
+
+            void RemoveFilePath(TopicModel topic)
+            {
+                if (topic.Source is not IFileBasedTopic fileTopic)
+                    return;
+
+                var path = NormalizeFilePath(fileTopic.FilePath);
+                if (topicsByPath.TryGetValue(path, out var indexedTopic) && ReferenceEquals(indexedTopic, topic))
+                    topicsByPath.Remove(path);
             }
         }
 
@@ -344,7 +350,7 @@ namespace Kampute.DocToolkit.Collections
             topic = null;
             foreach (var candidate in allTopics.Values)
             {
-                if (!candidate.Id.EndsWith(id, StringComparison.Ordinal))
+                if (!candidate.Id.EndsWith(id, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (candidate.Id.Length > id.Length && candidate.Id[candidate.Id.Length - id.Length - 1] != '/')
@@ -374,5 +380,13 @@ namespace Kampute.DocToolkit.Collections
         /// </summary>
         /// <returns>An enumerator that can be used to iterate through the collection.</returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>
+        /// Normalizes the specified file path to the form used as the key of the file path index.
+        /// </summary>
+        /// <param name="path">The file path to normalize.</param>
+        /// <returns>The normalized file path.</returns>
+        private static string NormalizeFilePath(string path)
+            => PathHelper.TryNormalizePath(path, out var normalizedPath) ? normalizedPath : path.Replace('\\', '/');
     }
 }

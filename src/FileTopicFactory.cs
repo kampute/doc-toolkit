@@ -144,7 +144,7 @@ namespace Kampute.DocToolkit
 
             return registry.TryGetValue(Path.GetExtension(filePath), out var registration)
                 ? registration.Factory(id, filePath)
-                : new FileTopic(filePath, id);
+                : new FileTopic(id, filePath);
         }
 
         #region Private Members

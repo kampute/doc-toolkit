@@ -134,6 +134,26 @@ namespace Kampute.DocToolkit.Test.Support
             return text.TranslateChars(fromChars, toChars);
         }
 
+        [Test]
+        public void TranslateChars_WithDifferentLengths_ThrowsArgumentException()
+        {
+            Assert.That(() => "abc".TranslateChars("ab", "x"), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void CharacterMethods_WithNullText_ThrowArgumentNullException()
+        {
+            string text = null!;
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => text.ReplaceChars("a", 'b'), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("text"));
+                Assert.That(() => text.RemoveChars("a"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("text"));
+                Assert.That(() => text.TranslateChars("a", "b"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("text"));
+                Assert.That(() => text.ToTitleCase(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("text"));
+            }
+        }
+
         [TestCase("simple_title", ExpectedResult = "Simple Title")]
         [TestCase("simple-title_with_mixed-separators", ExpectedResult = "Simple Title With Mixed Separators")]
         [TestCase("already-Title-Cased", ExpectedResult = "Already Title Cased")]
@@ -147,6 +167,13 @@ namespace Kampute.DocToolkit.Test.Support
         public string ToTitleCase_ReturnsExpectedResult(string text)
         {
             return text.ToTitleCase();
+        }
+
+        [Test]
+        [SetCulture("tr-TR")]
+        public void ToTitleCase_UnderTurkishCulture_ReturnsCultureIndependentResult()
+        {
+            Assert.That("intro_items".ToTitleCase(), Is.EqualTo("Intro Items"));
         }
 
         [TestCase("", '.', ExpectedResult = "|")]

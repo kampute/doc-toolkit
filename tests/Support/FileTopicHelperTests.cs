@@ -29,24 +29,6 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
-        public void ConstructHierarchyByDirectory_WithSingleTopic_ReturnsSingleTopic()
-        {
-            var topics = new List<FileTopic>
-            {
-                new("standalone", "standalone.md")
-            };
-
-            var result = FileTopicHelper.ConstructHierarchyByDirectory(topics).ToList();
-
-            Assert.That(result, Has.Count.EqualTo(1));
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result[0].Id, Is.EqualTo("standalone"));
-                Assert.That(result[0].ParentTopic, Is.Null);
-            }
-        }
-
-        [Test]
         public void ConstructHierarchyByDirectory_WithParentChildPair_EstablishesRelationship()
         {
             var topics = new List<FileTopic>
@@ -316,6 +298,44 @@ namespace Kampute.DocToolkit.Test.Support
             Assert.That(children.Select(t => t.Id), Is.EqualTo(["child-z", "child-a", "child-m"]));
         }
 
+        [Test]
+        public void ConstructHierarchyByDirectory_WithNullTopics_ThrowsArgumentNullException()
+        {
+            Assert.That(static () => FileTopicHelper.ConstructHierarchyByDirectory(null!), Throws.ArgumentNullException);
+        }
+
+        #endregion
+
+        #region Shared Contract Tests
+
+        private static IEnumerable<TestCaseData> HierarchyMethods()
+        {
+            yield return new TestCaseData((Func<IEnumerable<FileTopic>, IEnumerable<FileTopic>>)(static topics => FileTopicHelper.ConstructHierarchyByDirectory(topics))).SetArgDisplayNames("ByDirectory");
+            yield return new TestCaseData((Func<IEnumerable<FileTopic>, IEnumerable<FileTopic>>)(static topics => FileTopicHelper.ConstructHierarchyByIndexFile(topics, "index"))).SetArgDisplayNames("ByIndexFile");
+            yield return new TestCaseData((Func<IEnumerable<FileTopic>, IEnumerable<FileTopic>>)(static topics => FileTopicHelper.ConstructHierarchyByFilenamePrefix(topics, '.'))).SetArgDisplayNames("ByFilenamePrefix");
+        }
+
+        [TestCaseSource(nameof(HierarchyMethods))]
+        public void ConstructHierarchy_WithOnlyNullTopic_ThrowsArgumentNullException(Func<IEnumerable<FileTopic>, IEnumerable<FileTopic>> construct)
+        {
+            Assert.That(() => construct([null!]), Throws.ArgumentNullException);
+        }
+
+        [TestCaseSource(nameof(HierarchyMethods))]
+        public void ConstructHierarchy_WithSingleTopicThatHasParent_ReturnsItAsTopLevelTopic(Func<IEnumerable<FileTopic>, IEnumerable<FileTopic>> construct)
+        {
+            var topic = new FileTopic("topic", "topic.md");
+            new FileTopic("old-parent", "old-parent.md").AddSubtopic(topic);
+
+            var topLevelTopics = construct([topic]).ToList();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(topLevelTopics, Is.EqualTo(new[] { topic }));
+                Assert.That(topic.ParentTopic, Is.Null);
+            }
+        }
+
         #endregion
 
         #region ConstructHierarchyByIndexFile Tests
@@ -338,6 +358,12 @@ namespace Kampute.DocToolkit.Test.Support
         {
             var topics = new List<FileTopic>();
             Assert.Throws<ArgumentException>(() => FileTopicHelper.ConstructHierarchyByIndexFile(topics, ""));
+        }
+
+        [Test]
+        public void ConstructHierarchyByIndexFile_WithWhitespaceIndexFileName_ThrowsArgumentException()
+        {
+            Assert.That(() => FileTopicHelper.ConstructHierarchyByIndexFile([], "  "), Throws.ArgumentException);
         }
 
         [Test]
@@ -365,6 +391,32 @@ namespace Kampute.DocToolkit.Test.Support
             {
                 Assert.That(introTopic.ParentTopic, Is.EqualTo(indexTopic));
                 Assert.That(advancedTopic.ParentTopic, Is.EqualTo(indexTopic));
+            }
+        }
+
+        [Test]
+        public void ConstructHierarchyByIndexFile_WithIndexFileInSubdirectory_NestsItUnderParentDirectoryIndex()
+        {
+            var topics = new List<FileTopic>
+            {
+                new("guides", Path.Combine("guides", "index.md")),
+                new("installation", Path.Combine("guides", "installation.md")),
+                new("advanced", Path.Combine("guides", "advanced", "index.md")),
+                new("scripting", Path.Combine("guides", "advanced", "scripting.md")),
+                new("intro", Path.Combine("tutorials", "intro.md")),
+                new("setup", Path.Combine("tutorials", "setup.md")),
+                new("standalone", "standalone.md")
+            };
+
+            var topLevelTopics = FileTopicHelper.ConstructHierarchyByIndexFile(topics, "index").ToList();
+
+            var byId = topics.ToDictionary(static t => t.Id);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(topLevelTopics.Select(static t => t.Id), Is.EqualTo(new[] { "guides", "intro", "setup", "standalone" }));
+                Assert.That(byId["installation"].ParentTopic, Is.SameAs(byId["guides"]));
+                Assert.That(byId["advanced"].ParentTopic, Is.SameAs(byId["guides"]));
+                Assert.That(byId["scripting"].ParentTopic, Is.SameAs(byId["advanced"]));
             }
         }
 
@@ -439,6 +491,18 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
+        public void ConstructHierarchyByFilenamePrefix_WithSameFileNameInDifferentDirectories_ThrowsArgumentException()
+        {
+            var topics = new List<FileTopic>
+            {
+                new("first", Path.Combine("docs", "guide.md")),
+                new("second", Path.Combine("help", "Guide.md"))
+            };
+
+            Assert.That(() => FileTopicHelper.ConstructHierarchyByFilenamePrefix(topics, '.'), Throws.ArgumentException);
+        }
+
+        [Test]
         public void ConstructHierarchyByFilenamePrefix_WithDotDelimiter_EstablishesHierarchy()
         {
             var topics = new List<FileTopic>
@@ -466,6 +530,21 @@ namespace Kampute.DocToolkit.Test.Support
                 Assert.That(guidesIntroTopic.ParentTopic, Is.EqualTo(guidesTopic));
                 Assert.That(guidesAdvancedTopic.ParentTopic, Is.EqualTo(guidesTopic));
                 Assert.That(guidesAdvancedScriptingTopic.ParentTopic, Is.EqualTo(guidesAdvancedTopic));
+            }
+        }
+
+        [Test]
+        public void ConstructHierarchyByFilenamePrefix_WithMissingIntermediatePrefix_LinksToNearestExistingPrefix()
+        {
+            var guides = new FileTopic("guides", "guides.md");
+            var scripting = new FileTopic("guides-advanced-scripting", "guides.advanced.scripting.md");
+
+            var topLevelTopics = FileTopicHelper.ConstructHierarchyByFilenamePrefix([guides, scripting], '.').ToList();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(topLevelTopics, Is.EqualTo(new[] { guides }));
+                Assert.That(scripting.ParentTopic, Is.SameAs(guides));
             }
         }
 

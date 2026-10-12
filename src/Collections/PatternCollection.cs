@@ -144,7 +144,7 @@ namespace Kampute.DocToolkit.Collections
             }
 
             return pattern.EndsWith(Wildcard)
-                ? wildcardPatterns.Remove(pattern[..^2])
+                ? IsWildcardPattern(pattern) && wildcardPatterns.Remove(pattern[..^2])
                 : exactMatches.Remove(pattern);
         }
 
@@ -172,7 +172,7 @@ namespace Kampute.DocToolkit.Collections
                 return matchingAll;
 
             return pattern.EndsWith(Wildcard)
-                ? wildcardPatterns.Contains(pattern[..^2])
+                ? IsWildcardPattern(pattern) && wildcardPatterns.Contains(pattern[..^2])
                 : exactMatches.Contains(pattern);
         }
 
@@ -279,6 +279,13 @@ namespace Kampute.DocToolkit.Collections
         /// A universal match pattern is a single wildcard character (*) that matches any non-empty value.
         /// </remarks>
         public static bool IsUniversalMatch(ReadOnlySpan<char> pattern) => pattern.Length == 1 && pattern[0] == Wildcard;
+
+        /// <summary>
+        /// Determines whether the specified pattern ends with the separator character followed by the wildcard character.
+        /// </summary>
+        /// <param name="pattern">The pattern to check.</param>
+        /// <returns><see langword="true"/> if the pattern has the form of a wildcard pattern; otherwise, <see langword="false"/>.</returns>
+        private bool IsWildcardPattern(string pattern) => pattern.Length > 1 && pattern[^1] == Wildcard && pattern[^2] == Separator;
 
         #region Explicit Interface Implementations
 

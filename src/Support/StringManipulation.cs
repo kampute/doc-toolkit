@@ -306,6 +306,9 @@ namespace Kampute.DocToolkit.Support
         /// <param name="text">The string to convert.</param>
         /// <returns>A new string in title case.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// The letter casing uses the invariant culture, so the result does not depend on the current culture.
+        /// </remarks>
         public static string ToTitleCase(this string text)
         {
             if (text is null)
@@ -333,9 +336,9 @@ namespace Kampute.DocToolkit.Support
                 }
                 else
                 {
-                    result[index++] = char.ToUpper(word[0]);
+                    result[index++] = char.ToUpperInvariant(word[0]);
                     for (var i = 1; i < word.Length; ++i)
-                        result[index++] = char.ToLower(word[i]);
+                        result[index++] = char.ToLowerInvariant(word[i]);
                 }
             }
 

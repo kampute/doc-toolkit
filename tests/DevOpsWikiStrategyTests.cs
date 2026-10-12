@@ -6,9 +6,11 @@
 namespace Kampute.DocToolkit.Test
 {
     using Kampute.DocToolkit;
+    using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Routing;
     using NUnit.Framework;
+    using System.Linq;
 
     [TestFixture]
     public class DevOpsWikiStrategyTests
@@ -205,6 +207,91 @@ namespace Kampute.DocToolkit.Test
         public string EncodeWikiFragmentIdentifier_ReturnsExpectedFragment(string input)
         {
             return DevOpsWikiStrategy.EncodeWikiFragmentIdentifier(input);
+        }
+
+        private static (DevOpsWikiStrategy Strategy, IDocumentationContext Context) CreateBoundStrategy(DevOpsWikiOptions options)
+        {
+            var strategy = new DevOpsWikiStrategy(options);
+            var context = MockHelper.CreateDocumentationContext<MarkdownFormat>(
+            [
+                MockTopicBuilder.Topic("home", "Home").Build(),
+                MockTopicBuilder.Topic("api", "API Reference").Build(),
+                MockTopicBuilder.Topic("guide", "User Guide").Build(),
+            ]);
+            ((IContextualAddressingStrategy)strategy).InitializeWithContext(context);
+            return (strategy, context);
+        }
+
+        [Test]
+        public void MainTopicId_PlacesOtherPagesUnderMainTopic()
+        {
+            var (strategy, context) = CreateBoundStrategy(new DevOpsWikiOptions { MainTopicId = "home", OmitExtensionInUrls = true });
+            using var contextScope = context;
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "home").Source, out var main) ? main.RelativeUrl : null, Is.EqualTo("Home"));
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "guide").Source, out var guide) ? guide.RelativeUrl : null, Is.EqualTo("Home/User-Guide"));
+                Assert.That(strategy.TryResolveAddressByCodeReference("N:System", out var ns) ? ns.RelativeUrl : null, Is.EqualTo("Home/System"));
+                Assert.That(strategy.TryResolveAddressByCodeReference("T:System.DateTime", out var type) ? type.RelativeUrl : null, Is.EqualTo("Home/System/DateTime"));
+            }
+        }
+
+        [Test]
+        public void ApiTopicId_PlacesApiPagesUnderApiTopic()
+        {
+            var (strategy, context) = CreateBoundStrategy(new DevOpsWikiOptions { MainTopicId = "home", ApiTopicId = "api", OmitExtensionInUrls = true });
+            using var contextScope = context;
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(strategy.TryResolveAddressByCodeReference("N:System", out var ns) ? ns.RelativeUrl : null, Is.EqualTo("Home/API-Reference/System"));
+                Assert.That(strategy.TryResolveAddressByCodeReference("T:System.DateTime", out var type) ? type.RelativeUrl : null, Is.EqualTo("Home/API-Reference/System/DateTime"));
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "guide").Source, out var guide) ? guide.RelativeUrl : null, Is.EqualTo("Home/User-Guide"));
+            }
+        }
+
+        [Test]
+        public void MainTopicId_WithoutBoundContext_ThrowsInvalidOperationException()
+        {
+            var strategy = new DevOpsWikiStrategy(new DevOpsWikiOptions { MainTopicId = "home" });
+
+            Assert.That(() => strategy.TryResolveNamespaceAddress("System", out _), Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void MainTopicId_WithUnknownTopic_ThrowsArgumentException()
+        {
+            var (strategy, context) = CreateBoundStrategy(new DevOpsWikiOptions { MainTopicId = "missing" });
+            using var contextScope = context;
+
+            Assert.That(() => strategy.TryResolveNamespaceAddress("System", out _), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void ApiTopicId_WithUnknownTopic_ThrowsArgumentException()
+        {
+            var (strategy, context) = CreateBoundStrategy(new DevOpsWikiOptions { ApiTopicId = "missing" });
+            using var contextScope = context;
+
+            Assert.That(() => strategy.TryResolveNamespaceAddress("System", out _), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void InitializeWithContext_WhenAlreadyBound_ThrowsInvalidOperationException()
+        {
+            var (strategy, context) = CreateBoundStrategy(new DevOpsWikiOptions());
+            using var contextScope = context;
+
+            Assert.That(() => ((IContextualAddressingStrategy)strategy).InitializeWithContext(context), Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void InitializeWithContext_WithNullContext_ThrowsArgumentNullException()
+        {
+            var strategy = new DevOpsWikiStrategy();
+
+            Assert.That(() => ((IContextualAddressingStrategy)strategy).InitializeWithContext(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
         }
     }
 }
