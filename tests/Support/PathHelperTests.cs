@@ -84,6 +84,18 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
+        public void Methods_WithNullArgument_ThrowArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => PathHelper.TryNormalizePath(null!, out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("path"));
+                Assert.That(() => PathHelper.NormalizePathSegments(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("pathSegments"));
+                Assert.That(() => PathHelper.IsSubpath(null!, "path"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("subPath"));
+                Assert.That(() => PathHelper.IsSubpath("path", null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fullPath"));
+            }
+        }
+
+        [Test]
         public void TryNormalizePath_WhenPathNavigatesBeyondRoot_ReturnsFalse()
         {
             var result = PathHelper.TryNormalizePath("/../outside", out var normalizedPath);
@@ -103,6 +115,9 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("path\\to\\file.txt", "file.txt", ExpectedResult = true)]
         [TestCase("path\\to\\file.txt", "to\\file.txt", ExpectedResult = true)]
         [TestCase("path\\to\\file.txt", "path\\to\\file.txt", ExpectedResult = true)]
+        [TestCase("path/to/file.txt", "to\\file.txt", ExpectedResult = true)]
+        [TestCase("path\\to\\file.txt", "to/file.txt", ExpectedResult = true)]
+        [TestCase("path/to-file.txt", "to/file.txt", ExpectedResult = false)]
         [TestCase("", "", ExpectedResult = true)]
         [TestCase("file.txt", "", ExpectedResult = false)]
         [TestCase("", "file.txt", ExpectedResult = false)]

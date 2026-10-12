@@ -128,9 +128,10 @@ namespace Kampute.DocToolkit.Support
         /// <returns><see langword="true"/> if <paramref name="subPath"/> matches the complete <paramref name="fullPath"/> or its trailing path segments; otherwise, <see langword="false"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="fullPath"/> or <paramref name="subPath"/> is <see langword="null"/>.</exception>
         /// <remarks>
-        /// Matching is case-insensitive. An empty subpath matches only an empty full path.
+        /// Matching is case-insensitive, and slash ('/') and backslash ('\') are equivalent directory separators. An empty
+        /// subpath matches only an empty full path.
         /// <note type="caution" title="Caution">
-        /// The method assumes that both paths are normalized and use the same directory separator.
+        /// The method assumes that both paths are normalized.
         /// </note>
         /// </remarks>
         public static bool IsSubpath(string subPath, string fullPath)
@@ -140,11 +141,19 @@ namespace Kampute.DocToolkit.Support
             if (fullPath is null)
                 throw new ArgumentNullException(nameof(fullPath));
 
-            if (fullPath.Length < subPath.Length)
+            var offset = fullPath.Length - subPath.Length;
+            if (offset < 0)
                 return false;
 
-            var i = fullPath.LastIndexOf(subPath, StringComparison.OrdinalIgnoreCase);
-            return (i == 0 || (i > 0 && fullPath[i - 1] is '/' or '\\')) && fullPath.Length == i + subPath.Length;
+            for (var i = 0; i < subPath.Length; i++)
+            {
+                var subChar = subPath[i];
+                var fullChar = fullPath[offset + i];
+                if (subChar is '/' or '\\' ? fullChar is not ('/' or '\\') : char.ToUpperInvariant(subChar) != char.ToUpperInvariant(fullChar))
+                    return false;
+            }
+
+            return offset == 0 || fullPath[offset - 1] is '/' or '\\';
         }
 
         /// <summary>

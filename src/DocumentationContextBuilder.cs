@@ -219,8 +219,7 @@ namespace Kampute.DocToolkit
             if (!File.Exists(topicPath))
                 throw new FileNotFoundException($"Topic file not found: {topicPath}", topicPath);
 
-            AddTopic(topicId, topicPath);
-            return this;
+            return AddTopic(FileTopicFactory.Create(topicId, topicPath));
         }
 
         /// <summary>

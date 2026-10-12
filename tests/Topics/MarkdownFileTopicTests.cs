@@ -5,6 +5,7 @@
 
 namespace Kampute.DocToolkit.Test.Topics
 {
+    using Kampute.DocToolkit.Formatters;
     using Kampute.DocToolkit.Topics;
     using NUnit.Framework;
     using System;
@@ -13,11 +14,12 @@ namespace Kampute.DocToolkit.Test.Topics
     [TestFixture]
     public class MarkdownFileTopicTests
     {
-        private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        private string tempDir = null!;
 
         [SetUp]
         public void Setup()
         {
+            tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempDir);
         }
 
@@ -48,6 +50,43 @@ namespace Kampute.DocToolkit.Test.Topics
             var topic = new MarkdownFileTopic(Path.GetFileNameWithoutExtension(path), path);
 
             return topic.Title;
+        }
+
+        [Test]
+        public void Render_WithMarkdownFormat_OmitsFrontMatterAndResolvesTopicLinks()
+        {
+            var path = Path.Combine(tempDir, "page.md");
+            File.WriteAllText(path, "---\ntitle: Page\n---\nSee [guide](guide) and [example](https://example.org/).");
+            var topic = new MarkdownFileTopic("page", path);
+            var guide = MockTopicBuilder.Topic("guide").Build();
+            using var context = MockHelper.CreateDocumentationContext<MarkdownFormat>([guide, topic]);
+            using var writer = new StringWriter();
+
+            topic.Render(writer, context);
+
+            Assert.That(writer.ToString(), Is.EqualTo("See [guide](https://example.com/guide) and [example](https://example.org/)."));
+        }
+
+        [Test]
+        public void Render_WithFormatWithoutMarkdownTransformer_ThrowsNotSupportedException()
+        {
+            var path = Path.Combine(tempDir, "page.md");
+            File.WriteAllText(path, "Content");
+            var topic = new MarkdownFileTopic("page", path);
+            using var context = MockHelper.CreateDocumentationContext<HtmlFormat>([topic]);
+
+            Assert.That(() => topic.Render(new StringWriter(), context), Throws.TypeOf<NotSupportedException>());
+        }
+
+        [Test]
+        public void FrontMatter_ExposesValuesFromYamlHeader()
+        {
+            var path = Path.Combine(tempDir, "page.md");
+            File.WriteAllText(path, "---\ntitle: Page\norder: 2\n---\nContent");
+
+            var topic = new MarkdownFileTopic("page", path);
+
+            Assert.That(topic.FrontMatter["title"], Is.EqualTo("Page"));
         }
     }
 }

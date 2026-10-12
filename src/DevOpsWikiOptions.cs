@@ -62,8 +62,9 @@ namespace Kampute.DocToolkit
         /// The identifier of the topic that should serve as the main entry point for the documentation.
         /// </value>
         /// <remarks>
-        /// When this property is not empty and there is a topic with the specified identifier, that topic will be used
-        /// as the main topic of the documentation and all other pages will be placed under it.
+        /// When this property is not empty, the topic with the specified identifier is used as the main topic of the documentation,
+        /// and all other pages are placed under it. If the documentation context has no topic with this identifier, the addressing
+        /// strategy throws an <see cref="System.ArgumentException"/> when it resolves page addresses.
         /// </remarks>
         public string MainTopicId
         {
@@ -78,8 +79,9 @@ namespace Kampute.DocToolkit
         /// The identifier of the topic that should serve as the introduction or overview of the API references.
         /// </value>
         /// <remarks>
-        /// When this property is not empty and there is a topic with the specified identifier, that topic will be used as
-        /// the API topic of the documentation and all API references will be placed under it.
+        /// When this property is not empty, the topic with the specified identifier is used as the API topic of the documentation,
+        /// and all API references are placed under it. If the documentation context has no topic with this identifier, the addressing
+        /// strategy throws an <see cref="System.ArgumentException"/> when it resolves API reference addresses.
         /// </remarks>
         public string ApiTopicId
         {

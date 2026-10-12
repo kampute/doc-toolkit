@@ -14,11 +14,12 @@ namespace Kampute.DocToolkit.Test.Topics
     [TestFixture]
     public class HtmlFileTopicTests
     {
-        private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        private string tempDir = null!;
 
         [SetUp]
         public void Setup()
         {
+            tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempDir);
         }
 

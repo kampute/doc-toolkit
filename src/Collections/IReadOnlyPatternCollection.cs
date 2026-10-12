@@ -26,8 +26,8 @@ namespace Kampute.DocToolkit.Collections
         /// <summary>
         /// Determines whether the collection contains the specified namespace pattern.
         /// </summary>
-        /// <param name="pattern">The namespace to check for.</param>
-        /// <returns><see langword="true"/> if the collection contains a pattern that matches the namespace; otherwise, <see langword="false"/>.</returns>
+        /// <param name="pattern">The pattern to check for.</param>
+        /// <returns><see langword="true"/> if the collection contains the specified pattern; otherwise, <see langword="false"/>.</returns>
         bool Contains(string pattern);
 
         /// <summary>

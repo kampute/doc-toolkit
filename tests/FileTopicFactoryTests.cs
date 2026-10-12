@@ -14,11 +14,36 @@ namespace Kampute.DocToolkit.Test
     [TestFixture]
     public class FileTopicFactoryTests
     {
+        private string folder = null!;
+
         [SetUp]
         public void Setup()
         {
+            folder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(folder);
+            UnregisterTestTopics();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            UnregisterTestTopics(); // The registry is global, so registrations must not leak into other tests.
+
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+
+        private static void UnregisterTestTopics()
+        {
             FileTopicFactory.Unregister<TestTopic>();
             FileTopicFactory.Unregister<AnotherTestTopic>();
+        }
+
+        private string CreateFile(string fileName)
+        {
+            var path = Path.Combine(folder, fileName);
+            File.WriteAllText(path, "Test content");
+            return path;
         }
 
         [Test]
@@ -26,26 +51,13 @@ namespace Kampute.DocToolkit.Test
         {
             FileTopicFactory.Register(static (id, path) => new TestTopic(id, path), ".test", ".tst");
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            var tstFilePath = Path.Combine(Path.GetTempPath(), "test.tst");
-            try
-            {
-                File.WriteAllText(testFilePath, "Test content");
-                File.WriteAllText(tstFilePath, "Test content");
+            var topic1 = FileTopicFactory.Create(CreateFile("test.test"));
+            var topic2 = FileTopicFactory.Create(CreateFile("test.tst"));
 
-                var topic1 = FileTopicFactory.Create(testFilePath);
-                var topic2 = FileTopicFactory.Create(tstFilePath);
-
-                using (Assert.EnterMultipleScope())
-                {
-                    Assert.That(topic1, Is.TypeOf<TestTopic>());
-                    Assert.That(topic2, Is.TypeOf<TestTopic>());
-                }
-            }
-            finally
+            using (Assert.EnterMultipleScope())
             {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
-                if (File.Exists(tstFilePath)) File.Delete(tstFilePath);
+                Assert.That(topic1, Is.TypeOf<TestTopic>());
+                Assert.That(topic2, Is.TypeOf<TestTopic>());
             }
         }
 
@@ -55,19 +67,9 @@ namespace Kampute.DocToolkit.Test
             FileTopicFactory.Register(static (id, path) => new TestTopic(id, path), ".test");
             FileTopicFactory.Register(static (id, path) => new AnotherTestTopic(id, path), ".test");
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            try
-            {
-                File.WriteAllText(testFilePath, "Test content");
+            var topic = FileTopicFactory.Create(CreateFile("test.test"));
 
-                var topic = FileTopicFactory.Create(testFilePath);
-
-                Assert.That(topic, Is.TypeOf<AnotherTestTopic>());
-            }
-            finally
-            {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
-            }
+            Assert.That(topic, Is.TypeOf<AnotherTestTopic>());
         }
 
         [Test]
@@ -77,26 +79,13 @@ namespace Kampute.DocToolkit.Test
 
             FileTopicFactory.Unregister<TestTopic>();
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            var tstFilePath = Path.Combine(Path.GetTempPath(), "test.tst");
-            try
-            {
-                File.WriteAllText(testFilePath, "Test content");
-                File.WriteAllText(tstFilePath, "Test content");
+            var topic1 = FileTopicFactory.Create(CreateFile("test.test"));
+            var topic2 = FileTopicFactory.Create(CreateFile("test.tst"));
 
-                var topic1 = FileTopicFactory.Create(testFilePath);
-                var topic2 = FileTopicFactory.Create(tstFilePath);
-
-                using (Assert.EnterMultipleScope())
-                {
-                    Assert.That(topic1, Is.TypeOf<FileTopic>());
-                    Assert.That(topic2, Is.TypeOf<FileTopic>());
-                }
-            }
-            finally
+            using (Assert.EnterMultipleScope())
             {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
-                if (File.Exists(tstFilePath)) File.Delete(tstFilePath);
+                Assert.That(topic1, Is.TypeOf<FileTopic>());
+                Assert.That(topic2, Is.TypeOf<FileTopic>());
             }
         }
 
@@ -108,26 +97,13 @@ namespace Kampute.DocToolkit.Test
 
             FileTopicFactory.Unregister<TestTopic>();
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            var anotherFilePath = Path.Combine(Path.GetTempPath(), "test.another");
-            try
-            {
-                File.WriteAllText(testFilePath, "Test content");
-                File.WriteAllText(anotherFilePath, "Test content");
+            var topic1 = FileTopicFactory.Create(CreateFile("test.test"));
+            var topic2 = FileTopicFactory.Create(CreateFile("test.another"));
 
-                var topic1 = FileTopicFactory.Create(testFilePath);
-                var topic2 = FileTopicFactory.Create(anotherFilePath);
-
-                using (Assert.EnterMultipleScope())
-                {
-                    Assert.That(topic1, Is.TypeOf<FileTopic>());
-                    Assert.That(topic2, Is.TypeOf<AnotherTestTopic>());
-                }
-            }
-            finally
+            using (Assert.EnterMultipleScope())
             {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
-                if (File.Exists(anotherFilePath)) File.Delete(anotherFilePath);
+                Assert.That(topic1, Is.TypeOf<FileTopic>());
+                Assert.That(topic2, Is.TypeOf<AnotherTestTopic>());
             }
         }
 
@@ -138,26 +114,13 @@ namespace Kampute.DocToolkit.Test
 
             FileTopicFactory.Unregister(".test");
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            var tstFilePath = Path.Combine(Path.GetTempPath(), "test.tst");
-            try
-            {
-                File.WriteAllText(testFilePath, "Test content");
-                File.WriteAllText(tstFilePath, "Test content");
+            var topic1 = FileTopicFactory.Create(CreateFile("test.test"));
+            var topic2 = FileTopicFactory.Create(CreateFile("test.tst"));
 
-                var topic1 = FileTopicFactory.Create(testFilePath);
-                var topic2 = FileTopicFactory.Create(tstFilePath);
-
-                using (Assert.EnterMultipleScope())
-                {
-                    Assert.That(topic1, Is.TypeOf<FileTopic>());
-                    Assert.That(topic2, Is.TypeOf<TestTopic>());
-                }
-            }
-            finally
+            using (Assert.EnterMultipleScope())
             {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
-                if (File.Exists(tstFilePath)) File.Delete(tstFilePath);
+                Assert.That(topic1, Is.TypeOf<FileTopic>());
+                Assert.That(topic2, Is.TypeOf<TestTopic>());
             }
         }
 
@@ -184,22 +147,18 @@ namespace Kampute.DocToolkit.Test
         }
 
         [Test]
-        public void Create_WithDefaultName_ReturnsCorrectTopicType()
+        public void Create_WithDefaultName_UsesFileNameWithoutExtensionAsId()
         {
             FileTopicFactory.Register(static (id, path) => new TestTopic(id, path), ".test");
+            var filePath = CreateFile("getting-started.test");
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            try
+            var topic = FileTopicFactory.Create(filePath);
+
+            using (Assert.EnterMultipleScope())
             {
-                File.WriteAllText(testFilePath, "Test content");
-
-                var topic = FileTopicFactory.Create(testFilePath);
-
                 Assert.That(topic, Is.TypeOf<TestTopic>());
-            }
-            finally
-            {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
+                Assert.That(topic.Id, Is.EqualTo("getting-started"));
+                Assert.That(topic.FilePath, Is.EqualTo(filePath));
             }
         }
 
@@ -207,20 +166,30 @@ namespace Kampute.DocToolkit.Test
         public void Create_WithCustomName_ReturnsCorrectTopicType()
         {
             FileTopicFactory.Register(static (id, path) => new TestTopic(id, path), ".test");
+            var filePath = CreateFile("test.test");
 
-            var testFilePath = Path.Combine(Path.GetTempPath(), "test.test");
-            try
+            var topic = FileTopicFactory.Create("test-topic", filePath);
+
+            using (Assert.EnterMultipleScope())
             {
-                File.WriteAllText(testFilePath, "Test content");
-
-                var topic = FileTopicFactory.Create("test-topic", testFilePath);
-
                 Assert.That(topic, Is.TypeOf<TestTopic>());
                 Assert.That(topic.Id, Is.EqualTo("test-topic"));
+                Assert.That(topic.FilePath, Is.EqualTo(filePath));
             }
-            finally
+        }
+
+        [Test]
+        public void Create_WithUnregisteredExtension_ReturnsPlainFileTopicWithIdAndPath()
+        {
+            var filePath = CreateFile("notes.txt");
+
+            var topic = FileTopicFactory.Create("release-notes", filePath);
+
+            using (Assert.EnterMultipleScope())
             {
-                if (File.Exists(testFilePath)) File.Delete(testFilePath);
+                Assert.That(topic, Is.TypeOf<FileTopic>());
+                Assert.That(topic.Id, Is.EqualTo("release-notes"));
+                Assert.That(topic.FilePath, Is.EqualTo(filePath));
             }
         }
 
@@ -231,19 +200,9 @@ namespace Kampute.DocToolkit.Test
         [TestCase(".xhtml", ExpectedResult = typeof(HtmlFileTopic))]
         public Type BuiltInTopics_AreRegisteredByDefault(string extension)
         {
-            var tempFilePath = Path.Combine(Path.GetTempPath(), $"test{extension}");
-            try
-            {
-                File.WriteAllText(tempFilePath, "Test content");
+            var topic = FileTopicFactory.Create(CreateFile($"test{extension}"));
 
-                var topic = FileTopicFactory.Create(tempFilePath);
-
-                return topic.GetType();
-            }
-            finally
-            {
-                if (File.Exists(tempFilePath)) File.Delete(tempFilePath);
-            }
+            return topic.GetType();
         }
 
         private class TestTopic : FileTopic

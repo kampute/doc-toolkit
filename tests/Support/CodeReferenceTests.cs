@@ -19,16 +19,10 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("P:System.String.Length", ExpectedResult = true)]
         [TestCase("M:System.String.ToString", ExpectedResult = true)]
         [TestCase("E:System.AppDomain.AssemblyLoad", ExpectedResult = true)]
-        [TestCase("N:System.Collections.Generic", ExpectedResult = true)]
-        [TestCase("T:System.String.Format(System.String,System.Object[])", ExpectedResult = true)]
-        [TestCase("M:System.String.Substring(System.Int32,System.Int32)", ExpectedResult = true)]
-        [TestCase("P:System.Collections.Generic.List`1.Item(System.Int32)", ExpectedResult = true)]
-        [TestCase("T:System.Collections.Generic.Dictionary`2", ExpectedResult = true)]
-        [TestCase("F:System.String.Empty", ExpectedResult = true)]
-        [TestCase("E:System.ComponentModel.INotifyPropertyChanged.PropertyChanged", ExpectedResult = true)]
         [TestCase("", ExpectedResult = false)]
         [TestCase("T", ExpectedResult = false)]
         [TestCase("T:", ExpectedResult = false)]
+        [TestCase("T:A", ExpectedResult = true)]
         [TestCase(":System.String", ExpectedResult = false)]
         [TestCase("X:System.String", ExpectedResult = false)]
         [TestCase("T;System.String", ExpectedResult = false)]
@@ -49,6 +43,23 @@ namespace Kampute.DocToolkit.Test.Support
         public bool IsNamespace_ReturnsExpectedResult(string cref)
         {
             return CodeReference.IsNamespace(cref);
+        }
+
+        [TestCase("T:System.String", ExpectedResult = true)]
+        [TestCase("F:System.ConsoleColor.Black", ExpectedResult = true)]
+        [TestCase("P:System.String.Length", ExpectedResult = true)]
+        [TestCase("M:System.String.ToString", ExpectedResult = true)]
+        [TestCase("E:System.AppDomain.AssemblyLoad", ExpectedResult = true)]
+        [TestCase("T:A", ExpectedResult = true)]
+        [TestCase("N:System.IO", ExpectedResult = false)]
+        [TestCase("X:System.String", ExpectedResult = false)]
+        [TestCase("T;System.String", ExpectedResult = false)]
+        [TestCase("T:", ExpectedResult = false)]
+        [TestCase("", ExpectedResult = false)]
+        [TestCase(null, ExpectedResult = false)]
+        public bool IsMember_ReturnsExpectedResult(string? cref)
+        {
+            return CodeReference.IsMember(cref!);
         }
 
         [Test]

@@ -72,7 +72,7 @@ namespace Kampute.DocToolkit.Support
             var uriWithoutFragment = fragmentIndex != -1 ? uriString[..fragmentIndex] : uriString;
 
             var separator = uriWithoutFragment.Contains('?', StringComparison.Ordinal) ? '&' : '?';
-            var queryParam = paramName + '=' + WebUtility.UrlEncode(paramValue);
+            var queryParam = WebUtility.UrlEncode(paramName) + '=' + WebUtility.UrlEncode(paramValue);
             var newUriString = uriWithoutFragment + separator + queryParam + fragment;
 
             return new RawUri(newUriString, uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
@@ -194,20 +194,34 @@ namespace Kampute.DocToolkit.Support
             if (string.IsNullOrEmpty(relativeUri))
                 return baseUri;
 
-            var (basePath, baseQuery, _) = SplitPathQueryAndFragment(baseUri.ToString());
-            var (relativePath, relativeQuery, resultFragment) = SplitPathQueryAndFragment(relativeUri);
+            var (basePath, baseQuery, baseFragment) = SplitPathQueryAndFragment(baseUri.ToString());
+            var (relativePath, relativeQuery, relativeFragment) = SplitPathQueryAndFragment(relativeUri);
+
+            // The scheme and authority of an absolute URI are kept apart, so that the path cannot navigate into them
+            var authority = string.Empty;
+            if (baseUri.IsAbsoluteUri)
+            {
+                var authorityLength = GetAuthorityLength(basePath);
+                authority = basePath[..authorityLength];
+                basePath = basePath[authorityLength..];
+            }
 
             string combinedPath;
 
             if (relativePath.Length == 0)
                 combinedPath = basePath;
-            else if (basePath.Length == 0 || relativePath.StartsWith('/'))
-                combinedPath = baseUri.IsAbsoluteUri ? baseUri.GetLeftPart(UriPartial.Authority) + relativePath : relativePath;
+            else if (relativePath.StartsWith('/'))
+                combinedPath = relativePath;
+            else if (basePath.Length == 0)
+                combinedPath = authority.Length != 0 ? '/' + relativePath : relativePath;
             else
                 combinedPath = basePath.EndsWith('/') ? basePath + relativePath : basePath + '/' + relativePath;
 
             if (!PathHelper.TryNormalizePath(combinedPath, out var resultPath))
                 throw new ArgumentException("The resulting path cannot navigate beyond the root directory.", nameof(relativeUri));
+
+            resultPath = authority + resultPath;
+            var resultFragment = relativeFragment.Length != 0 ? relativeFragment : baseFragment;
 
             string resultQuery;
             if (relativeQuery.Length == 0)
@@ -218,6 +232,16 @@ namespace Kampute.DocToolkit.Support
                 resultQuery = baseQuery + '&' + relativeQuery[1..];
 
             return new RawUri(resultPath + resultQuery + resultFragment, baseUri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
+
+            static int GetAuthorityLength(string absoluteUriPath)
+            {
+                var schemeEnd = absoluteUriPath.IndexOf("://", StringComparison.Ordinal);
+                if (schemeEnd == -1)
+                    return 0;
+
+                var pathStart = absoluteUriPath.IndexOf('/', schemeEnd + 3);
+                return pathStart != -1 ? pathStart : absoluteUriPath.Length;
+            }
         }
 
         /// <summary>

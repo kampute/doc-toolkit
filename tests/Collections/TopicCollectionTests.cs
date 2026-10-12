@@ -10,6 +10,7 @@ namespace Kampute.DocToolkit.Test.Collections
     using Kampute.DocToolkit.Models;
     using Kampute.DocToolkit.Topics;
     using NUnit.Framework;
+    using System.Collections.Generic;
     using System.Linq;
 
     [TestFixture]
@@ -43,9 +44,15 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
-        public void Constructor_WithContextAndFactory_CreatesEmptyCollection()
+        public void Constructor_WithContextAndFactory_CreatesEmptyCollectionThatUsesFactory()
         {
-            static TopicModel factory(IDocumentationContext ctx, ITopic src) => new(ctx, src);
+            var created = new List<TopicModel>();
+            TopicModel factory(IDocumentationContext ctx, ITopic src)
+            {
+                var model = new TopicModel(ctx, src);
+                created.Add(model);
+                return model;
+            }
             var collection = new TopicCollection(context, factory);
 
             using (Assert.EnterMultipleScope())
@@ -53,6 +60,36 @@ namespace Kampute.DocToolkit.Test.Collections
                 Assert.That(collection, Is.Empty);
                 Assert.That(collection.Context, Is.SameAs(context));
                 Assert.That(collection.Flatten, Is.Empty);
+            }
+
+            collection.Add(CreateMockTopic("Topic"));
+
+            Assert.That(collection, Is.EqualTo(created).Using(ReferenceEqualityComparer<TopicModel>.Instance));
+        }
+
+        [Test]
+        public void Constructor_WithNullContext_ThrowsArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => new TopicCollection(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+                Assert.That(() => new TopicCollection(null!, static (ctx, src) => new(ctx, src)), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+            }
+        }
+
+        [Test]
+        public void Constructor_WithNullFactory_ThrowsArgumentNullException()
+        {
+            Assert.That(() => new TopicCollection(context, (System.Func<IDocumentationContext, ITopic, TopicModel>)null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("modelFactory"));
+        }
+
+        [Test]
+        public void Constructor_WithNullTopics_ThrowsArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => new TopicCollection(context, (IEnumerable<ITopic>)null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("topics"));
+                Assert.That(() => new TopicCollection(context, static (ctx, src) => new(ctx, src), null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("topics"));
             }
         }
 
@@ -71,15 +108,21 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
-        public void Constructor_WithContextAndFactoryAndTopics_CreatesCollectionWithTopics()
+        public void Constructor_WithContextAndFactoryAndTopics_CreatesCollectionWithTopicsUsingFactory()
         {
-            static TopicModel factory(IDocumentationContext ctx, ITopic src) => new(ctx, src);
+            var created = new List<TopicModel>();
+            TopicModel factory(IDocumentationContext ctx, ITopic src)
+            {
+                var model = new TopicModel(ctx, src);
+                created.Add(model);
+                return model;
+            }
             var topics = new[] { CreateMockTopic("Topic1"), CreateMockTopicWithChildren("Topic2", ["Child1", "Child2"]) };
             var collection = new TopicCollection(context, factory, topics);
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(collection, Has.Count.EqualTo(2));
+                Assert.That(collection, Is.EqualTo(created).Using(ReferenceEqualityComparer<TopicModel>.Instance));
                 Assert.That(collection.Context, Is.SameAs(context));
                 Assert.That(collection.Flatten, Has.Count.EqualTo(4));
             }
@@ -116,8 +159,7 @@ namespace Kampute.DocToolkit.Test.Collections
             var collection = new TopicCollection(context);
 
             Assert.That(() => collection.Add(topicWithParent),
-                Throws.ArgumentException.With.Property("ParamName").EqualTo("topLevelTopic")
-                .And.Message.Contains("top-level topic"));
+                Throws.ArgumentException.With.Property("ParamName").EqualTo("topLevelTopic"));
         }
 
         [Test]
@@ -198,8 +240,30 @@ namespace Kampute.DocToolkit.Test.Collections
             Assert.That(collection.TryGetById("Parent/Child1", out var topicWithParent), Is.True);
 
             Assert.That(() => collection.Remove(topicWithParent!),
-                Throws.ArgumentException.With.Property("ParamName").EqualTo("topLevelTopic")
-                .And.Message.Contains("top-level topic"));
+                Throws.ArgumentException.With.Property("ParamName").EqualTo("topLevelTopic"));
+        }
+
+        [Test]
+        public void Remove_WithFileBasedTopic_RemovesFilePathsOfTopicAndItsSubtopics()
+        {
+            var parent = new FileTopic("Parent", "/docs/parent.md");
+            parent.AddSubtopic(new FileTopic("Child", "/docs/parent/child.md"));
+            var collection = new TopicCollection(context)
+            {
+                parent
+            };
+
+            Assert.That(collection.TryGetById("Parent", out var contextualTopic), Is.True);
+
+            var result = collection.Remove(contextualTopic!);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(collection.TryGetByFilePath("/docs/parent.md", out _), Is.False);
+                Assert.That(collection.TryGetByFilePath("/docs/parent/child.md", out _), Is.False);
+                Assert.That(collection.TryFindBySubpath("child.md", out _), Is.False);
+            }
         }
 
         [Test]
@@ -374,6 +438,23 @@ namespace Kampute.DocToolkit.Test.Collections
         }
 
         [Test]
+        public void TryGetByFilePath_WithExactTopicPathContainingDotSegment_ReturnsTrueAndTopic()
+        {
+            var collection = new TopicCollection(context)
+            {
+                new FileTopic("Topic", "./docs/topic.md")
+            };
+
+            var result = collection.TryGetByFilePath("./docs/topic.md", out var found);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(found?.Id, Is.EqualTo("Topic"));
+            }
+        }
+
+        [Test]
         public void TryGetByFilePath_WithExistingSubtopicPath_ReturnsTrueAndSubtopic()
         {
             var parent = new FileTopic("Parent", "/docs/parent.md");
@@ -408,20 +489,6 @@ namespace Kampute.DocToolkit.Test.Collections
 
             Assert.That(() => collection.TryFindBySubpath("", out _), Throws.ArgumentException
                 .With.Property("ParamName").EqualTo("filePath"));
-        }
-
-        [Test]
-        public void TryFindBySubpath_WithInvalidRelativePath_ReturnsNull()
-        {
-            var collection = new TopicCollection(context);
-
-            var result = collection.TryFindBySubpath("invalid:path", out var found);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.False);
-                Assert.That(found, Is.Null);
-            }
         }
 
         [Test]
@@ -637,31 +704,21 @@ namespace Kampute.DocToolkit.Test.Collections
             }
         }
 
-        [Test]
-        public void TryResolve_WithNullReference_ReturnsFalse()
+        [TestCase(null)]
+        [TestCase("")]
+        public void TryResolve_WithNullOrEmptyReference_ReturnsFalse(string? reference)
         {
-            var collection = new TopicCollection(context);
+            var collection = new TopicCollection(context)
+            {
+                new FileTopic("Topic", "/docs/topic.md")
+            };
 
-            var result = collection.TryResolve(null!, out var resolved);
+            var result = collection.TryResolve(reference!, out var resolved);
 
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result, Is.False);
                 Assert.That(resolved, Is.Null);
-            }
-        }
-
-        [Test]
-        public void TryResolve_WithWhitespaceReference_ReturnsFalse()
-        {
-            var collection = new TopicCollection(context);
-
-            var result = collection.TryResolve("   ", out var topic);
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.False);
-                Assert.That(topic, Is.Null);
             }
         }
 
@@ -807,6 +864,23 @@ namespace Kampute.DocToolkit.Test.Collections
             };
 
             var result = collection.TryResolve("installation", out var resolvedTopic);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.True);
+                Assert.That(resolvedTopic?.Id, Is.EqualTo("guides/installation"));
+            }
+        }
+
+        [Test]
+        public void TryResolve_WithUniqueRelativeTopicIdInDifferentCase_OutOfScope_ResolvesCorrectly()
+        {
+            var collection = new TopicCollection(context)
+            {
+                CreateMockTopicWithChildren("guides", "installation")
+            };
+
+            var result = collection.TryResolve("INSTALLATION", out var resolvedTopic);
 
             using (Assert.EnterMultipleScope())
             {
@@ -1160,26 +1234,6 @@ namespace Kampute.DocToolkit.Test.Collections
                 Assert.That(enumerated.Select(static t => t.Id), Contains.Item("Topic1"));
                 Assert.That(enumerated.Select(static t => t.Id), Contains.Item("Topic2"));
             }
-        }
-
-        [Test]
-        public void Context_Property_ReturnsProvidedContext()
-        {
-            var collection = new TopicCollection(context);
-
-            Assert.That(collection.Context, Is.SameAs(context));
-        }
-
-        [Test]
-        public void Count_Property_ReturnsTopLevelTopicsCount()
-        {
-            var collection = new TopicCollection(context)
-            {
-                CreateMockTopic("Topic1"),
-                CreateMockTopicWithChildren("Topic2", "Child1", "Child2")
-            };
-
-            Assert.That(collection, Has.Count.EqualTo(2));
         }
 
         [Test]

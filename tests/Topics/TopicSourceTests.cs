@@ -156,6 +156,27 @@ namespace Kampute.DocToolkit.Test.Topics
         }
 
         [Test]
+        public void AddSubtopic_WhenAddingInstanceWithSameIdInDifferentCase_ThrowsArgumentException()
+        {
+            var topic = new TestableTopic("topic");
+            topic.AddSubtopic(new TestableTopic("subtopic"));
+
+            Assert.That(() => topic.AddSubtopic(new TestableTopic("SubTopic")), Throws.ArgumentException); // Identifiers are case-insensitive
+        }
+
+        [Test]
+        public void AddSubtopic_WhenAddingAncestorAsSubtopic_ThrowsInvalidOperationException()
+        {
+            var grandparent = new TestableTopic("grandparent");
+            var parent = new TestableTopic("parent");
+            var child = new TestableTopic("child");
+            grandparent.AddSubtopic(parent);
+            parent.AddSubtopic(child);
+
+            Assert.That(() => child.AddSubtopic(grandparent), Throws.InvalidOperationException);
+        }
+
+        [Test]
         public void AddSubtopic_WhenAddingSelf_ThrowsInvalidOperationException()
         {
             var topic = new TestableTopic("topic");

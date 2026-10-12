@@ -123,7 +123,7 @@ namespace Kampute.DocToolkit
                 return false;
             }
 
-            var path = GetTopicPath(topic, '-').ToLower();
+            var path = GetTopicPath(topic, '-').ToLowerInvariant();
             address = CreateAddressFromPath(path);
             return true;
         }

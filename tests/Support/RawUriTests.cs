@@ -65,33 +65,5 @@ namespace Kampute.DocToolkit.Test.Support
 
             return uri.ToString();
         }
-
-        [Test]
-        public void ToString_ComparedToStandardUri_PreservesEscapeSequencesWhenStandardUriNormalizes()
-        {
-            var testUris = new[]
-            {
-                "http://example.com/%2D",                  // Escaped dash
-                "http://example.com/path%2Dto%2Dresource", // Multiple escaped dashes
-                "http://example.com/path?query=%2Dvalue",  // Escaped dash in query
-                "http://example.com/path#fragment%2Did"    // Escaped dash in fragment
-            };
-
-            foreach (var uriString in testUris)
-            {
-                var rawUri = new RawUri(uriString);
-                var standardUri = new Uri(uriString);
-
-                var rawResult = rawUri.ToString();
-                var standardResult = standardUri.ToString();
-
-                Assert.That(rawResult, Is.EqualTo(uriString), $"RawUri should preserve the exact original string: {uriString}");
-
-                if (standardResult != uriString)
-                    Assert.Pass($"Confirmed different behavior: RawUri preserves escapes that Uri normalizes in {uriString}");
-            }
-
-            Assert.Inconclusive("Could not demonstrate a difference between RawUri and Uri behavior with the test URIs");
-        }
     }
 }

@@ -52,8 +52,25 @@ namespace Kampute.DocToolkit.Test
 
             var result = docContext.FindMember(type);
 
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.Name, Is.EqualTo(type.Name));
+            Assert.That(result?.Metadata, Is.SameAs(type));
+        }
+
+        [Test]
+        public void FindMember_WithNullArgument_ThrowsArgumentNullException()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => DocumentationContextExtensions.FindMember(null!, Mock.Of<IMember>()), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+                Assert.That(() => docContext.FindMember(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+            }
+        }
+
+        [Test]
+        public void InspectDocumentations_WithNullContext_ThrowsArgumentNullException()
+        {
+            Assert.That(() => DocumentationContextExtensions.InspectDocumentations(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
         }
 
         [Test]
@@ -133,6 +150,26 @@ namespace Kampute.DocToolkit.Test
         }
 
         [Test]
+        public void IsFormatSupported_WithNullArgument_ThrowsArgumentNullException()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<TestFormatter>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => DocumentationContextExtensions.IsFormatSupported(null!, ".xyz"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+                Assert.That(() => docContext.IsFormatSupported(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("filePath"));
+            }
+        }
+
+        [Test]
+        public void IsFormatSupported_WithEmptyFilePath_ThrowsArgumentException()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<TestFormatter>();
+
+            Assert.That(() => docContext.IsFormatSupported(string.Empty), Throws.ArgumentException.With.Property("ParamName").EqualTo("filePath"));
+        }
+
+        [Test]
         public void TryTransformText_EmptyText_ReturnsEmptyString()
         {
             using var docContext = MockHelper.CreateDocumentationContext<TestFormatter>();
@@ -171,6 +208,19 @@ namespace Kampute.DocToolkit.Test
             {
                 Assert.That(result, Is.False);
                 Assert.That(transformed, Is.Null);
+            }
+        }
+
+        [Test]
+        public void TryTransformText_WithNullArgument_ThrowsArgumentNullException()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<TestFormatter>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => DocumentationContextExtensions.TryTransformText(null!, ".xyz", "text", out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+                Assert.That(() => docContext.TryTransformText(null!, string.Empty, out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fileExtension"));
+                Assert.That(() => docContext.TryTransformText(".xyz", null!, out _), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("text"));
             }
         }
 
@@ -236,6 +286,47 @@ namespace Kampute.DocToolkit.Test
             var result = docContext.DetermineNameQualifier(memberMock);
 
             Assert.That(result, Is.EqualTo(NameQualifier.DeclaringType));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_NestedTypeInCurrentTypeScope_ReturnsDeclaringType()
+        {
+            var assembly = MockHelper.CreateAssembly("TestAssembly", ["Test.Namespace"]);
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>(assembly);
+            var typeModel = docContext.Types.First();
+            using var scope = docContext.AddressProvider.BeginScope("test", typeModel);
+
+            var nestedType = Mock.Of<IType>(t => t.DeclaringType == typeModel.Metadata);
+
+            var result = docContext.DetermineNameQualifier(nestedType);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.DeclaringType)); // Types always use the declaring type qualifier
+        }
+
+        [Test]
+        public void DetermineNameQualifier_MemberOfTypeDeclaringCurrentMemberScope_ReturnsNone()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>(typeof(Acme.SampleFields).Assembly.GetMetadata());
+            var scopeMember = docContext.FindMember(typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.ArrayField))!.GetMetadata());
+            using var scope = docContext.AddressProvider.BeginScope("test", scopeMember);
+
+            var siblingMember = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.VolatileField))!.GetMetadata();
+
+            var result = docContext.DetermineNameQualifier(siblingMember);
+
+            Assert.That(result, Is.EqualTo(NameQualifier.None));
+        }
+
+        [Test]
+        public void DetermineNameQualifier_WithNullArgument_ThrowsArgumentNullException()
+        {
+            using var docContext = MockHelper.CreateDocumentationContext<HtmlFormat>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => DocumentationContextExtensions.DetermineNameQualifier(null!, Mock.Of<IMember>()), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("context"));
+                Assert.That(() => docContext.DetermineNameQualifier(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+            }
         }
 
         private sealed class TestFormatter : IDocumentFormatter

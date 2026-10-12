@@ -67,8 +67,6 @@ namespace Kampute.DocToolkit.Support
                 throw new ArgumentNullException(nameof(topics));
 
             var allTopics = Collect(topics);
-            if (allTopics.Count <= 1)
-                return allTopics;
 
             var topicsByPath = new Dictionary<string, FileTopic>(StringComparer.OrdinalIgnoreCase);
             foreach (var topic in allTopics)
@@ -176,8 +174,6 @@ namespace Kampute.DocToolkit.Support
                 throw new ArgumentException($"'{nameof(indexFileName)}' cannot be null, empty, or whitespace.", nameof(indexFileName));
 
             var allTopics = Collect(topics);
-            if (allTopics.Count <= 1)
-                return allTopics;
 
             var topicsByPath = new Dictionary<string, FileTopic>(StringComparer.OrdinalIgnoreCase);
             foreach (var topic in allTopics)
@@ -193,11 +189,9 @@ namespace Kampute.DocToolkit.Support
                 .GroupBy(topic => Path.GetDirectoryName(topic.FilePath) ?? string.Empty)
                 .ToDictionary(g => g.Key, g => g.Select(t => t.FilePath).ToList());
 
+            var indexTopicsByDirectory = new Dictionary<string, FileTopic>(StringComparer.OrdinalIgnoreCase);
             foreach (var (directoryPath, filesInDirectory) in filesByDirectory)
             {
-                if (filesInDirectory.Count <= 1)
-                    continue;
-
                 var indexFilePath = filesInDirectory.FirstOrDefault(filePath =>
                 {
                     var fileName = Path.GetFileNameWithoutExtension(filePath);
@@ -206,10 +200,24 @@ namespace Kampute.DocToolkit.Support
 
                 if (indexFilePath is not null && topicsByPath.TryGetValue(indexFilePath, out var indexTopic))
                 {
+                    indexTopicsByDirectory[directoryPath] = indexTopic;
                     foreach (var childFilePath in filesInDirectory)
                     {
                         if (childFilePath != indexFilePath && topicsByPath.TryGetValue(childFilePath, out var childTopic))
                             childTopic.ParentTopic = indexTopic;
+                    }
+                }
+            }
+
+            // An index file becomes a subtopic of the index file in the nearest ancestor directory that has one
+            foreach (var (directoryPath, indexTopic) in indexTopicsByDirectory)
+            {
+                for (var ancestorPath = Path.GetDirectoryName(directoryPath); !string.IsNullOrEmpty(ancestorPath); ancestorPath = Path.GetDirectoryName(ancestorPath))
+                {
+                    if (indexTopicsByDirectory.TryGetValue(ancestorPath, out var ancestorIndexTopic))
+                    {
+                        indexTopic.ParentTopic = ancestorIndexTopic;
+                        break;
                     }
                 }
             }
@@ -227,8 +235,9 @@ namespace Kampute.DocToolkit.Support
         /// <exception cref="ArgumentException">Thrown when multiple topics have the same file name (without extension), regardless of directory path.</exception>
         /// <remarks>
         /// This method creates parent-child relationships by analyzing file name prefixes separated by the specified delimiter.
-        /// Files with fewer delimiter segments become parents of files with more segments that share the same prefix. File name
-        /// comparison is case-insensitive.
+        /// Files with fewer delimiter segments become parents of files with more segments that share the same prefix. Each file
+        /// becomes a subtopic of the file with the longest such prefix, so when an intermediate file is missing, the file is placed
+        /// under the nearest existing prefix instead. File name comparison is case-insensitive.
         /// <para>
         /// In this method, directories of files are ignored, and only the filenames are considered for hierarchy construction.
         /// This means that files with the same name but located in different directories will be treated as if they were in
@@ -271,8 +280,6 @@ namespace Kampute.DocToolkit.Support
                 throw new ArgumentNullException(nameof(topics));
 
             var allTopics = Collect(topics);
-            if (allTopics.Count <= 1)
-                return allTopics;
 
             var topicsByFileName = new Dictionary<string, FileTopic>(StringComparer.OrdinalIgnoreCase);
             foreach (var topic in allTopics)
@@ -303,14 +310,14 @@ namespace Kampute.DocToolkit.Support
                 if (!processedFileNames.Add(fileName))
                     return;
 
-                var delimiterIndex = fileName.LastIndexOf(delimiter);
-                if (delimiterIndex > 0)
+                for (var delimiterIndex = fileName.LastIndexOf(delimiter); delimiterIndex > 0; delimiterIndex = fileName.LastIndexOf(delimiter, delimiterIndex - 1))
                 {
                     var parentFileName = fileName[..delimiterIndex];
                     if (topicsByFileName.TryGetValue(parentFileName, out var parentTopic))
                     {
                         ProcessHierarchy(parentTopic, parentFileName);
                         topic.ParentTopic = parentTopic;
+                        break;
                     }
                 }
             }
