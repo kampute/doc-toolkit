@@ -31,7 +31,7 @@ Basic usage:
 // 1. Create a documentation renderer
 public class MyDocumentRenderer : DocumentPageRenderer
 {
-    protected override void Render(TextWriter writer, PageCategory category, IModel model)
+    protected override void Render(TextWriter writer, PageCategory category, IDocumentModel model)
     {
         // Your custom rendering logic here
     }
