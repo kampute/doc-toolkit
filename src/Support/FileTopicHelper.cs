@@ -79,8 +79,8 @@ namespace Kampute.DocToolkit.Support
             }
 
             var filesByDirectory = allTopics
-                .GroupBy(topic => Path.GetDirectoryName(topic.FilePath) ?? string.Empty)
-                .ToDictionary(g => g.Key, g => g.Select(t => t.FilePath).ToList());
+                .GroupBy(topic => Path.GetDirectoryName(topic.FilePath) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(t => t.FilePath).ToList(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var (directoryPath, filesInDirectory) in filesByDirectory)
             {
@@ -186,8 +186,8 @@ namespace Kampute.DocToolkit.Support
             }
 
             var filesByDirectory = allTopics
-                .GroupBy(topic => Path.GetDirectoryName(topic.FilePath) ?? string.Empty)
-                .ToDictionary(g => g.Key, g => g.Select(t => t.FilePath).ToList());
+                .GroupBy(topic => Path.GetDirectoryName(topic.FilePath) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(t => t.FilePath).ToList(), StringComparer.OrdinalIgnoreCase);
 
             var indexTopicsByDirectory = new Dictionary<string, FileTopic>(StringComparer.OrdinalIgnoreCase);
             foreach (var (directoryPath, filesInDirectory) in filesByDirectory)

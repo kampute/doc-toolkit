@@ -108,7 +108,7 @@ namespace Kampute.DocToolkit.Routing
                 var (urlPath, urlSuffix) = UriHelper.SplitPathAndSuffix(urlString);
                 var (resourcePath, resourceName) = urlPath.SplitLast('/');
 
-                if (!EqualsIgnoreCase(directory.Path, resourcePath))
+                if (!string.Equals(directory.Path, resourcePath, StringComparison.Ordinal))
                     AppendAdjustedRelativePath(href, resourcePath);
 
                 href.Append(resourceName).Append(urlSuffix);
@@ -128,7 +128,7 @@ namespace Kampute.DocToolkit.Routing
                 var minLength = Math.Min(directory.Segments.Length, targetSegments.Length);
 
                 var commonPrefixLength = 0;
-                while (commonPrefixLength < minLength && EqualsIgnoreCase(directory.Segments[commonPrefixLength], targetSegments[commonPrefixLength]))
+                while (commonPrefixLength < minLength && string.Equals(directory.Segments[commonPrefixLength], targetSegments[commonPrefixLength], StringComparison.Ordinal))
                     commonPrefixLength++;
 
                 var upCount = directory.Segments.Length - commonPrefixLength;
@@ -139,15 +139,6 @@ namespace Kampute.DocToolkit.Routing
                 for (var i = commonPrefixLength; i < targetSegments.Length; i++)
                     sb.Append(targetSegments[i]).Append('/');
             }
-
-            /// <summary>
-            /// Compares two strings for equality in a case-insensitive manner.
-            /// </summary>
-            /// <param name="a">The first string to compare.</param>
-            /// <param name="b">The second string to compare.</param>
-            /// <returns><see langword="true"/> if the strings are equal; otherwise, <see langword="false"/>.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool EqualsIgnoreCase(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
