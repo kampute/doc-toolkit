@@ -54,6 +54,7 @@ namespace Kampute.DocToolkit.Test
                 Assert.That(DocumentationContextBuilder.DotNetApi().Strategy, Is.InstanceOf<DotNetApiStrategy>());
                 Assert.That(DocumentationContextBuilder.DocFx().Strategy, Is.InstanceOf<DocFxStrategy>());
                 Assert.That(DocumentationContextBuilder.DevOpsWiki().Strategy, Is.InstanceOf<DevOpsWikiStrategy>());
+                Assert.That(DocumentationContextBuilder.GitLabWiki().Strategy, Is.InstanceOf<GitLabWikiStrategy>());
             }
         }
 

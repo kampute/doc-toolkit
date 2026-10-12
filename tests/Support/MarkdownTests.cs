@@ -178,6 +178,29 @@ namespace Kampute.DocToolkit.Test.Support
             return Markdown.TryGetFirstHeading(content, out var heading) ? heading : null;
         }
 
+        // Examples from GitLab's documentation of heading anchors (https://docs.gitlab.com/user/markdown/#heading-ids-and-links)
+        [TestCase("This heading has spaces in it", ExpectedResult = "this-heading-has-spaces-in-it")]
+        [TestCase("This heading has a :thumbsup: in it", ExpectedResult = "this-heading-has-a-thumbsup-in-it")]
+        [TestCase("This heading has Unicode in it: 한글", ExpectedResult = "this-heading-has-unicode-in-it-한글")]
+        [TestCase("This heading has 3.5 in it (and parentheses)", ExpectedResult = "this-heading-has-35-in-it-and-parentheses")]
+        [TestCase("This heading has  multiple spaces and --- hyphens_and_underscores", ExpectedResult = "this-heading-has--multiple-spaces-and-----hyphens_and_underscores")]
+        // Member signatures as formatted for member headings
+        [TestCase("Repeat<TResult>(TResult, int)", ExpectedResult = "repeattresulttresult-int")]
+        [TestCase("Item[int]", ExpectedResult = "itemint")]
+        [TestCase("", ExpectedResult = "")]
+        // Characters outside the Basic Multilingual Plane are kept when they are letters and removed otherwise
+        [TestCase("\U0001D49C \U0001F600", ExpectedResult = "\U0001D49C-")]
+        public string ToHeadingAnchor_ReturnsExpectedAnchor(string heading)
+        {
+            return Markdown.ToHeadingAnchor(heading);
+        }
+
+        [Test]
+        public void ToHeadingAnchor_WithNullHeading_ThrowsArgumentNullException()
+        {
+            Assert.That(static () => Markdown.ToHeadingAnchor(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("heading"));
+        }
+
         [Test]
         public void TryExtractFrontMatter_NoFrontMatter_ReturnsFalse()
         {

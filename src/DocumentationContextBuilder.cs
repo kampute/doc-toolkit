@@ -457,6 +457,14 @@ namespace Kampute.DocToolkit
 
         /// <summary>
         /// Creates a new instance of <see cref="DocumentationContextBuilder"/> for building documentation context to
+        /// generate Markdown pages for GitLab Wiki.
+        /// </summary>
+        /// <param name="options">The options for GitLab Wiki pages. If <see langword="null"/>, default options are used.</param>
+        /// <returns>A <see cref="DocumentationContextBuilder"/> configured for Markdown pages with GitLab Wiki addressing strategy.</returns>
+        public static DocumentationContextBuilder GitLabWiki(GitLabWikiOptions? options = null) => new(new GitLabWikiStrategy(options ?? new GitLabWikiOptions()));
+
+        /// <summary>
+        /// Creates a new instance of <see cref="DocumentationContextBuilder"/> for building documentation context to
         /// generate HTML pages with structure matching DocFX conventions.
         /// </summary>
         /// <param name="options">The options for DocFX pages. If <see langword="null"/>, default options are used.</param>
