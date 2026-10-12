@@ -34,9 +34,21 @@ namespace Kampute.DocToolkit.Languages
                 case bool booleanLiteral:
                     writer.Write(booleanLiteral ? "true" : "false");
                     break;
+                case float floatLiteral when float.IsNaN(floatLiteral):
+                    writer.Write("float.NaN");
+                    break;
+                case float floatLiteral when float.IsInfinity(floatLiteral):
+                    writer.Write(floatLiteral > 0 ? "float.PositiveInfinity" : "float.NegativeInfinity");
+                    break;
                 case float floatLiteral:
                     writer.Write(floatLiteral.ToString(null, CultureInfo.InvariantCulture));
                     writer.Write('F');
+                    break;
+                case double doubleLiteral when double.IsNaN(doubleLiteral):
+                    writer.Write("double.NaN");
+                    break;
+                case double doubleLiteral when double.IsInfinity(doubleLiteral):
+                    writer.Write(doubleLiteral > 0 ? "double.PositiveInfinity" : "double.NegativeInfinity");
                     break;
                 case double doubleLiteral:
                     writer.Write(doubleLiteral.ToString(null, CultureInfo.InvariantCulture));
@@ -170,13 +182,13 @@ namespace Kampute.DocToolkit.Languages
             else if (enumType.IsFlagsEnum)
                 WriteEnumFlagNames();
             else
-                WriteConstantValue(writer, enumValue, enumType.UnderlyingType, linker);
+                WriteConstantValue(writer, EnumBits.FromBits(EnumBits.ToBits(enumValue), Convert.GetTypeCode(enumValue)), enumType.UnderlyingType, linker);
 
             void WriteEnumFlagNames()
             {
                 var flags = enumType.Fields.Select(field =>
                 {
-                    var value = ToNumericValue(field.LiteralValue!);
+                    var value = EnumBits.ToBits(field.LiteralValue!);
                     var bits = CountSetBits(value);
                     return new
                     {
@@ -186,7 +198,7 @@ namespace Kampute.DocToolkit.Languages
                     };
                 }).OrderByDescending(flag => flag.BitCount).ThenBy(flag => flag.Value);
 
-                var remaining = ToNumericValue(enumValue);
+                var remaining = EnumBits.ToBits(enumValue);
 
                 var needsDisjunction = false;
                 foreach (var flag in flags)
@@ -209,7 +221,7 @@ namespace Kampute.DocToolkit.Languages
                 if (needsDisjunction)
                     writer.Write(" | ");
 
-                WriteConstantValue(writer, remaining, enumType.UnderlyingType, linker);
+                WriteConstantValue(writer, EnumBits.FromBits(remaining, Convert.GetTypeCode(enumValue)), enumType.UnderlyingType, linker);
             }
 
             void WriteEnumName(string name)
@@ -217,11 +229,6 @@ namespace Kampute.DocToolkit.Languages
                 linker(writer, enumType, enumType.Name);
                 writer.Write(Type.Delimiter);
                 writer.Write(name);
-            }
-
-            static ulong ToNumericValue(object value)
-            {
-                return Convert.ToUInt64(value, CultureInfo.InvariantCulture);
             }
 
             static int CountSetBits(ulong value)

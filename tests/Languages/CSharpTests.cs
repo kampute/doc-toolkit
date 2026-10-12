@@ -10,6 +10,7 @@ namespace Kampute.DocToolkit.Test.Languages
     using NUnit.Framework;
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Reflection;
 
@@ -41,8 +42,20 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(42uL, ExpectedResult = "42")]
         [TestCase(42.25f, ExpectedResult = "42.25F")]
         [TestCase(42.25d, ExpectedResult = "42.25")]
+        [TestCase(double.NaN, ExpectedResult = "double.NaN")] // C# has no literal for non-finite values
+        [TestCase(double.PositiveInfinity, ExpectedResult = "double.PositiveInfinity")]
+        [TestCase(double.NegativeInfinity, ExpectedResult = "double.NegativeInfinity")]
+        [TestCase(float.NaN, ExpectedResult = "float.NaN")]
+        [TestCase(float.PositiveInfinity, ExpectedResult = "float.PositiveInfinity")]
+        [TestCase(float.NegativeInfinity, ExpectedResult = "float.NegativeInfinity")]
         [TestCase(DayOfWeek.Monday, ExpectedResult = "DayOfWeek.Monday")]
         [TestCase(BindingFlags.Static | BindingFlags.Public, ExpectedResult = "BindingFlags.Static | BindingFlags.Public")]
+        [TestCase(Acme.SampleSignedEnum.Negative, ExpectedResult = "SampleSignedEnum.Negative")]
+        [TestCase(Acme.SampleSignedFlags.All, ExpectedResult = "SampleSignedFlags.All")]
+        [TestCase(Acme.SampleSignedFlags.Read | Acme.SampleSignedFlags.Write, ExpectedResult = "SampleSignedFlags.Read | SampleSignedFlags.Write")]
+        [TestCase(Acme.SampleSignedFlags.Read | (Acme.SampleSignedFlags)8, ExpectedResult = "SampleSignedFlags.Read | 8")]
+        [TestCase((Acme.SampleSignedFlags)int.MinValue, ExpectedResult = "-2147483648")]
+        [TestCase((DayOfWeek)99, ExpectedResult = "99")]
         [TestCase('C', ExpectedResult = "'C'")]
         [TestCase('\\', ExpectedResult = "'\\\\'")]
         [TestCase('\0', ExpectedResult = "'\\0'")]
@@ -61,6 +74,45 @@ namespace Kampute.DocToolkit.Test.Languages
         public string FormatValue_ReturnsExpectedString(object? value)
         {
             return cs.FormatLiteral(value);
+        }
+
+        [Test]
+        [SetCulture("de-DE")]
+        public void FormatValue_UnderCultureWithCommaDecimalSeparator_UsesCSharpSyntax()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(cs.FormatLiteral(42.25d), Is.EqualTo("42.25"));
+                Assert.That(cs.FormatLiteral(42.25f), Is.EqualTo("42.25F"));
+                Assert.That(cs.FormatLiteral(1.5m), Is.EqualTo("1.5M"));
+            }
+        }
+
+        [TestCase(NameQualifier.None, ExpectedResult = "AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)")]
+        [TestCase(NameQualifier.Full, ExpectedResult = "System.AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)")]
+        public string FormatAttribute_AppliesQualifierToAttributeName(NameQualifier qualifier)
+        {
+            var attribute = typeof(Acme.SampleAttribute).GetMetadata<IClassType>().CustomAttributes.Single(static a => a.Type.Name == nameof(AttributeUsageAttribute));
+
+            return cs.FormatAttribute(attribute, qualifier);
+        }
+
+        [TestCase("int", ExpectedResult = true)]
+        [TestCase("class", ExpectedResult = true)]
+        [TestCase("Int32", ExpectedResult = false)]
+        [TestCase(null, ExpectedResult = false)]
+        public bool IsLanguageKeyword_ReturnsWhetherValueIsKeyword(string? value)
+        {
+            return CSharp.IsLanguageKeyword(value!);
+        }
+
+        [TestCase(typeof(Acme.SampleSignedFlags), 3, ExpectedResult = "SampleSignedFlags.Read | SampleSignedFlags.Write")]
+        [TestCase(typeof(DayOfWeek), 99, ExpectedResult = "99")]
+        public string WriteConstantValue_WithUnderlyingEnumValue_ReturnsExpectedString(Type enumType, int value)
+        {
+            using var writer = new StringWriter();
+            cs.WriteConstantValue(writer, value, enumType.GetMetadata());
+            return writer.ToString();
         }
 
         [TestCase(NameQualifier.None, typeof(Action), ExpectedResult = "Action")]
@@ -181,12 +233,8 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         public string FormatName_ForFields_ReturnsExpectedString(NameQualifier qualifier, Type type, string fieldName)
         {
             var fieldInfo = type.GetField(fieldName, Acme.Bindings.AllDeclared);
@@ -316,13 +364,8 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = "ConstField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = "VolatileField")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
         [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = "FixedBuffer")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.ComplexField), ExpectedResult = "ComplexField")]
-        [TestCase(NameQualifier.None, typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = "StaticReadonlyField")]
         public string FormatSignature_ForFields_ReturnsExpectedString(NameQualifier qualifier, Type type, string fieldName)
         {
             var fieldInfo = type.GetField(fieldName, Acme.Bindings.AllDeclared);

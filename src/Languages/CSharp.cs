@@ -338,7 +338,7 @@ namespace Kampute.DocToolkit.Languages
 
             linker ??= DefaultLinker;
 
-            WriteTypeSignature(writer, attribute.Type, Options.GlobalNameQualifier, (w, member, name) =>
+            WriteTypeSignature(writer, attribute.Type, qualifier, (w, member, name) =>
             {
                 if (ReferenceEquals(member, attribute.Type) && name.EndsWith("Attribute", StringComparison.Ordinal))
                     name = name[..^9];

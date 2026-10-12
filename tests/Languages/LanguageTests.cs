@@ -12,6 +12,46 @@ namespace Kampute.DocToolkit.Test.Languages
     public class LanguageTests
     {
         [Test]
+        public void Default_InitiallyIsCSharpAndRecognizedAsDefault()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(Language.Default, Is.InstanceOf<CSharp>());
+                Assert.That(Language.IsDefault(Language.Default), Is.True);
+                Assert.That(Language.IsDefault(new CSharp()), Is.False);
+            }
+        }
+
+        [Test]
+        public void Default_WhenSet_ReplacesDefaultLanguage()
+        {
+            var original = Language.Default;
+            var replacement = new CSharp();
+
+            try
+            {
+                Language.Default = replacement;
+
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(Language.Default, Is.SameAs(replacement));
+                    Assert.That(Language.IsDefault(replacement), Is.True);
+                    Assert.That(Language.IsDefault(original), Is.False);
+                }
+            }
+            finally
+            {
+                Language.Default = original;
+            }
+        }
+
+        [Test]
+        public void Default_SetToNull_ThrowsArgumentNullException()
+        {
+            Assert.That(static () => Language.Default = null!, Throws.ArgumentNullException);
+        }
+
+        [Test]
         public void IsValidIdentifier_WithNullInput_ReturnsFalse()
         {
             Assert.That(Language.IsValidIdentifier(null!), Is.False);
@@ -28,6 +68,8 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase("_", ExpectedResult = true)]
         [TestCase("__", ExpectedResult = true)]
         [TestCase("___identifier___", ExpectedResult = true)]
+        [TestCase("café", ExpectedResult = true)] // Non-ASCII letters are letters
+        [TestCase("été", ExpectedResult = true)]
         [TestCase("1identifier", ExpectedResult = false)]
         [TestCase("123", ExpectedResult = false)]
         [TestCase("identifier-name", ExpectedResult = false)]
