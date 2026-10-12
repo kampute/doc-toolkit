@@ -29,6 +29,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(DayOfWeek), ExpectedResult = "System.Int32")]
         [TestCase(typeof(AttributeTargets), ExpectedResult = "System.Int32")]
+        [TestCase(typeof(Acme.SampleUnsignedLongEnum), ExpectedResult = "System.UInt64")]
         public string UnderlayingType_HasExpectedValue(Type enumType)
         {
             var metadata = enumType.GetMetadata<IEnumType>();
@@ -78,10 +79,11 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(DayOfWeek), DayOfWeek.Sunday, ExpectedResult = "Sunday")]
-        [TestCase(typeof(DayOfWeek), DayOfWeek.Monday, ExpectedResult = "Monday")]
         [TestCase(typeof(DayOfWeek), DayOfWeek.Saturday, ExpectedResult = "Saturday")]
         [TestCase(typeof(AttributeTargets), AttributeTargets.Assembly, ExpectedResult = "Assembly")]
-        [TestCase(typeof(AttributeTargets), AttributeTargets.Class, ExpectedResult = "Class")]
+        [TestCase(typeof(Acme.SampleSignedEnum), Acme.SampleSignedEnum.Negative, ExpectedResult = "Negative")]
+        [TestCase(typeof(Acme.SampleSignedEnum), Acme.SampleSignedEnum.Positive, ExpectedResult = "Positive")]
+        [TestCase(typeof(Acme.SampleUnsignedLongEnum), Acme.SampleUnsignedLongEnum.Max, ExpectedResult = "Max")]
         public string? GetEnumName_WithValidEnumValue_ReturnsExpectedName(Type enumType, object value)
         {
             var metadata = enumType.GetMetadata<IEnumType>();
@@ -90,10 +92,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(DayOfWeek), 0, ExpectedResult = "Sunday")]
-        [TestCase(typeof(DayOfWeek), 1, ExpectedResult = "Monday")]
         [TestCase(typeof(DayOfWeek), 6, ExpectedResult = "Saturday")]
         [TestCase(typeof(AttributeTargets), 1, ExpectedResult = "Assembly")]
-        [TestCase(typeof(AttributeTargets), 4, ExpectedResult = "Class")]
+        [TestCase(typeof(Acme.SampleSignedEnum), -1, ExpectedResult = "Negative")]
         public string? GetEnumName_WithValidIntegerValue_ReturnsExpectedName(Type enumType, int value)
         {
             var metadata = enumType.GetMetadata<IEnumType>();
@@ -104,8 +105,8 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(DayOfWeek), (byte)0, ExpectedResult = "Sunday")]
         [TestCase(typeof(DayOfWeek), (short)1, ExpectedResult = "Monday")]
         [TestCase(typeof(DayOfWeek), (long)2, ExpectedResult = "Tuesday")]
-        [TestCase(typeof(AttributeTargets), (byte)1, ExpectedResult = "Assembly")]
-        [TestCase(typeof(AttributeTargets), (short)4, ExpectedResult = "Class")]
+        [TestCase(typeof(Acme.SampleSignedEnum), (sbyte)-1, ExpectedResult = "Negative")]
+        [TestCase(typeof(Acme.SampleSignedEnum), (long)-1, ExpectedResult = "Negative")]
         public string? GetEnumName_WithDifferentNumericTypes_ReturnsExpectedName(Type enumType, object value)
         {
             var metadata = enumType.GetMetadata<IEnumType>();
@@ -133,6 +134,24 @@ namespace Kampute.DocToolkit.Test.Metadata
             var result = metadata.GetEnumName(combinedFlags);
 
             Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Metadata_WithEnumFromMetadataLoadContext_ResolvesFlagsUnderlyingTypeAndRawValues()
+        {
+            var assemblyPath = typeof(Acme.SampleSignedFlags).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath]);
+            var enumType = universe.LoadFromPath(assemblyPath).GetType(typeof(Acme.SampleSignedFlags).FullName!)!;
+
+            var metadata = enumType.GetMetadata<IEnumType>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(metadata.IsFlagsEnum, Is.True);
+                Assert.That(metadata.UnderlyingType.FullName, Is.EqualTo("System.Int32"));
+                Assert.That(metadata.GetEnumName(-1), Is.EqualTo(nameof(Acme.SampleSignedFlags.All)));
+                Assert.That(metadata.GetEnumName(2), Is.EqualTo(nameof(Acme.SampleSignedFlags.Write)));
+            }
         }
 
         [TestCase(typeof(DayOfWeek), typeof(DayOfWeek), ExpectedResult = true)]

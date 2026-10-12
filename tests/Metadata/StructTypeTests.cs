@@ -29,6 +29,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(ReadOnlySpan<>), true)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), true)]
         [TestCase(typeof(Acme.SampleGenericStruct<>), false)]
         public void IsReadonly_HasExpectedValue(Type structType, bool isReadOnly)
         {
@@ -38,6 +39,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [TestCase(typeof(ReadOnlySpan<>), true)]
+        [TestCase(typeof(Acme.SampleGenericStruct<>.InnerGenericStruct<,>), false)]
         [TestCase(typeof(Acme.SampleGenericStruct<>), false)]
         public void IsRef_HasExpectedValue(Type structType, bool isRef)
         {
@@ -78,7 +80,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(metadata.TypeArguments, Has.Count.EqualTo(2));
                 Assert.That(metadata.TypeArguments[0].Name, Is.EqualTo("Int32"));
                 Assert.That(metadata.TypeArguments[1].Name, Is.EqualTo("String"));
-                Assert.That(metadata.GenericTypeDefinition, Is.Not.Null);
+                Assert.That(metadata.GenericTypeDefinition, Is.SameAs(typeof(System.Collections.Generic.KeyValuePair<,>).GetMetadata()));
             }
         }
 

@@ -171,6 +171,10 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(object), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(int), ExpectedResult = false)]
         [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(ReadOnlySpan<int>), ExpectedResult = false)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(IDisposable), ExpectedResult = true)] // where T : class accepts any reference type
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(int[]), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(Action), ExpectedResult = true)]
+        [TestCase(typeof(Acme.SampleGenericClass<>), 0, typeof(int*), ExpectedResult = false)]
         // where U: struct
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, typeof(int), ExpectedResult = true)]
         [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>), 1, typeof(ReadOnlySpan<int>), ExpectedResult = false)]

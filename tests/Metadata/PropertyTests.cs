@@ -13,6 +13,15 @@ namespace Kampute.DocToolkit.Test.Metadata
     [TestFixture]
     public class PropertyTests
     {
+        [Test]
+        public void OverriddenProperty_WithDifferentConstructedTypeArgument_DoesNotMatchBaseMember()
+        {
+            var property = typeof(Acme.SampleConstructedSignatureMismatch)
+                .GetProperty(nameof(Acme.SampleConstructedSignatureMismatch.ListProperty), Acme.Bindings.AllDeclared)!.GetMetadata();
+
+            Assert.That(property.OverriddenProperty, Is.Null);
+        }
+
         [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty")]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.VirtualProperty))]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
@@ -150,7 +159,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty))]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int))]
-        public void GetMethod_ForReadableIsNotNull(Type declaringType, string propertyName, params Type[] parameterTypes)
+        public void GetMethod_ForReadable_RepresentsGetAccessor(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
             var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
@@ -158,13 +167,13 @@ namespace Kampute.DocToolkit.Test.Metadata
             var metadata = propertyInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            Assert.That(metadata.GetMethod, Is.InstanceOf<IMethod>());
+            Assert.That(metadata.GetMethod?.Represents(propertyInfo.GetMethod!), Is.True);
         }
 
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty))]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.StaticProperty))]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty))]
-        public void SetMethod_ForWritableIsNotNull(Type declaringType, string propertyName, params Type[] parameterTypes)
+        public void SetMethod_ForWritable_RepresentsSetAccessor(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
             var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
             Assert.That(propertyInfo, Is.Not.Null);
@@ -172,7 +181,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var metadata = propertyInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            Assert.That(metadata.SetMethod, Is.InstanceOf<IMethod>());
+            Assert.That(metadata.SetMethod?.Represents(propertyInfo.SetMethod!), Is.True);
         }
 
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.ReadOnlyProperty))]
@@ -211,7 +220,6 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.WriteOnlyProperty), ExpectedResult = MemberVisibility.Public)]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.InternalProperty), ExpectedResult = MemberVisibility.Internal)]
         [TestCase(typeof(Acme.SampleProperties), "Item", typeof(int), ExpectedResult = MemberVisibility.Public)]
-        [TestCase(typeof(Acme.SampleProperties), "Acme.ISampleInterface.InterfaceProperty", ExpectedResult = MemberVisibility.Private)]
         public MemberVisibility Visibility_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
             var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);
@@ -337,6 +345,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Property), ExpectedResult = "SampleDerivedGenericClass`3")]
         [TestCase(typeof(Acme.SampleProperties), nameof(Acme.SampleProperties.RegularProperty), ExpectedResult = null)]
+        [TestCase(typeof(Acme.SampleConstructedSignatureDerived), nameof(Acme.SampleConstructedSignatureDerived.ListProperty), ExpectedResult = "SampleConstructedSignatureBase`1")]
         public string? OverriddenProperty_HasExpectedValue(Type declaringType, string propertyName, params Type[] parameterTypes)
         {
             var propertyInfo = declaringType.GetProperty(propertyName, Acme.Bindings.AllDeclared, null, null, parameterTypes, null);

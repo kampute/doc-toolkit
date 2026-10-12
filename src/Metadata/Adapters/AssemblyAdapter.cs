@@ -98,7 +98,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         public IReadOnlyDictionary<string, object?> Attributes => attributes.Value;
 
         /// <inheritdoc/>
-        public virtual bool IsStronglyNamed => Identity.Flags.HasFlag(AssemblyNameFlags.PublicKey);
+        public virtual bool IsStronglyNamed => Identity.GetPublicKey() is { Length: > 0 };
 
         /// <inheritdoc/>
         public virtual bool IsReflectionOnly => Reflection.ReflectionOnly || Reflection.GetType().Assembly != typeof(Assembly).Assembly;

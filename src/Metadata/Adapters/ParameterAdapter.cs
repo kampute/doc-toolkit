@@ -9,7 +9,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using System;
     using System.Collections.Generic;
     using System.Reflection;
-    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// An adapter that wraps a <see cref="ParameterInfo"/> and provides metadata access.
@@ -95,20 +94,12 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (other is null || Position != other.Position || ReferenceKind != other.ReferenceKind)
                 return false;
 
-            if (TypesAreCompatible(Type, other.Type))
+            if (AdapterHelper.IsValidTypeSubstitution(Member, Type, other.Member, other.Type))
                 return true;
 
             return IsReturnParameter
                 && Member.DeclaringType is not IInterfaceType
                 && Type.IsAssignableFrom(other.Type);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool TypesAreCompatible(IType expectedType, IType actualType)
-            {
-                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
-                    ? typeParameter.IsSatisfiableBy(actualType)
-                    : expectedType.Equals(actualType);
-            }
         }
 
         /// <inheritdoc/>

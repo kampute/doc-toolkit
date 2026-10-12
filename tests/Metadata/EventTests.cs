@@ -12,6 +12,15 @@ namespace Kampute.DocToolkit.Test.Metadata
     [TestFixture]
     public class EventTests
     {
+        [Test]
+        public void OverriddenEvent_WithDifferentConstructedTypeArgument_DoesNotMatchBaseMember()
+        {
+            var eventMetadata = typeof(Acme.SampleConstructedSignatureMismatch)
+                .GetEvent(nameof(Acme.SampleConstructedSignatureMismatch.GenericEvent), Acme.Bindings.AllDeclared)!.GetMetadata();
+
+            Assert.That(eventMetadata.OverriddenEvent, Is.Null);
+        }
+
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
@@ -45,7 +54,7 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
         [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
-        public void AddMethod_IsNotNull(Type declaringType, string eventName)
+        public void AddMethod_RepresentsAddAccessor(Type declaringType, string eventName)
         {
             var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
@@ -53,14 +62,14 @@ namespace Kampute.DocToolkit.Test.Metadata
             var metadata = eventInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            Assert.That(metadata.AddMethod, Is.InstanceOf<IMethod>());
+            Assert.That(metadata.AddMethod.Represents(eventInfo.AddMethod!), Is.True);
         }
 
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.StaticEvent))]
         [TestCase(typeof(Acme.SampleEvents), "Acme.ISampleInterface.InterfaceEvent")]
-        public void RemoveMethod_IsNotNull(Type declaringType, string eventName)
+        public void RemoveMethod_RepresentsRemoveAccessor(Type declaringType, string eventName)
         {
             var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);
             Assert.That(eventInfo, Is.Not.Null);
@@ -68,7 +77,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             var metadata = eventInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
 
-            Assert.That(metadata.RemoveMethod, Is.InstanceOf<IMethod>());
+            Assert.That(metadata.RemoveMethod.Represents(eventInfo.RemoveMethod!), Is.True);
         }
 
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.VirtualEvent), ExpectedResult = MemberVisibility.ProtectedInternal)]
@@ -177,6 +186,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Event), typeof(Acme.SampleDerivedGenericClass<,,>))]
         [TestCase(typeof(Acme.SampleEvents), nameof(Acme.SampleEvents.RegularEvent), null)]
+        [TestCase(typeof(Acme.SampleConstructedSignatureDerived), nameof(Acme.SampleConstructedSignatureDerived.GenericEvent), typeof(Acme.SampleConstructedSignatureBase<>))]
         public void OverriddenEvent_HasExpectedValue(Type declaringType, string eventName, Type? expectedBaseType)
         {
             var eventInfo = declaringType.GetEvent(eventName, Acme.Bindings.AllDeclared);

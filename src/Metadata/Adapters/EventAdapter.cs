@@ -128,7 +128,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
             return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
-                ? GetEventsWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
+                ? GetEventsWithSameName(genericType).FirstOrDefault(candidate => SharesMetadataDefinitionWith(candidate) ?? HasMatchingSignature(candidate))
                 : (IVirtualTypeMember?)null;
         }
 
@@ -145,15 +145,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.IsStatic == IsStatic
-                && TypesAreCompatible(baseCandidate.Type, Type);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool TypesAreCompatible(IType expectedType, IType actualType)
-            {
-                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
-                    ? typeParameter.IsSatisfiableBy(actualType)
-                    : expectedType.Equals(actualType);
-            }
+                && AdapterHelper.IsValidTypeSubstitution(baseCandidate, baseCandidate.Type, this, Type);
         }
 
         /// <summary>

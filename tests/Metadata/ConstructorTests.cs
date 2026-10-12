@@ -14,18 +14,6 @@ namespace Kampute.DocToolkit.Test.Metadata
     public class ConstructorTests
     {
         [TestCase(typeof(Acme.SampleConstructors))]
-        [TestCase(typeof(Acme.SampleConstructors), typeof(int))]
-        [TestCase(typeof(Acme.SampleConstructors), typeof(string), typeof(double))]
-        public void ImplementsConstructor(Type type, params Type[] parameterTypes)
-        {
-            var constructorInfo = type.GetConstructor(Acme.Bindings.AllDeclared, parameterTypes);
-            Assert.That(constructorInfo, Is.Not.Null);
-
-            var metadata = constructorInfo.GetMetadata();
-            Assert.That(metadata, Is.InstanceOf<IConstructor>());
-        }
-
-        [TestCase(typeof(Acme.SampleConstructors))]
         [TestCase(typeof(Acme.SampleGenericClass<>))]
         public void IsDefaultConstructor_ForInstanceParameterlessConstructor_ReturnsTrue(Type type)
         {
@@ -46,6 +34,16 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             var metadata = constructorInfo.GetMetadata();
             Assert.That(metadata, Is.Not.Null);
+
+            Assert.That(metadata.IsDefaultConstructor, Is.False);
+        }
+
+        [Test]
+        public void IsDefaultConstructor_ForStaticConstructor_ReturnsFalse()
+        {
+            var constructorInfo = typeof(Acme.ISampleInterface).TypeInitializer!;
+
+            var metadata = constructorInfo.GetMetadata();
 
             Assert.That(metadata.IsDefaultConstructor, Is.False);
         }
@@ -198,17 +196,37 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata.CustomAttributes.Any(static a => a.Type.Name == "SetsRequiredMembersAttribute"), Is.True);
         }
 
-        [TestCase(typeof(Acme.SampleConstructors), ExpectedResult = 3)] // public and protected constructors
-        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass), ExpectedResult = 0)]
-        public int Overloads_HasExpectedCount(Type declaringType)
+        [Test]
+        public void Overloads_ContainsOtherVisibleConstructorsOrderedByParameterCount()
         {
-            var constructorInfo = declaringType.GetConstructors(Acme.Bindings.AllDeclared).FirstOrDefault();
-            Assert.That(constructorInfo, Is.Not.Null);
+            var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, [typeof(int)])!;
 
             var metadata = constructorInfo.GetMetadata();
-            Assert.That(metadata, Is.Not.Null);
 
-            return metadata.Overloads.Count();
+            // The internal constructor (string) is not visible, and the constructor itself is excluded.
+            var overloadSignatures = metadata.Overloads.Cast<IConstructor>()
+                .Select(static c => string.Join(",", c.Parameters.Select(static p => p.Type.Name)));
+            Assert.That(overloadSignatures, Is.EqualTo(new[] { "", "Object", "String,Double" }));
+        }
+
+        [TestCase(typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass))]
+        public void Overloads_WithSingleConstructor_IsEmpty(Type declaringType)
+        {
+            var constructorInfo = declaringType.GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes)!;
+
+            var metadata = constructorInfo.GetMetadata();
+
+            Assert.That(metadata.Overloads, Is.Empty);
+        }
+
+        [Test]
+        public void Overloads_ForStaticConstructor_IsEmpty()
+        {
+            var constructorInfo = typeof(Acme.SampleProperties).TypeInitializer!; // The type also has an instance constructor
+
+            var metadata = constructorInfo.GetMetadata();
+
+            Assert.That(metadata.Overloads, Is.Empty);
         }
 
         [TestCase(typeof(Uri), typeof(string), ExpectedResult = "M:System.Uri.#ctor(System.String)")]

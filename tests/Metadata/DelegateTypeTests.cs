@@ -82,7 +82,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(metadata.TypeArguments, Has.Count.EqualTo(2));
                 Assert.That(metadata.TypeArguments[0].Name, Is.EqualTo("String"));
                 Assert.That(metadata.TypeArguments[1].Name, Is.EqualTo("Int32"));
-                Assert.That(metadata.GenericTypeDefinition, Is.Not.Null);
+                Assert.That(metadata.GenericTypeDefinition, Is.SameAs(typeof(Func<,>).GetMetadata()));
 
                 Assert.That(metadata.Parameters, Has.Count.EqualTo(1));
                 Assert.That(metadata.Parameters[0].Type.Name, Is.EqualTo("String"));

@@ -100,7 +100,7 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(metadata.IsConstructedGenericType, Is.True);
                 Assert.That(metadata.TypeArguments, Has.Count.EqualTo(1));
                 Assert.That(metadata.TypeArguments[0].Name, Is.EqualTo("Int32"));
-                Assert.That(metadata.GenericTypeDefinition, Is.Not.Null);
+                Assert.That(metadata.GenericTypeDefinition, Is.SameAs(typeof(System.Collections.Generic.List<>).GetMetadata()));
             }
         }
 

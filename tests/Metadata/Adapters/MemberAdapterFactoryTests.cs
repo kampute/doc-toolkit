@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Adapters;
+    using Kampute.DocToolkit.Metadata.Reflection;
     using Moq;
     using NUnit.Framework;
     using System;
@@ -151,6 +152,24 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
+        public void CreateTypeMetadata_WithTypeOfAnotherAssembly_ThrowsArgumentException()
+        {
+            assemblyMock.Setup(a => a.Represents(It.IsAny<Assembly>())).Returns(false);
+
+            Assert.That(() => factory.CreateTypeMetadata(assemblyMock.Object, typeof(Uri)), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("type"));
+        }
+
+        [Test]
+        public void CreateTypeMetadata_WithAssemblyAndNestedType_ThrowsArgumentException()
+        {
+            var type = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>);
+
+            Assert.That(() => factory.CreateTypeMetadata(assemblyMock.Object, type), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("type"));
+        }
+
+        [Test]
         public void CreateTypeMetadata_WithDeclaringTypeNull_ThrowsArgumentNullException()
         {
             Assert.That(() => factory.CreateTypeMetadata((IType)null!, typeof(Uri)), Throws.ArgumentNullException
@@ -165,13 +184,23 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreateConstructorMetadata_ReturnsConstructorMetadata()
+        public void CreateConstructorMetadata_ReturnsConstructorOfDeclaringType()
         {
             var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes)!;
 
             var result = factory.CreateConstructorMetadata(typeMock.Object, constructorInfo);
 
-            Assert.That(result, Is.InstanceOf<IConstructor>());
+            Assert.That(result.DeclaringType, Is.SameAs(typeMock.Object));
+        }
+
+        [Test]
+        public void CreateConstructorMetadata_WithConstructorOfAnotherType_ThrowsArgumentException()
+        {
+            var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes)!;
+            typeMock.Setup(t => t.Represents(It.IsAny<Type>())).Returns(false);
+
+            Assert.That(() => factory.CreateConstructorMetadata(typeMock.Object, constructorInfo), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("declaringType"));
         }
 
         [Test]
@@ -191,13 +220,17 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreatePropertyMetadata_ReturnsPropertyMetadata()
+        public void CreatePropertyMetadata_ReturnsPropertyOfDeclaringType()
         {
             var propertyInfo = typeof(Acme.SampleProperties).GetProperty(nameof(Acme.SampleProperties.RegularProperty), Acme.Bindings.AllDeclared)!;
 
             var result = factory.CreatePropertyMetadata(typeMock.Object, propertyInfo);
 
-            Assert.That(result, Is.InstanceOf<IProperty>());
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.DeclaringType, Is.SameAs(typeMock.Object));
+                Assert.That(result.Name, Is.EqualTo(nameof(Acme.SampleProperties.RegularProperty)));
+            }
         }
 
         [Test]
@@ -263,13 +296,17 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreateEventMetadata_ReturnsEventMetadata()
+        public void CreateEventMetadata_ReturnsEventOfDeclaringType()
         {
             var eventInfo = typeof(Acme.SampleEvents).GetEvent(nameof(Acme.SampleEvents.RegularEvent), Acme.Bindings.AllDeclared)!;
 
             var result = factory.CreateEventMetadata(typeMock.Object, eventInfo);
 
-            Assert.That(result, Is.InstanceOf<IEvent>());
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.DeclaringType, Is.SameAs(typeMock.Object));
+                Assert.That(result.Name, Is.EqualTo(nameof(Acme.SampleEvents.RegularEvent)));
+            }
         }
 
         [Test]
@@ -289,13 +326,17 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreateFieldMetadata_ReturnsFieldMetadata()
+        public void CreateFieldMetadata_ReturnsFieldOfDeclaringType()
         {
             var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.VolatileField), Acme.Bindings.AllDeclared)!;
 
             var result = factory.CreateFieldMetadata(typeMock.Object, fieldInfo);
 
-            Assert.That(result, Is.InstanceOf<IField>());
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.DeclaringType, Is.SameAs(typeMock.Object));
+                Assert.That(result.Name, Is.EqualTo(nameof(Acme.SampleFields.VolatileField)));
+            }
         }
 
         [Test]
@@ -315,14 +356,18 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreateParameterMetadata_ReturnsParameterMetadata()
+        public void CreateParameterMetadata_ReturnsParameterOfMember()
         {
             var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.ArrayParamsMethod), Acme.Bindings.AllDeclared)!;
             var parameterInfo = methodInfo.GetParameters()[0];
 
             var result = factory.CreateParameterMetadata(memberMock.Object, parameterInfo);
 
-            Assert.That(result, Is.InstanceOf<IParameter>());
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Member, Is.SameAs(memberMock.Object));
+                Assert.That(result.Name, Is.EqualTo("args"));
+            }
         }
 
         [Test]
@@ -343,13 +388,39 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void CreateCustomAttributeMetadata_ReturnsCustomAttributeMetadata()
+        public void CreateCustomAttributeMetadata_ReturnsAttributeForTarget()
         {
             var attributeData = typeof(Acme.SampleAttribute).GetCustomAttributesData()[0];
 
             var result = factory.CreateCustomAttributeMetadata(attributeData, AttributeTarget.Type);
 
-            Assert.That(result, Is.InstanceOf<ICustomAttribute>());
+            Assert.That(result.Target, Is.EqualTo(AttributeTarget.Type));
+        }
+
+        [Test]
+        public void CreateExtensionBlockMetadata_ReturnsBlockOfDeclaringType()
+        {
+            var block = new ExtensionContainerInfo(typeof(Acme.SampleExtensions)).ExtensionBlocks[0];
+
+            var result = factory.CreateExtensionBlockMetadata(typeMock.Object, block);
+
+            Assert.That(result.DeclaringType, Is.SameAs(typeMock.Object));
+        }
+
+        [Test]
+        public void CreateExtensionBlockMetadata_WithNullDeclaringType_ThrowsArgumentNullException()
+        {
+            var block = new ExtensionContainerInfo(typeof(Acme.SampleExtensions)).ExtensionBlocks[0];
+
+            Assert.That(() => factory.CreateExtensionBlockMetadata(null!, block), Throws.ArgumentNullException
+                .With.Property("ParamName").EqualTo("declaringType"));
+        }
+
+        [Test]
+        public void CreateExtensionBlockMetadata_WithNullExtensionBlock_ThrowsArgumentNullException()
+        {
+            Assert.That(() => factory.CreateExtensionBlockMetadata(typeMock.Object, null!), Throws.ArgumentNullException
+                .With.Property("ParamName").EqualTo("extensionBlock"));
         }
 
         [Test]

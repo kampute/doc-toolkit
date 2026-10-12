@@ -505,6 +505,128 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(result, Is.Empty);
         }
 
+        [Test]
+        public void FindByFullName_WithNullArguments_ThrowsArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(static () => ((IReadOnlyList<IType>)null!).FindByFullName("A"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("types"));
+                Assert.That(static () => CreateSortedTypes("A").FindByFullName(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fullName"));
+            }
+        }
+
+        [Test]
+        public void FindIndexByName_WithNullArguments_ThrowsArgumentNullException()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(static () => ((IReadOnlyList<IMember>)null!).FindIndexByName("A"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("members"));
+                Assert.That(static () => CreateSortedMembers("A").FindIndexByName(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("name"));
+            }
+        }
+
+        [Test]
+        public void WhereName_WithNullArguments_ThrowsBeforeEnumeration()
+        {
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(static () => ((IReadOnlyList<IMember>)null!).WhereName("A"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("members"));
+                Assert.That(static () => CreateSortedMembers("A").WhereName(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("name"));
+            }
+        }
+
+        [Test]
+        public void OrderByFullName_UsesOrdinalComparison()
+        {
+            var types = CreateSortedTypes("a.Type", "B.Type", "A.Type");
+
+            var result = types.OrderByFullName().Select(static t => t.FullName);
+
+            Assert.That(result, Is.EqualTo(new[] { "A.Type", "B.Type", "a.Type" }));
+        }
+
+        [Test]
+        public void OrderByParameterCount_OrdersConstructorsByParameterCount()
+        {
+            var constructors = new[] { CreateConstructor(2), CreateConstructor(0), CreateConstructor(1) };
+
+            var result = constructors.OrderByParameterCount().Select(static c => c.Parameters.Count);
+
+            Assert.That(result, Is.EqualTo(new[] { 0, 1, 2 }));
+        }
+
+        [Test]
+        public void OrderByName_OrdersMethodsByNameThenTypeParameterCountThenParameterCount()
+        {
+            var methods = new[]
+            {
+                CreateMethod("b", 0, 0),
+                CreateMethod("a", 1, 0),
+                CreateMethod("a", 0, 2),
+                CreateMethod("a", 0, 1),
+                CreateMethod("B", 0, 0),
+            };
+
+            var result = methods.OrderByName().Select(static m => $"{m.Name}<{m.TypeParameters.Count}>({m.Parameters.Count})");
+
+            Assert.That(result, Is.EqualTo(new[] { "B<0>(0)", "a<0>(1)", "a<0>(2)", "a<1>(0)", "b<0>(0)" }));
+        }
+
+        [Test]
+        public void OrderByName_OrdersPropertiesByNameThenIndexParameterCount()
+        {
+            var properties = new[] { CreateProperty("Item", 2), CreateProperty("Count", 0), CreateProperty("Item", 1) };
+
+            var result = properties.OrderByName().Select(static p => $"{p.Name}({p.Parameters.Count})");
+
+            Assert.That(result, Is.EqualTo(new[] { "Count(0)", "Item(1)", "Item(2)" }));
+        }
+
+        [Test]
+        public void OrderByName_OrdersOperatorsByNameThenParameterCount()
+        {
+            var operators = new[] { CreateOperator("op_Subtraction", 2), CreateOperator("op_Addition", 2), CreateOperator("op_Subtraction", 1) };
+
+            var result = operators.OrderByName().Select(static o => $"{o.Name}({o.Parameters.Count})");
+
+            Assert.That(result, Is.EqualTo(new[] { "op_Addition(2)", "op_Subtraction(1)", "op_Subtraction(2)" }));
+        }
+
+        private static IReadOnlyList<IParameter> CreateParameters(int count)
+            => [.. Enumerable.Range(0, count).Select(static _ => Mock.Of<IParameter>())];
+
+        private static IConstructor CreateConstructor(int parameterCount)
+        {
+            var mock = new Mock<IConstructor>();
+            mock.SetupGet(static c => c.Parameters).Returns(CreateParameters(parameterCount));
+            return mock.Object;
+        }
+
+        private static IMethod CreateMethod(string name, int typeParameterCount, int parameterCount)
+        {
+            var mock = new Mock<IMethod>();
+            mock.SetupGet(static m => m.Name).Returns(name);
+            mock.SetupGet(static m => m.TypeParameters).Returns([.. Enumerable.Range(0, typeParameterCount).Select(static _ => Mock.Of<ITypeParameter>())]);
+            mock.SetupGet(static m => m.Parameters).Returns(CreateParameters(parameterCount));
+            return mock.Object;
+        }
+
+        private static IProperty CreateProperty(string name, int parameterCount)
+        {
+            var mock = new Mock<IProperty>();
+            mock.SetupGet(static p => p.Name).Returns(name);
+            mock.SetupGet(static p => p.Parameters).Returns(CreateParameters(parameterCount));
+            return mock.Object;
+        }
+
+        private static IOperator CreateOperator(string name, int parameterCount)
+        {
+            var mock = new Mock<IOperator>();
+            mock.SetupGet(static o => o.Name).Returns(name);
+            mock.SetupGet(static o => o.Parameters).Returns(CreateParameters(parameterCount));
+            return mock.Object;
+        }
+
         private static List<IType> CreateSortedTypes(params string[] fullNames)
         {
             var types = new List<IType>();

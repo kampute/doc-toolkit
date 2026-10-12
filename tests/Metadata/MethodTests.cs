@@ -14,6 +14,32 @@ namespace Kampute.DocToolkit.Test.Metadata
     [TestFixture]
     public class MethodTests
     {
+        [TestCase("Process", false, ExpectedResult = true)]
+        [TestCase("Process", true, ExpectedResult = false)]
+        [TestCase("ProcessArray", false, ExpectedResult = true)]
+        [TestCase("ProcessArray", true, ExpectedResult = false)]
+        public bool ImplementedMethod_WithOpenGenericOverloads_MatchesActualInterfaceSignature(string name, bool stringOverload)
+        {
+            var type = typeof(Acme.SampleListProcessor<>);
+            var method = type.GetMethods(Acme.Bindings.AllDeclared).Single(m => m.Name == name
+                && m.GetParameters()[0].ParameterType.ContainsGenericParameters != stringOverload);
+
+            return ((IMethod)method.GetMetadata()).ImplementedMethod is not null;
+        }
+
+        [Test]
+        public void OverriddenMethod_WithDifferentConstructedTypeArgument_DoesNotMatchBaseMember()
+        {
+            var method = (IMethod)typeof(Acme.SampleConstructedSignatureMismatch)
+                .GetMethod(nameof(Acme.SampleConstructedSignatureMismatch.ListMethod), Acme.Bindings.AllDeclared)!.GetMetadata();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(method.OverriddenMethod, Is.Null);
+                Assert.That(method.Virtuality, Is.EqualTo(MemberVirtuality.Virtual));
+            }
+        }
+
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.StaticMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.RegularMethod))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod))]
@@ -204,6 +230,9 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.Method), typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass))]
         [TestCase(typeof(Acme.SampleDerivedConstructedGenericClass), nameof(Acme.SampleDerivedConstructedGenericClass.GenericMethod), typeof(Acme.SampleDerivedGenericClass<,,>))]
         [TestCase(typeof(Acme.SampleMethods), nameof(Acme.SampleMethods.VirtualMethod), null)]
+        [TestCase(typeof(Acme.SampleConstructedSignatureDerived), nameof(Acme.SampleConstructedSignatureDerived.ListMethod), typeof(Acme.SampleConstructedSignatureBase<>))]
+        [TestCase(typeof(Acme.SampleConstructedSignatureDerived), nameof(Acme.SampleConstructedSignatureDerived.ArrayMethod), typeof(Acme.SampleConstructedSignatureBase<>))]
+        [TestCase(typeof(Acme.SampleConstructedSignatureDerived), nameof(Acme.SampleConstructedSignatureDerived.RefMethod), typeof(Acme.SampleConstructedSignatureBase<>))]
         public void OverriddenMethod_HasExpectedValue(Type declaringType, string methodName, Type? expectedBaseType)
         {
             var methodInfo = declaringType.GetMethod(methodName, Acme.Bindings.AllDeclared);

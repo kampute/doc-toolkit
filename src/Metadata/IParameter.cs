@@ -117,6 +117,7 @@ namespace Kampute.DocToolkit.Metadata
         /// <list type="bullet">
         ///   <item>Both types are identical.</item>
         ///   <item>Both types are decorated types (array, pointer, by-ref, or nullable) with identical modifiers and compatible element types.</item>
+        ///   <item>Both types are constructed from the same generic type definition with compatible type arguments.</item>
         ///   <item>Both types are generic type parameters with identical constraints and declaring member ancestry.</item>
         ///   <item>The current type is an open generic type parameter, and the specified type satisfies all of its constraints.</item>
         /// </list>

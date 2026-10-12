@@ -7,8 +7,10 @@ namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
-    using NUnit.Framework.Internal;
+    using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
 
     [TestFixture]
     public class AssemblyTests
@@ -42,12 +44,12 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Modules_HasExpectedCollection()
+        public void Modules_ContainsManifestModule()
         {
             var testAssembly = typeof(AssemblyTests).Assembly;
             var assemblyMetadata = testAssembly.GetMetadata();
 
-            Assert.That(assemblyMetadata.Modules, Is.Not.Empty);
+            Assert.That(assemblyMetadata.Modules, Does.Contain(testAssembly.ManifestModule));
         }
 
         [Test]
@@ -80,12 +82,126 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Attributes_HasExpectedCollection()
+        public void Namespaces_AreOrderedByNameWithTypesOrderedByFullName()
         {
-            var testAssembly = typeof(AssemblyTests).Assembly;
-            var assemblyMetadata = testAssembly.GetMetadata();
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
 
-            Assert.That(assemblyMetadata.Attributes, Is.Not.Empty);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(assemblyMetadata.Namespaces.Keys, Is.Ordered.Using((IComparer<string>)StringComparer.Ordinal));
+                foreach (var (ns, types) in assemblyMetadata.Namespaces)
+                    Assert.That(types.Select(static t => t.FullName), Is.Ordered.Using((IComparer<string>)StringComparer.Ordinal), ns);
+            }
+        }
+
+        [Test]
+        public void ExportedTypes_AreOrderedByFullName()
+        {
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
+
+            Assert.That(assemblyMetadata.ExportedTypes.Select(static t => t.FullName), Is.Ordered.Using((IComparer<string>)StringComparer.Ordinal));
+        }
+
+        [Test]
+        public void Attributes_MapsAssemblyAttributesByNameIgnoringCase()
+        {
+            var assembly = typeof(MetadataProvider).Assembly;
+            var assemblyMetadata = assembly.GetMetadata();
+
+            var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>()!.Title;
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(assemblyMetadata.Attributes["Title"], Is.EqualTo(title));
+                Assert.That(assemblyMetadata.Attributes["title"], Is.EqualTo(title));
+                Assert.That(assemblyMetadata.Attributes.Keys, Has.None.EqualTo("Metadata"));
+            }
+        }
+
+        [Test]
+        public void Attributes_MapsAssemblyMetadataAttributesByKey()
+        {
+            var assembly = typeof(MetadataProvider).Assembly;
+            var assemblyMetadata = assembly.GetMetadata();
+
+            var repositoryUrl = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().First(static a => a.Key == "RepositoryUrl").Value;
+
+            Assert.That(assemblyMetadata.Attributes["RepositoryUrl"], Is.EqualTo(repositoryUrl));
+        }
+
+        [TestCase(typeof(object), ExpectedResult = true)]
+        [TestCase(typeof(AssemblyTests), ExpectedResult = false)]
+        public bool IsStronglyNamed_ReflectsPublicKey(Type typeInAssembly)
+        {
+            return typeInAssembly.Assembly.GetMetadata().IsStronglyNamed;
+        }
+
+        [Test]
+        public void IsReflectionOnly_WithRuntimeAssembly_ReturnsFalse()
+        {
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
+
+            Assert.That(assemblyMetadata.IsReflectionOnly, Is.False);
+        }
+
+        [Test]
+        public void IsReflectionOnly_WithMetadataLoadContextAssembly_ReturnsTrue()
+        {
+            var assemblyPath = typeof(AssemblyTests).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath]);
+
+            var assemblyMetadata = universe.LoadFromPath(assemblyPath).GetMetadata();
+
+            Assert.That(assemblyMetadata.IsReflectionOnly, Is.True);
+        }
+
+        [Test]
+        public void ExtensionMethods_ContainsClassicAndBlockExtensionMethods()
+        {
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
+
+            string[] expectedNames =
+            [
+                nameof(Acme.SampleExtensions.ClassicExtensionMethodForClass),
+                nameof(Acme.SampleExtensions.ClassicExtensionMethodForStruct),
+                nameof(Acme.SampleExtensions.ClassicExtensionMethodForInterface),
+                nameof(Acme.SampleExtensions.ClassicExtensionMethod),
+                nameof(Acme.SampleExtensions.InstanceExtensionMethodForClass),
+                nameof(Acme.SampleExtensions.StaticExtensionMethodForClass),
+                nameof(Acme.SampleExtensions.GenericExtensionMethodForClass),
+                nameof(Acme.SampleExtensions.InstanceExtensionMethodForStruct),
+                nameof(Acme.SampleExtensions.StaticExtensionMethodForStruct),
+                nameof(Acme.SampleExtensions.GenericExtensionMethodForStruct),
+                nameof(Acme.SampleExtensions.InstanceExtensionMethodForInterface),
+                nameof(Acme.SampleExtensions.StaticExtensionMethodForInterface),
+                nameof(Acme.SampleExtensions.GenericExtensionMethodForInterface),
+                nameof(Acme.SampleExtensions.InstanceExtensionMethod),
+                nameof(Acme.SampleExtensions.StaticExtensionMethod),
+                nameof(Acme.SampleExtensions.GenericExtensionMethod),
+            ];
+
+            Assert.That(assemblyMetadata.ExtensionMethods.Select(static m => m.Name), Is.EquivalentTo(expectedNames));
+        }
+
+        [Test]
+        public void ExtensionProperties_ContainsBlockExtensionProperties()
+        {
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
+
+            string[] expectedNames =
+            [
+                "InstanceExtensionPropertyForClass",
+                "StaticExtensionPropertyForClass",
+                "InstanceExtensionPropertyForStruct",
+                "StaticExtensionPropertyForStruct",
+                "InstanceExtensionPropertyForInterface",
+                "StaticExtensionPropertyForInterface",
+                "InstanceExtensionProperty",
+                "StaticExtensionProperty",
+                "FullExtensionProperty",
+            ];
+
+            Assert.That(assemblyMetadata.ExtensionProperties.Select(static p => p.Name), Is.EquivalentTo(expectedNames));
         }
 
         [Test]
@@ -120,6 +236,15 @@ namespace Kampute.DocToolkit.Test.Metadata
                 Assert.That(found, Is.True);
                 Assert.That(typeMetadata?.Name, Is.EqualTo(nameof(AssemblyTests)));
             }
+        }
+
+        [Test]
+        public void TryGetType_WithNullName_ThrowsArgumentNullException()
+        {
+            var assemblyMetadata = typeof(AssemblyTests).Assembly.GetMetadata();
+
+            Assert.That(() => assemblyMetadata.TryGetType(null!, out _), Throws.ArgumentNullException
+                .With.Property("ParamName").EqualTo("fullName"));
         }
 
         [Test]

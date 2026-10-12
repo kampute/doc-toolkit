@@ -232,9 +232,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             {
                 var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
 
-                return ((IInterfaceCapableType)DeclaringType)
-                    .Interfaces.FindByFullName(interfaceFullName)?
-                    .Properties.WhereName(memberName).FirstOrDefault(HasMatchingSignature);
+                return ((IInterfaceCapableType)DeclaringType).Interfaces
+                    .Where(i => i.FullName == interfaceFullName)
+                    .SelectMany(i => i.Properties.WhereName(memberName))
+                    .FirstOrDefault(HasMatchingSignature);
             }
 
             return null;
@@ -244,7 +245,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
             return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
-                ? GetPropertiesWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
+                ? GetPropertiesWithSameName(genericType).FirstOrDefault(candidate => SharesMetadataDefinitionWith(candidate) ?? HasMatchingSignature(candidate))
                 : (IVirtualTypeMember?)null;
         }
 
@@ -261,16 +262,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         {
             return baseCandidate is not null
                 && baseCandidate.IsStatic == IsStatic
-                && TypesAreCompatible(baseCandidate.Type, Type)
+                && AdapterHelper.IsValidTypeSubstitution(baseCandidate, baseCandidate.Type, this, Type)
                 && (!IsIndexer || AdapterHelper.EquivalentParameters(baseCandidate.Parameters, Parameters));
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool TypesAreCompatible(IType expectedType, IType actualType)
-            {
-                return expectedType is ITypeParameter { IsGenericTypeParameter: true } typeParameter
-                    ? typeParameter.IsSatisfiableBy(actualType)
-                    : expectedType.Equals(actualType);
-            }
         }
 
         /// <summary>

@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
     using Kampute.DocToolkit.Metadata.Adapters;
     using Moq;
     using NUnit.Framework;
+    using System;
     using System.Collections.Generic;
 
     [TestFixture]
@@ -33,6 +34,14 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
                 Assert.That(interfaceName, Is.EqualTo(expectedInterface));
                 Assert.That(memberName, Is.EqualTo(expectedMember));
             }
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void SplitExplicitName_WithNullOrEmpty_ThrowsArgumentException(string? explicitName)
+        {
+            Assert.That(() => AdapterHelper.SplitExplicitName(explicitName!), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("explicitName"));
         }
 
         [Test]
@@ -138,6 +147,116 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             var result = AdapterHelper.HaveSameDeclarationScope(typeof(List<string>.Enumerator), typeof(List<int>.Enumerator));
 
             Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void HaveSameDeclarationScope_WithNestedTypesOfDifferentDeclaringTypes_ReturnsFalse()
+        {
+            var result = AdapterHelper.HaveSameDeclarationScope(typeof(List<int>.Enumerator), typeof(Queue<int>.Enumerator));
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void HaveSameDeclarationScope_WithSameNameInDifferentNamespaces_ReturnsFalse()
+        {
+            var result = AdapterHelper.HaveSameDeclarationScope(typeof(System.Threading.Timer), typeof(System.Timers.Timer));
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithSameNonGenericType_ReturnsTrue()
+        {
+            var member = Mock.Of<IMember>();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(member, typeof(string).GetMetadata(), member, typeof(string).GetMetadata());
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithDifferentNonGenericTypes_ReturnsFalse()
+        {
+            var member = Mock.Of<IMember>();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(member, typeof(object).GetMetadata(), member, typeof(string).GetMetadata());
+
+            Assert.That(result, Is.False);
+        }
+
+        [TestCase(typeof(string), ExpectedResult = true)]
+        [TestCase(typeof(int), ExpectedResult = false)]
+        public bool IsValidTypeSubstitution_WithGenericTypeParameter_ReturnsWhetherConstraintsAreSatisfied(Type targetType)
+        {
+            var member = Mock.Of<IMember>();
+            var typeParameter = typeof(Acme.SampleGenericClass<>).GetGenericArguments()[0].GetMetadata(); // where T : class
+
+            return AdapterHelper.IsValidTypeSubstitution(member, typeParameter, member, targetType.GetMetadata());
+        }
+
+        [TestCase(typeof(List<string>), ExpectedResult = true)]
+        [TestCase(typeof(List<int>), ExpectedResult = false)]
+        [TestCase(typeof(HashSet<string>), ExpectedResult = false)]
+        public bool IsValidTypeSubstitution_WithTypeConstructedFromGenericTypeParameter_ReturnsWhetherTypeArgumentsCanSubstitute(Type targetType)
+        {
+            var member = Mock.Of<IMember>();
+            var typeParameter = typeof(Acme.SampleGenericClass<>).GetGenericArguments()[0]; // where T : class
+            var sourceType = typeof(List<>).MakeGenericType(typeParameter).GetMetadata();
+
+            return AdapterHelper.IsValidTypeSubstitution(member, sourceType, member, targetType.GetMetadata());
+        }
+
+        [TestCase(typeof(string[]), ExpectedResult = true)]
+        [TestCase(typeof(int[]), ExpectedResult = false)]
+        [TestCase(typeof(string[,]), ExpectedResult = false)]
+        public bool IsValidTypeSubstitution_WithArrayOfGenericTypeParameter_ReturnsWhetherElementTypeCanSubstitute(Type targetType)
+        {
+            var member = Mock.Of<IMember>();
+            var typeParameter = typeof(Acme.SampleGenericClass<>).GetGenericArguments()[0]; // where T : class
+            var sourceType = typeParameter.MakeArrayType().GetMetadata();
+
+            return AdapterHelper.IsValidTypeSubstitution(member, sourceType, member, targetType.GetMetadata());
+        }
+
+        [Test]
+        public void IsValidTypeSubstitution_WithGenericMethodParameter_ReturnsFalseForConcreteType()
+        {
+            var member = Mock.Of<IMember>();
+            var methodTypeParameter = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.GenericMethodWithGenericParameter))!.GetGenericArguments()[0].GetMetadata();
+
+            var result = AdapterHelper.IsValidTypeSubstitution(member, methodTypeParameter, member, typeof(string).GetMetadata());
+
+            Assert.That(result, Is.False);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void IsValidTypeSubstitution_WithNullArgument_ThrowsArgumentNullException(int nullIndex)
+        {
+            var member = Mock.Of<IMember>();
+            var type = typeof(string).GetMetadata();
+            string[] names = ["baseMember", "sourceType", "derivedMember", "targetType"];
+
+            Assert.That(() => AdapterHelper.IsValidTypeSubstitution(
+                nullIndex == 0 ? null! : member,
+                nullIndex == 1 ? null! : type,
+                nullIndex == 2 ? null! : member,
+                nullIndex == 3 ? null! : type), Throws.ArgumentNullException.With.Property("ParamName").EqualTo(names[nullIndex]));
+        }
+
+        [Test]
+        public void IsSubstitutableBy_WithNullArgument_ThrowsArgumentNullException()
+        {
+            var type = typeof(string).GetMetadata();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => AdapterHelper.IsSubstitutableBy(null!, type), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("sourceType"));
+                Assert.That(() => AdapterHelper.IsSubstitutableBy(type, null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("targetType"));
+            }
         }
     }
 }

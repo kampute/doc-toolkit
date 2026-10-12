@@ -13,6 +13,24 @@ namespace Kampute.DocToolkit.Test.Metadata
     public class TypeDecoratorTests
     {
         [Test]
+        public void NullableType_FromMetadataLoadContext_IsNullableDecorator()
+        {
+            var assemblyPath = typeof(Acme.SampleFields).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath]);
+            var field = universe.LoadFromPath(assemblyPath).GetType(typeof(Acme.SampleFields).FullName!)!.GetField(nameof(Acme.SampleFields.ComplexField))!;
+            var nullableType = field.FieldType.GetElementType()!.GetElementType()!.GetElementType()!.GetElementType()!; // double?*[][,][,,] -> double?
+
+            var metadata = nullableType.GetMetadata();
+
+            Assert.That(metadata, Is.InstanceOf<ITypeDecorator>());
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(((ITypeDecorator)metadata).Modifier, Is.EqualTo(TypeModifier.Nullable));
+                Assert.That(((ITypeDecorator)metadata).ElementType.Name, Is.EqualTo("Double"));
+            }
+        }
+
+        [Test]
         public void ArrayType_IsTypeDecorator()
         {
             var metadata = typeof(int[]).GetMetadata();
