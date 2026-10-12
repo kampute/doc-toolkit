@@ -16,13 +16,14 @@ namespace Kampute.DocToolkit.Support
     /// <remarks>
     /// <para>
     /// This class supports a limited YAML subset intended for lightweight metadata scenarios. It supports
-    /// string keys, scalar values, simple sequences, simple nested mappings based on indentation, and
-    /// block scalars.
+    /// string keys, scalar values, simple sequences, simple nested mappings based on indentation, block scalars,
+    /// and flow sequences and mappings written on a single line (such as <c>[a, b]</c> or <c>{a: 1, b: [x, y]}</c>).
     /// </para>
     /// <note type="important" title="Important">
     /// The parser does not support all YAML features and is designed for simplicity and performance in
-    /// common use cases. It does not handle complex constructs such as anchors, aliases, or advanced tags.
-    /// For more advanced YAML processing needs, consider using a full-featured YAML library.
+    /// common use cases. Anchors, aliases, tags, flow collections that span lines, and single-pair mappings
+    /// inside flow sequences (such as <c>[a: b]</c>) are rejected with a <see cref="FormatException"/>. For more
+    /// advanced YAML processing needs, consider using a full-featured YAML library.
     /// </note>
     /// </remarks>
     public static class Yaml
@@ -40,7 +41,6 @@ namespace Kampute.DocToolkit.Support
         /// </summary>
         /// <param name="text">The YAML text to parse.</param>
         /// <returns>A read-only dictionary containing parsed keys and values.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
         /// <exception cref="FormatException">Thrown when the YAML content is malformed or uses unsupported constructs.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IReadOnlyDictionary<string, object?> Parse(ReadOnlySpan<char> text)
@@ -55,6 +55,7 @@ namespace Kampute.DocToolkit.Support
         {
             private readonly ReadOnlySpan<char> source;
             private readonly List<LineToken> tokens;
+            private readonly List<(int Start, int End)> lines;
             private int index;
 
             /// <summary>
@@ -65,6 +66,7 @@ namespace Kampute.DocToolkit.Support
             {
                 source = sourceSpan;
                 tokens = [];
+                lines = [];
                 index = 0;
 
                 var lineNumber = 0;
@@ -80,12 +82,12 @@ namespace Kampute.DocToolkit.Support
                     if (end > start && source[end - 1] is '\r')
                         end--;
 
-                    var lineSpan = source[start..end];
-                    var indent = 0;
-                    while (indent < lineSpan.Length && char.IsWhiteSpace(lineSpan[indent]))
-                        indent++;
+                    lines.Add((start, end));
 
-                    var contentLen = StripComment(lineSpan[indent..], lineNumber);
+                    var lineSpan = source[start..end];
+                    var indent = GetIndent(lineSpan);
+
+                    var contentLen = StripComment(lineSpan[indent..]);
                     var contentSpan = lineSpan.Slice(indent, contentLen).TrimEnd();
 
                     if (!contentSpan.IsEmpty)
@@ -140,15 +142,15 @@ namespace Kampute.DocToolkit.Support
 
                     object? value;
                     if (valueSpan is ['|' or '>', ..])
-                        value = ParseBlockScalar(valueSpan[0], token.Indent);
+                        value = ParseBlockScalar(valueSpan[0], token.Indent, token.LineNumber);
                     else if (!valueSpan.IsEmpty)
                         value = ParseInlineValue(valueSpan, token.LineNumber);
-                    else if (index < tokens.Count && tokens[index].Indent > indent)
+                    else if (HasNestedNode(indent))
                         value = ParseNode(tokens[index].Indent);
                     else
                         value = null;
 
-                    var key = keySpan.ToString();
+                    var key = ParseKey(keySpan, token.LineNumber);
                     if (!map.TryAdd(key, value))
                         throw CreateFormatException(token.LineNumber, $"Duplicate key '{key}'.");
                 }
@@ -185,7 +187,7 @@ namespace Kampute.DocToolkit.Support
                     object? value;
                     if (itemSpan is ['|' or '>', ..])
                     {
-                        value = ParseBlockScalar(itemSpan[0], token.Indent);
+                        value = ParseBlockScalar(itemSpan[0], token.Indent, token.LineNumber);
                     }
                     else if (itemSpan.Length == 0)
                     {
@@ -193,16 +195,18 @@ namespace Kampute.DocToolkit.Support
                             ? ParseNode(tokens[index].Indent)
                             : null;
                     }
-                    else if (TrySplitKeyValue(itemSpan, out var keySpan, out var valueSpan))
+                    else if (itemSpan[0] is not ('[' or '{') && TrySplitKeyValue(itemSpan, out var keySpan, out var valueSpan))
                     {
-                        var key = keySpan.ToString();
+                        // The keys of a mapping inside a sequence item are aligned with the first key after the '-' indicator
+                        var contentIndent = token.Indent + tokenContent.Length - itemSpan.Length;
+                        var key = ParseKey(keySpan, token.LineNumber);
                         var itemMap = new Dictionary<string, object?>(StringComparer.Ordinal);
 
                         itemMap[key] = valueSpan is ['|' or '>', ..]
-                            ? ParseBlockScalar(valueSpan[0], token.Indent)
+                            ? ParseBlockScalar(valueSpan[0], contentIndent, token.LineNumber)
                             : valueSpan.Length > 0
                                 ? ParseInlineValue(valueSpan, token.LineNumber)!
-                                : index < tokens.Count && tokens[index].Indent > indent
+                                : HasNestedNode(contentIndent)
                                     ? ParseNode(tokens[index].Indent)!
                                     : null;
 
@@ -234,39 +238,78 @@ namespace Kampute.DocToolkit.Support
             /// </summary>
             /// <param name="blockType">The character indicating literal or folded.</param>
             /// <param name="parentIndent">The indentation of the parent block.</param>
+            /// <param name="headerLineNumber">The line number of the line that introduces the block scalar.</param>
             /// <returns>The block scalar string.</returns>
-            private string ParseBlockScalar(char blockType, int parentIndent)
+            /// <remarks>
+            /// The content of a block scalar is read from the source lines rather than from the tokens, because empty lines,
+            /// indentation beyond the block indentation, and '#' characters are all part of the content.
+            /// </remarks>
+            private string ParseBlockScalar(char blockType, int parentIndent, int headerLineNumber)
             {
-                if (index >= tokens.Count)
-                    return string.Empty;
-
-                var blockIndent = tokens[index].Indent;
-                if (blockIndent <= parentIndent)
-                    return string.Empty;
-
                 using var reusable = StringBuilderPool.Shared.GetBuilder();
                 var sb = reusable.Builder;
 
                 var literal = blockType == '|';
-                var firstLine = true;
-                var expectedIndent = blockIndent;
+                var blockIndent = -1;
+                var lastLineNumber = headerLineNumber;
+                var pendingEmptyLines = 0;
 
-                while (index < tokens.Count)
+                for (var i = headerLineNumber; i < lines.Count; i++)
                 {
-                    var token = tokens[index];
-                    if (token.Indent < expectedIndent)
+                    var line = source[lines[i].Start..lines[i].End];
+                    var lineIndent = GetIndent(line);
+
+                    if (lineIndent == line.Length)
+                    {
+                        pendingEmptyLines++;
+                        continue;
+                    }
+
+                    if (blockIndent < 0)
+                    {
+                        if (lineIndent <= parentIndent)
+                            break;
+
+                        blockIndent = lineIndent;
+                    }
+                    else if (lineIndent < blockIndent)
+                    {
                         break;
+                    }
 
-                    if (!firstLine)
-                        sb.Append(literal ? '\n' : ' ');
+                    if (sb.Length > 0)
+                    {
+                        if (literal)
+                            sb.Append('\n', pendingEmptyLines + 1);
+                        else if (pendingEmptyLines > 0)
+                            sb.Append('\n', pendingEmptyLines);
+                        else
+                            sb.Append(' ');
+                    }
 
-                    var tokenContent = source.Slice(token.Offset, token.Length);
-                    sb.Append(tokenContent);
-                    firstLine = false;
-                    index++;
+                    sb.Append(line[blockIndent..]);
+                    pendingEmptyLines = 0;
+                    lastLineNumber = i + 1;
                 }
 
+                while (index < tokens.Count && tokens[index].LineNumber <= lastLineNumber)
+                    index++;
+
                 return sb.ToString().TrimEnd();
+            }
+
+            /// <summary>
+            /// Determines whether the next token starts a node nested under a key with an empty value.
+            /// </summary>
+            /// <param name="keyIndent">The indentation of the key.</param>
+            /// <returns><see langword="true"/> if the next token is more indented than the key, or is a sequence item aligned with the key; otherwise, <see langword="false"/>.</returns>
+            private readonly bool HasNestedNode(int keyIndent)
+            {
+                if (index >= tokens.Count)
+                    return false;
+
+                var next = tokens[index];
+                return next.Indent > keyIndent || (next.Indent == keyIndent && IsSequenceItem(source.Slice(next.Offset, next.Length)));
             }
 
             /// <summary>
@@ -290,6 +333,21 @@ namespace Kampute.DocToolkit.Support
             }
 
             /// <summary>
+            /// Parses a mapping key.
+            /// </summary>
+            /// <param name="span">The span of the key.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>The key, without quotes when it is a quoted scalar.</returns>
+            private static string ParseKey(ReadOnlySpan<char> span, int lineNumber)
+            {
+                if (span[0] is '[' or '{')
+                    throw CreateFormatException(lineNumber, "Flow collections are not supported as mapping keys.");
+
+                ThrowIfNodePropertyOrAlias(span, lineNumber);
+                return span[0] is '"' or '\'' ? ParseQuotedValue(span, lineNumber) : span.ToString();
+            }
+
+            /// <summary>
             /// Parses an inline scalar value.
             /// </summary>
             /// <param name="span">The span to parse.</param>
@@ -303,6 +361,11 @@ namespace Kampute.DocToolkit.Support
 
                 if (span[0] is '"' or '\'')
                     return ParseQuotedValue(span, lineNumber);
+
+                if (span[0] is '[' or '{')
+                    return ParseFlowCollection(span, lineNumber);
+
+                ThrowIfNodePropertyOrAlias(span, lineNumber);
 
                 if (span.Equals("null", StringComparison.OrdinalIgnoreCase) || span.Equals("~", StringComparison.Ordinal))
                     return null;
@@ -320,6 +383,227 @@ namespace Kampute.DocToolkit.Support
                     return doubleValue;
 
                 return span.ToString();
+            }
+
+            /// <summary>
+            /// Parses a flow collection, such as <c>[a, b]</c> or <c>{a: 1, b: 2}</c>, that is written on a single line.
+            /// </summary>
+            /// <param name="span">The span of the flow collection, including its brackets or braces.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>A list for a flow sequence, or a dictionary for a flow mapping.</returns>
+            private static object? ParseFlowCollection(ReadOnlySpan<char> span, int lineNumber)
+            {
+                var position = 0;
+                var collection = ParseFlowNode(span, ref position, lineNumber);
+
+                SkipFlowWhitespace(span, ref position);
+                if (position < span.Length)
+                    throw CreateFormatException(lineNumber, "Unexpected content after a flow collection.");
+
+                return collection;
+            }
+
+            /// <summary>
+            /// Parses a node inside a flow collection.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the node; when this method returns, the position after the node.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>The parsed node.</returns>
+            private static object? ParseFlowNode(ReadOnlySpan<char> span, ref int position, int lineNumber)
+            {
+                return span[position] switch
+                {
+                    '[' => ParseFlowSequence(span, ref position, lineNumber),
+                    '{' => ParseFlowMapping(span, ref position, lineNumber),
+                    _ => ParseInlineValue(ReadFlowScalar(span, ref position, lineNumber), lineNumber)
+                };
+            }
+
+            /// <summary>
+            /// Parses a flow sequence.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the opening bracket; when this method returns, the position after the closing bracket.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>A list of the parsed items.</returns>
+            private static List<object?> ParseFlowSequence(ReadOnlySpan<char> span, ref int position, int lineNumber)
+            {
+                var items = new List<object?>();
+
+                position++;
+                while (true)
+                {
+                    SkipFlowWhitespace(span, ref position);
+                    if (position >= span.Length)
+                        throw CreateFormatException(lineNumber, "A flow sequence must end with ']' on the same line.");
+
+                    if (span[position] is ']')
+                    {
+                        position++;
+                        return items;
+                    }
+
+                    items.Add(ParseFlowNode(span, ref position, lineNumber));
+
+                    if (!SkipFlowEntrySeparator(span, ref position, ']'))
+                        throw CreateFormatException(lineNumber, "A flow sequence entry must be followed by ',' or ']'.");
+                }
+            }
+
+            /// <summary>
+            /// Parses a flow mapping.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the opening brace; when this method returns, the position after the closing brace.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>A dictionary of the parsed entries.</returns>
+            private static Dictionary<string, object?> ParseFlowMapping(ReadOnlySpan<char> span, ref int position, int lineNumber)
+            {
+                var map = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+                position++;
+                while (true)
+                {
+                    SkipFlowWhitespace(span, ref position);
+                    if (position >= span.Length)
+                        throw CreateFormatException(lineNumber, "A flow mapping must end with '}' on the same line.");
+
+                    if (span[position] is '}')
+                    {
+                        position++;
+                        return map;
+                    }
+
+                    var key = ParseKey(ReadFlowScalar(span, ref position, lineNumber), lineNumber);
+
+                    // A key without ':' has a null value
+                    object? value = null;
+                    SkipFlowWhitespace(span, ref position);
+                    if (position < span.Length && span[position] is ':')
+                    {
+                        position++;
+                        SkipFlowWhitespace(span, ref position);
+                        if (position < span.Length && span[position] is not (',' or '}'))
+                            value = ParseFlowNode(span, ref position, lineNumber);
+                    }
+
+                    if (!map.TryAdd(key, value))
+                        throw CreateFormatException(lineNumber, $"Duplicate key '{key}'.");
+
+                    if (!SkipFlowEntrySeparator(span, ref position, '}'))
+                        throw CreateFormatException(lineNumber, "A flow mapping entry must be followed by ',' or '}'.");
+                }
+            }
+
+            /// <summary>
+            /// Reads a quoted or plain scalar inside a flow collection.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the scalar; when this method returns, the position after the scalar.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <returns>The span of the scalar, including its quotes if it is quoted.</returns>
+            /// <remarks>
+            /// A plain scalar ends at ',', ']', '}', or at a ':' that is followed by whitespace, by one of these characters, or by the
+            /// end of the line.
+            /// </remarks>
+            private static ReadOnlySpan<char> ReadFlowScalar(ReadOnlySpan<char> span, ref int position, int lineNumber)
+            {
+                var start = position;
+                var quote = span[position];
+                if (quote is '"' or '\'')
+                {
+                    for (position++; position < span.Length; position++)
+                    {
+                        var c = span[position];
+                        if (quote is '"' && c is '\\')
+                        {
+                            position++;
+                        }
+                        else if (c == quote)
+                        {
+                            if (quote is '\'' && position + 1 < span.Length && span[position + 1] is '\'')
+                            {
+                                position++;
+                                continue;
+                            }
+
+                            return span[start..++position];
+                        }
+                    }
+
+                    throw CreateFormatException(lineNumber, "Quoted scalar is not terminated.");
+                }
+
+                for (; position < span.Length; position++)
+                {
+                    var c = span[position];
+                    if (c is ',' or ']' or '}')
+                        break;
+
+                    if (c is '[' or '{')
+                        throw CreateFormatException(lineNumber, $"A plain scalar in a flow collection cannot contain '{c}'.");
+
+                    if (c is ':' && (position + 1 == span.Length || span[position + 1] is ',' or ']' or '}' || char.IsWhiteSpace(span[position + 1])))
+                        break;
+                }
+
+                var scalar = span[start..position].TrimEnd();
+                if (scalar.IsEmpty)
+                    throw CreateFormatException(lineNumber, "A flow collection entry cannot be empty.");
+
+                return scalar;
+            }
+
+            /// <summary>
+            /// Skips the separator after an entry of a flow collection.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position after the entry; when this method returns, the position after the separator.</param>
+            /// <param name="closing">The closing character of the flow collection.</param>
+            /// <returns><see langword="true"/> if the entry is followed by ',' or by the closing character; otherwise, <see langword="false"/>.</returns>
+            private static bool SkipFlowEntrySeparator(ReadOnlySpan<char> span, ref int position, char closing)
+            {
+                SkipFlowWhitespace(span, ref position);
+                if (position < span.Length && span[position] is ',')
+                {
+                    position++;
+                    return true;
+                }
+
+                // The closing character itself is consumed by the caller
+                return position >= span.Length || span[position] == closing;
+            }
+
+            /// <summary>
+            /// Skips whitespace inside a flow collection.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The current position; when this method returns, the position of the next non-whitespace character.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static void SkipFlowWhitespace(ReadOnlySpan<char> span, ref int position)
+            {
+                while (position < span.Length && char.IsWhiteSpace(span[position]))
+                    position++;
+            }
+
+            /// <summary>
+            /// Throws a <see cref="FormatException"/> if the specified node starts with an anchor, a tag, or an alias, which are not supported.
+            /// </summary>
+            /// <param name="span">The span of the node.</param>
+            /// <param name="lineNumber">The line number.</param>
+            /// <exception cref="FormatException">Thrown when the node starts with an anchor, a tag, or an alias.</exception>
+            private static void ThrowIfNodePropertyOrAlias(ReadOnlySpan<char> span, int lineNumber)
+            {
+                switch (span[0])
+                {
+                    case '&':
+                        throw CreateFormatException(lineNumber, "Anchors are not supported.");
+                    case '*':
+                        throw CreateFormatException(lineNumber, "Aliases are not supported.");
+                    case '!':
+                        throw CreateFormatException(lineNumber, "Tags are not supported.");
+                }
             }
 
             /// <summary>
@@ -451,7 +735,7 @@ namespace Kampute.DocToolkit.Support
                     var c = span[i];
                     if (quote is '\0')
                     {
-                        if (c is '"' or '\'')
+                        if (c is '"' or '\'' && IsQuotedScalarStart(span, i))
                         {
                             quote = c;
                             continue;
@@ -486,20 +770,29 @@ namespace Kampute.DocToolkit.Support
             /// Returns the length of the span unaffected by inline comments (ignoring the # marking the start of a comment unless it's within quotes).
             /// </summary>
             /// <param name="span">The span to scan.</param>
-            /// <param name="lineNumber">The line number.</param>
             /// <returns>The length remaining after stripping the comment.</returns>
-            private static int StripComment(ReadOnlySpan<char> span, int lineNumber)
+            private static int StripComment(ReadOnlySpan<char> span)
             {
                 var quote = '\0';
+                var flowDepth = 0;
 
                 for (var i = 0; i < span.Length; i++)
                 {
                     var c = span[i];
                     if (quote is '\0')
                     {
-                        if (c is '"' or '\'')
+                        if (c is '"' or '\'' or '[' or '{' && (flowDepth > 0 ? IsFlowNodeStart(span, i) : IsQuotedScalarStart(span, i)))
                         {
-                            quote = c;
+                            if (c is '[' or '{')
+                                flowDepth++;
+                            else
+                                quote = c;
+                            continue;
+                        }
+
+                        if (c is ']' or '}' && flowDepth > 0)
+                        {
+                            flowDepth--;
                             continue;
                         }
 
@@ -525,10 +818,50 @@ namespace Kampute.DocToolkit.Support
                         quote = '\0';
                 }
 
-                if (quote != '\0')
-                    throw CreateFormatException(lineNumber, "Quoted scalar is not terminated.");
-
                 return span.Length;
+            }
+
+            /// <summary>
+            /// Determines whether a quote character at the specified position starts a quoted scalar.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the quote character.</param>
+            /// <returns>
+            /// <see langword="true"/> if the quote starts a key, a value, or a sequence item; otherwise, <see langword="false"/>
+            /// because the quote is part of a plain scalar.
+            /// </returns>
+            private static bool IsQuotedScalarStart(ReadOnlySpan<char> span, int position)
+            {
+                if (position == 0)
+                    return true;
+
+                if (!char.IsWhiteSpace(span[position - 1]))
+                    return false;
+
+                var preceding = span[..position].TrimEnd();
+                return preceding is [.., ':'] or ['-'] or [.., ' ' or '\t', '-'];
+            }
+
+            /// <summary>
+            /// Determines whether a character inside a flow collection starts a node.
+            /// </summary>
+            /// <param name="span">The line content.</param>
+            /// <param name="position">The position of the character.</param>
+            /// <returns><see langword="true"/> if the character follows the start of the collection, a ',' or a ':'; otherwise, <see langword="false"/>.</returns>
+            private static bool IsFlowNodeStart(ReadOnlySpan<char> span, int position)
+                => span[..position].TrimEnd() is [.., '[' or '{' or ',' or ':'];
+
+            /// <summary>
+            /// Gets the number of leading whitespace characters of a line.
+            /// </summary>
+            /// <param name="line">The line.</param>
+            /// <returns>The number of leading whitespace characters.</returns>
+            private static int GetIndent(ReadOnlySpan<char> line)
+            {
+                var indent = 0;
+                while (indent < line.Length && char.IsWhiteSpace(line[indent]))
+                    indent++;
+                return indent;
             }
 
             /// <summary>

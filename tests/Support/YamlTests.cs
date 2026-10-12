@@ -221,7 +221,7 @@ namespace Kampute.DocToolkit.Test.Support
 
             var result = Yaml.Parse(yaml);
 
-            Assert.That(result["\"quoted key\""], Is.EqualTo("quoted value"));
+            Assert.That(result["quoted key"], Is.EqualTo("quoted value"));
         }
 
         [Test]
@@ -257,7 +257,7 @@ namespace Kampute.DocToolkit.Test.Support
             var yaml = "key: 'it's'";
 
             Assert.That(() => Yaml.Parse(yaml), Throws.TypeOf<FormatException>()
-                .With.Message.Contains("not terminated"));
+                .With.Message.Contains("escaped by doubling"));
         }
 
         #endregion
@@ -272,6 +272,14 @@ namespace Kampute.DocToolkit.Test.Support
             var result = Yaml.Parse(yaml);
 
             Assert.That(result["key"], Is.EqualTo("value"));
+        }
+
+        [TestCase("title: It's here", ExpectedResult = "It's here")]
+        [TestCase("title: It's a test # comment", ExpectedResult = "It's a test")]
+        [TestCase("title: say \"hi", ExpectedResult = "say \"hi")]
+        public object? Parse_PlainScalarContainingQuote_ReturnsString(string yaml)
+        {
+            return Yaml.Parse(yaml)["title"];
         }
 
         [Test]
@@ -506,6 +514,31 @@ namespace Kampute.DocToolkit.Test.Support
             }
         }
 
+        [Test]
+        public void Parse_SequenceIndentedLikeItsKey_ReturnsList()
+        {
+            var yaml = "tags:\n- one\n- two\nnext: value";
+
+            var result = Yaml.Parse(yaml);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result["tags"], Is.EqualTo(new[] { "one", "two" }));
+                Assert.That(result["next"], Is.EqualTo("value"));
+            }
+        }
+
+        [Test]
+        public void Parse_SequenceItemMappingWithEmptyValueFollowedBySiblingKey_ReturnsSiblingEntries()
+        {
+            var yaml = "items:\n  - first:\n    second: value";
+
+            var result = Yaml.Parse(yaml);
+
+            var item = (result["items"] as IList<object?>)?[0] as IReadOnlyDictionary<string, object?>;
+            Assert.That(item, Is.EquivalentTo(new Dictionary<string, object?> { ["first"] = null, ["second"] = "value" }));
+        }
+
         #endregion
 
         #region Block Scalars
@@ -630,6 +663,45 @@ namespace Kampute.DocToolkit.Test.Support
                 Assert.That(nested!["description"], Is.EqualTo("Multi\nLine"));
                 Assert.That(nested["other"], Is.EqualTo("value"));
             }
+        }
+
+        [Test]
+        public void Parse_LiteralBlockScalar_PreservesContentAsIs()
+        {
+            var yaml = "code: |\n  if (it's)\n\n  # not a comment\n    indented\nnext: value";
+
+            var result = Yaml.Parse(yaml);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result["code"], Is.EqualTo("if (it's)\n\n# not a comment\n  indented"));
+                Assert.That(result["next"], Is.EqualTo("value"));
+            }
+        }
+
+        [Test]
+        public void Parse_FoldedBlockScalar_KeepsEmptyLineAsLineBreak()
+        {
+            var yaml = "text: >\n  Paragraph 1\n  continues\n\n  Paragraph 2\nnext: value";
+
+            var result = Yaml.Parse(yaml);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result["text"], Is.EqualTo("Paragraph 1 continues\nParagraph 2"));
+                Assert.That(result["next"], Is.EqualTo("value"));
+            }
+        }
+
+        [Test]
+        public void Parse_EmptyBlockScalarInSequenceItemMapping_DoesNotConsumeSiblingKey()
+        {
+            var yaml = "items:\n  - text: |\n    other: value";
+
+            var result = Yaml.Parse(yaml);
+
+            var item = (result["items"] as IList<object?>)?[0] as IReadOnlyDictionary<string, object?>;
+            Assert.That(item, Is.EquivalentTo(new Dictionary<string, object?> { ["text"] = "", ["other"] = "value" }));
         }
 
         #endregion
@@ -906,7 +978,7 @@ namespace Kampute.DocToolkit.Test.Support
 
             var result = Yaml.Parse(yaml);
 
-            Assert.That(result["\"key:with:colons\""], Is.EqualTo("value"));
+            Assert.That(result["key:with:colons"], Is.EqualTo("value"));
         }
 
         [Test]
@@ -953,6 +1025,119 @@ namespace Kampute.DocToolkit.Test.Support
             var result = Yaml.Parse(yaml);
 
             Assert.That(result["key"], Is.EqualTo(7L));
+        }
+
+        #endregion
+
+        #region Flow Sequences and Unsupported Constructs
+
+        [Test]
+        public void Parse_FlowSequence_ReturnsList()
+        {
+            var result = Yaml.Parse("tags: [alpha, beta]");
+
+            Assert.That(result["tags"], Is.EqualTo(new object?[] { "alpha", "beta" }));
+        }
+
+        [Test]
+        public void Parse_FlowSequenceWithMixedScalars_ReturnsTypedItems()
+        {
+            var result = Yaml.Parse("items: [one, 2, \"x, y\", 'it''s', true, null]");
+
+            Assert.That(result["items"], Is.EqualTo(new object?[] { "one", 2L, "x, y", "it's", true, null }));
+        }
+
+        [TestCase("items: []", ExpectedResult = new object[0])]
+        [TestCase("items: [ a , b, ]", ExpectedResult = new object[] { "a", "b" })]
+        public object? Parse_FlowSequenceEdgeCases_ReturnsExpectedList(string yaml)
+        {
+            return Yaml.Parse(yaml)["items"];
+        }
+
+        [Test]
+        public void Parse_FlowSequenceAsSequenceItem_ReturnsNestedList()
+        {
+            var yaml = """
+                items:
+                  - [a, b]
+                  - c
+                """;
+
+            var result = Yaml.Parse(yaml);
+
+            Assert.That(result["items"], Is.EqualTo(new object?[] { new object?[] { "a", "b" }, "c" }));
+        }
+
+        [Test]
+        public void Parse_FlowMapping_ReturnsDictionary()
+        {
+            var result = Yaml.Parse("key: {a: 1, \"b\": \"x, y\", c}");
+
+            Assert.That(result["key"], Is.EqualTo(new Dictionary<string, object?> { ["a"] = 1L, ["b"] = "x, y", ["c"] = null }));
+        }
+
+        [Test]
+        public void Parse_EmptyFlowMapping_ReturnsEmptyDictionary()
+        {
+            var result = Yaml.Parse("key: {}");
+
+            Assert.That(result["key"], Is.EqualTo(new Dictionary<string, object?>()));
+        }
+
+        [Test]
+        public void Parse_NestedFlowCollections_ReturnsNestedValues()
+        {
+            var result = Yaml.Parse("key: {list: [1, [a, b]], map: {url: http://example.com}}");
+
+            var expected = new Dictionary<string, object?>
+            {
+                ["list"] = new object?[] { 1L, new object?[] { "a", "b" } },
+                ["map"] = new Dictionary<string, object?> { ["url"] = "http://example.com" }
+            };
+            Assert.That(result["key"], Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Parse_FlowMappingAsSequenceItem_ReturnsDictionary()
+        {
+            var yaml = """
+                items:
+                  - {name: x, value: 2}
+                """;
+
+            var result = Yaml.Parse(yaml);
+
+            Assert.That(result["items"], Is.EqualTo(new object?[] { new Dictionary<string, object?> { ["name"] = "x", ["value"] = 2L } }));
+        }
+
+        [Test]
+        public void Parse_QuotedFlowItemContainingHash_KeepsHash()
+        {
+            var result = Yaml.Parse("items: [\"a #b\", c] # comment");
+
+            Assert.That(result["items"], Is.EqualTo(new object?[] { "a #b", "c" }));
+        }
+
+        // Unsupported constructs and malformed flow collections are rejected rather than read as plain strings
+        [TestCase("key: [a, b", TestName = "Parse_UnterminatedFlowSequence_ThrowsFormatException")]
+        [TestCase("key: {a: 1", TestName = "Parse_UnterminatedFlowMapping_ThrowsFormatException")]
+        [TestCase("key: [a, , b]", TestName = "Parse_FlowSequenceWithEmptyEntry_ThrowsFormatException")]
+        [TestCase("key: {a: 1, , b: 2}", TestName = "Parse_FlowMappingWithEmptyEntry_ThrowsFormatException")]
+        [TestCase("key: {a: 1, a: 2}", TestName = "Parse_FlowMappingWithDuplicateKey_ThrowsFormatException")]
+        [TestCase("key: {a: \"x\" b: 2}", TestName = "Parse_FlowMappingWithoutSeparator_ThrowsFormatException")]
+        [TestCase("key: [\"a\" b]", TestName = "Parse_FlowSequenceWithoutSeparator_ThrowsFormatException")]
+        [TestCase("key: {a", TestName = "Parse_FlowMappingEndingAfterKey_ThrowsFormatException")]
+        [TestCase("key: [a: b]", TestName = "Parse_SinglePairMappingInFlowSequence_ThrowsFormatException")]
+        [TestCase("key: [a] b", TestName = "Parse_ContentAfterFlowCollection_ThrowsFormatException")]
+        [TestCase("key: &anchor value", TestName = "Parse_Anchor_ThrowsFormatException")]
+        [TestCase("&anchor key: value", TestName = "Parse_AnchorOnKey_ThrowsFormatException")]
+        [TestCase("key: *alias", TestName = "Parse_Alias_ThrowsFormatException")]
+        [TestCase("items:\n  - *alias", TestName = "Parse_AliasAsSequenceItem_ThrowsFormatException")]
+        [TestCase("key: !!str value", TestName = "Parse_Tag_ThrowsFormatException")]
+        [TestCase("!tag key: value", TestName = "Parse_TagOnKey_ThrowsFormatException")]
+        public void Parse_UnsupportedConstruct_ThrowsFormatException(string yaml)
+        {
+            Assert.That(() => Yaml.Parse(yaml), Throws.TypeOf<FormatException>());
         }
 
         #endregion
