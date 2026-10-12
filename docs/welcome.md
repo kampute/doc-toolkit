@@ -17,7 +17,7 @@ DocToolkit is a .NET library that extracts metadata from .NET assemblies and tra
 
 **Advanced XML Documentation Processing**: DocToolkit parses and transforms XML documentation files using configurable XSLT stylesheets, supporting standard XML documentation tags plus extended [Sandcastle](https://github.com/EWSoftware/SHFB) tags for comprehensive coverage. It automatically resolves cross-references between documentation elements.
 
-**Built for Integration**: DocToolkit is designed to integrate seamlessly with existing documentation workflows. It includes customizable URL management with built-in configurations for popular platforms like Azure DevOps Wiki, GitLab Wiki, Microsoft Docs, and DocFx, plus support for custom URL schemes.
+**Built for Integration**: DocToolkit is designed to integrate seamlessly with existing documentation workflows. It includes customizable URL management with built-in addressing strategies for Azure DevOps Wiki and GitLab Wiki, and for URLs compatible with DocFx and the .NET API reference on Microsoft Learn, plus support for custom URL schemes.
 
 **Beyond API Documentation**: DocToolkit supports both API reference documentation and conceptual topics, allowing you to create comprehensive documentation systems that include tutorials, guides, and standalone content alongside your code documentation.
 
