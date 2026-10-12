@@ -31,7 +31,6 @@ namespace Kampute.DocToolkit.Test.Metadata
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.ConstField), ExpectedResult = nameof(String))]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.VolatileField), ExpectedResult = nameof(Int32))]
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.StaticReadonlyField), ExpectedResult = nameof(Int32))]
-        [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = $"{nameof(Int32)}[]")]
         public string FieldType_HasExpectedValue(Type declaringType, string fieldName)
         {
             var fieldInfo = declaringType.GetField(fieldName, Acme.Bindings.AllDeclared);
@@ -41,6 +40,25 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.Not.Null);
 
             return metadata.Type.Name;
+        }
+
+        [Test]
+        public void FieldType_OfFixedSizeBuffer_IsArrayOfElementType()
+        {
+            // As declared in C#, 'fixed byte FixedBuffer[16]' is an array of its element type (byte[])
+            var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.FixedBuffer), Acme.Bindings.AllDeclared);
+            Assert.That(fieldInfo, Is.Not.Null);
+
+            var metadata = fieldInfo.GetMetadata();
+            Assert.That(metadata, Is.Not.Null);
+
+            var arrayType = metadata.Type as ITypeDecorator;
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(arrayType?.Modifier, Is.EqualTo(TypeModifier.Array));
+                Assert.That(arrayType?.ArrayRank, Is.EqualTo(1));
+                Assert.That(arrayType?.ElementType, Is.EqualTo(typeof(byte).GetMetadata()));
+            }
         }
 
         [TestCase(typeof(Acme.SampleFields), nameof(Acme.SampleFields.FixedBuffer), ExpectedResult = true)]
@@ -209,6 +227,22 @@ namespace Kampute.DocToolkit.Test.Metadata
             Assert.That(metadata, Is.Not.Null);
 
             return metadata.CodeReference;
+        }
+
+        [Test]
+        public void TryGetFixedSizeBufferInfo_WithRegularField_ReturnsFalse()
+        {
+            var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.ArrayField), Acme.Bindings.AllDeclared)!;
+            var metadata = fieldInfo.GetMetadata();
+
+            var result = metadata.TryGetFixedSizeBufferInfo(out var elementType, out var length);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result, Is.False);
+                Assert.That(elementType, Is.Null);
+                Assert.That(length, Is.Zero);
+            }
         }
 
         [Test]

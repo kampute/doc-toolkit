@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Metadata
     using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Threading;
 
     /// <summary>
     /// Provides metadata for assemblies in a specified universe.
@@ -26,6 +27,7 @@ namespace Kampute.DocToolkit.Metadata
     public sealed class MetadataUniverse : IDisposable
     {
         private readonly MetadataLoadContext mlc;
+        private int disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MetadataUniverse"/> class.
@@ -139,7 +141,18 @@ namespace Kampute.DocToolkit.Metadata
         /// <summary>
         /// Releases resources used by the <see cref="MetadataUniverse"/>.
         /// </summary>
-        public void Dispose() => mlc.Dispose();
+        /// <remarks>
+        /// The metadata that <see cref="MetadataProvider"/> has cached for the assemblies loaded by this universe is removed
+        /// from the cache, so those assemblies no longer appear in <see cref="MetadataProvider.AvailableAssemblies"/>.
+        /// </remarks>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+                return;
+
+            MetadataProvider.RemoveFromCache(mlc.GetAssemblies());
+            mlc.Dispose();
+        }
 
         /// <summary>
         /// A custom assembly resolver that searches in specified directories.
@@ -197,7 +210,7 @@ namespace Kampute.DocToolkit.Metadata
                     assembly = context.GetAssemblies().FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
                 }
 
-                return assembly ?? FindAssemblyInProbeFolders(context, assemblyName) ?? FindAssemblyInAppDomain(assemblyName);
+                return assembly ?? FindAssemblyInProbeFolders(context, assemblyName) ?? FindAssemblyInAppDomain(context, assemblyName);
             }
 
             /// <summary>
@@ -244,15 +257,24 @@ namespace Kampute.DocToolkit.Metadata
             }
 
             /// <summary>
-            /// Searches for an assembly in the current AppDomain.
+            /// Searches for an assembly in the current AppDomain and loads its file into the metadata load context.
             /// </summary>
+            /// <param name="context">The metadata load context.</param>
             /// <param name="assemblyName">The assembly name to find.</param>
-            /// <returns>The found assembly, or <see langword="null"/> if not found.</returns>
-            private static Assembly? FindAssemblyInAppDomain(AssemblyName assemblyName)
+            /// <returns>The found assembly loaded into <paramref name="context"/>, or <see langword="null"/> if not found or not loaded from a file.</returns>
+            /// <remarks>
+            /// A resolver must return assemblies created by its own <see cref="MetadataLoadContext"/>, so the runtime assembly
+            /// itself cannot be returned. Assemblies without a file location, such as dynamic assemblies, are not resolvable.
+            /// </remarks>
+            private static Assembly? FindAssemblyInAppDomain(MetadataLoadContext context, AssemblyName assemblyName)
             {
-                return AppDomain.CurrentDomain
+                var location = AppDomain.CurrentDomain
                     .GetAssemblies()
-                    .FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()));
+                    .Where(static a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                    .FirstOrDefault(a => AssemblyName.ReferenceMatchesDefinition(assemblyName, a.GetName()))?
+                    .Location;
+
+                return location is not null ? context.LoadFromAssemblyPath(location) : null;
             }
         }
     }

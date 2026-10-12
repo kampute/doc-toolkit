@@ -78,7 +78,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 return TypeModifier.ByRef;
             if (type.IsPointer)
                 return TypeModifier.Pointer;
-            if (Nullable.GetUnderlyingType(type) is not null)
+            if (GetNullableUnderlyingType(type) is not null)
                 return TypeModifier.Nullable;
 
             throw new ArgumentException("The provided type is not an array, pointer, by-ref, or nullable type.", nameof(type));
@@ -90,9 +90,21 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <returns>The adapted element <see cref="IType"/> instance.</returns>
         protected virtual IType GetElementType()
         {
-            var type = Modifier == TypeModifier.Nullable ? Nullable.GetUnderlyingType(Reflection)! : Reflection.GetElementType()!;
+            var type = Modifier == TypeModifier.Nullable ? GetNullableUnderlyingType(Reflection)! : Reflection.GetElementType()!;
             return MetadataProvider.GetMetadata(type);
         }
+
+        /// <summary>
+        /// Gets the underlying type of the specified nullable value type.
+        /// </summary>
+        /// <param name="type">The type to examine.</param>
+        /// <returns>The underlying type if <paramref name="type"/> is a constructed <see cref="Nullable{T}"/> type; otherwise, <see langword="null"/>.</returns>
+        /// <remarks>
+        /// Unlike <see cref="Nullable.GetUnderlyingType(Type)"/>, which compares against the runtime <see cref="Nullable{T}"/> type, this method
+        /// identifies the generic type definition by name, so it also recognizes nullable types loaded through a Metadata Load Context (MLC).
+        /// </remarks>
+        internal static Type? GetNullableUnderlyingType(Type type)
+            => type.IsConstructedGenericType && type.GetGenericTypeDefinition().FullName == "System.Nullable`1" ? type.GetGenericArguments()[0] : null;
 
         /// <inheritdoc/>
         protected override string ConstructSignature(bool useParameterNotation) => Modifier switch

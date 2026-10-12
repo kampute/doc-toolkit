@@ -87,9 +87,10 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             {
                 var (interfaceFullName, memberName) = AdapterHelper.SplitExplicitName(Name);
 
-                return ((IInterfaceCapableType)DeclaringType)
-                    .Interfaces.FindByFullName(interfaceFullName)?
-                    .Methods.WhereName(memberName).FirstOrDefault(HasMatchingSignature);
+                return ((IInterfaceCapableType)DeclaringType).Interfaces
+                    .Where(i => i.FullName == interfaceFullName)
+                    .SelectMany(i => i.Methods.WhereName(memberName))
+                    .FirstOrDefault(HasMatchingSignature);
             }
 
             return null;
@@ -99,7 +100,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         protected override IVirtualTypeMember? FindGenericDefinition()
         {
             return DeclaringType is IGenericCapableType { IsConstructedGenericType: true, GenericTypeDefinition: IType genericType }
-                ? GetMethodsWithSameName(genericType).FirstOrDefault(HasMatchingSignature)
+                ? GetMethodsWithSameName(genericType).FirstOrDefault(candidate => SharesMetadataDefinitionWith(candidate) ?? HasMatchingSignature(candidate))
                 : (IVirtualTypeMember?)null;
         }
 

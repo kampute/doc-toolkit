@@ -40,8 +40,9 @@ namespace Kampute.DocToolkit.Metadata
         /// <remarks>
         /// This property provides access to the assemblies for which metadata has been requested through  this provider.
         /// Assemblies loaded via the Common Language Runtime (CLR) persist in the collection  for the lifetime of the
-        /// application domain. However, assemblies loaded through Metadata Load Context (MLC) will be removed when the
-        /// MLC is disposed.
+        /// application domain. However, assemblies loaded through a <see cref="MetadataUniverse"/> are removed when the universe
+        /// is disposed, and assemblies loaded through any other Metadata Load Context (MLC) are removed once they are garbage
+        /// collected after the MLC is disposed.
         /// <para>
         /// The property uses deferred execution, so the collection reflects the current state at the time of enumeration.
         /// </para>
@@ -95,6 +96,16 @@ namespace Kampute.DocToolkit.Metadata
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ClearCache() => assemblyCache.Clear();
+
+        /// <summary>
+        /// Removes the cached metadata of the specified assemblies.
+        /// </summary>
+        /// <param name="assemblies">The assemblies whose metadata is to be removed.</param>
+        internal static void RemoveFromCache(IEnumerable<Assembly> assemblies)
+        {
+            foreach (var assembly in assemblies)
+                assemblyCache.Remove(assembly);
+        }
 
         /// <summary>
         /// Retrieves metadata for an assembly.

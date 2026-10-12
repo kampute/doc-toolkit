@@ -870,6 +870,127 @@ namespace Acme
     }
 
     /// <summary>
+    /// A sample generic base class whose virtual members use types constructed from its type parameter.
+    /// </summary>
+    /// <typeparam name="T">The type parameter.</typeparam>
+    public abstract class SampleConstructedSignatureBase<T>
+    {
+        /// <summary>
+        /// A virtual method with a constructed generic parameter type.
+        /// </summary>
+        /// <param name="list">The list parameter.</param>
+        public virtual void ListMethod(List<T> list) { }
+
+        /// <summary>
+        /// A virtual method with an array parameter type.
+        /// </summary>
+        /// <param name="array">The array parameter.</param>
+        public virtual void ArrayMethod(T[] array) { }
+
+        /// <summary>
+        /// A virtual method with a by-reference parameter.
+        /// </summary>
+        /// <param name="value">The by-reference parameter.</param>
+        public virtual void RefMethod(ref T value) { }
+
+        /// <summary>
+        /// A virtual property with a constructed generic type.
+        /// </summary>
+        public virtual List<T>? ListProperty { get; set; }
+
+        /// <summary>
+        /// A virtual event with a constructed generic handler type.
+        /// </summary>
+        public virtual event EventHandler<T>? GenericEvent;
+    }
+
+    /// <summary>
+    /// A sample class that overrides members whose signatures use types constructed from the base type's type argument.
+    /// </summary>
+    public class SampleConstructedSignatureDerived : SampleConstructedSignatureBase<int>
+    {
+        /// <summary>
+        /// Overrides the method with a constructed generic parameter type.
+        /// </summary>
+        /// <param name="list">The list parameter.</param>
+        public override void ListMethod(List<int> list) { }
+
+        /// <summary>
+        /// Overrides the method with an array parameter type.
+        /// </summary>
+        /// <param name="array">The array parameter.</param>
+        public override void ArrayMethod(int[] array) { }
+
+        /// <summary>
+        /// Overrides the method with a by-reference parameter.
+        /// </summary>
+        /// <param name="value">The by-reference parameter.</param>
+        public override void RefMethod(ref int value) { }
+
+        /// <summary>
+        /// Overrides the property with a constructed generic type.
+        /// </summary>
+        public override List<int>? ListProperty { get; set; }
+
+        /// <summary>
+        /// Overrides the event with a constructed generic handler type.
+        /// </summary>
+        public override event EventHandler<int>? GenericEvent;
+    }
+
+    /// <summary>
+    /// A sample interface with parameter types constructed from its type parameter.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    public interface ISampleListProcessor<T>
+    {
+        /// <summary>Processes a list.</summary>
+        /// <param name="values">The list.</param>
+        void Process(List<T> values);
+
+        /// <summary>Processes an array.</summary>
+        /// <param name="values">The array.</param>
+        void ProcessArray(T[] values);
+    }
+
+    /// <summary>
+    /// A sample implementation with unrelated overloads that also satisfy the type parameter's constraints.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    public class SampleListProcessor<T> : ISampleListProcessor<T>
+    {
+        /// <inheritdoc/>
+        public void Process(List<T> values) { }
+
+        /// <summary>Processes strings independently of the interface implementation.</summary>
+        /// <param name="values">The strings.</param>
+        public void Process(List<string> values) { }
+
+        /// <inheritdoc/>
+        public void ProcessArray(T[] values) { }
+
+        /// <summary>Processes strings independently of the interface implementation.</summary>
+        /// <param name="values">The strings.</param>
+        public void ProcessArray(string[] values) { }
+    }
+
+    /// <summary>
+    /// A sample derived class that introduces virtual members with types different from the constructed base signatures.
+    /// </summary>
+    public class SampleConstructedSignatureMismatch : SampleConstructedSignatureBase<int>
+    {
+        /// <summary>Introduces an unrelated overload.</summary>
+        /// <param name="list">The list.</param>
+        public virtual void ListMethod(List<string> list) { }
+
+        /// <summary>Hides the base property with a different type.</summary>
+        public new virtual List<string>? ListProperty { get; set; }
+
+        /// <summary>Hides the base event with a different handler type.</summary>
+        public new virtual event EventHandler<string>? GenericEvent;
+    }
+
+    /// <summary>
     /// A sample generic struct.
     /// </summary>
     /// <typeparam name="T">The type parameter.</typeparam>
@@ -1320,6 +1441,46 @@ namespace Acme
         /// A non-extension method to verify correct classification.
         /// </summary>
         public static void NonExtensionMethod() { }
+    }
+
+    /// <summary>
+    /// A sample enum with a negative member.
+    /// </summary>
+    public enum SampleSignedEnum
+    {
+        /// <summary>A negative value.</summary>
+        Negative = -1,
+        /// <summary>The zero value.</summary>
+        Zero = 0,
+        /// <summary>A positive value.</summary>
+        Positive = 1,
+    }
+
+    /// <summary>
+    /// A sample flags enum with a member that sets every bit.
+    /// </summary>
+    [Flags]
+    public enum SampleSignedFlags
+    {
+        /// <summary>No flags.</summary>
+        None = 0,
+        /// <summary>The read flag.</summary>
+        Read = 1,
+        /// <summary>The write flag.</summary>
+        Write = 2,
+        /// <summary>All flags.</summary>
+        All = ~0,
+    }
+
+    /// <summary>
+    /// A sample enum with an unsigned 64-bit underlying type.
+    /// </summary>
+    public enum SampleUnsignedLongEnum : ulong
+    {
+        /// <summary>The zero value.</summary>
+        Zero = 0,
+        /// <summary>The largest value.</summary>
+        Max = ulong.MaxValue,
     }
 
     /// <summary>

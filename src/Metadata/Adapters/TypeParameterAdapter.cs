@@ -103,8 +103,8 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             if (type is ITypeParameter typeParameter)
                 return IsSatisfiableBy(typeParameter);
 
-            // Check reference type constraint, disallow value and by-ref-like types
-            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && type is not IClassType)
+            // Check reference type constraint, disallow value types, pointers, and by-ref types
+            if (Constraints.HasFlag(TypeParameterConstraints.ReferenceType) && (type.IsValueType || type is ITypeDecorator { Modifier: TypeModifier.Pointer or TypeModifier.ByRef }))
                 return false;
 
             // Check not-nullable value type constraint, disallow reference types

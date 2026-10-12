@@ -122,6 +122,47 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public override bool Represents(Type reflection) => base.Represents(Assembly.Repository.ResolveCanonicalType(reflection));
 
+        /// <summary>
+        /// Resolves a type parameter using the reflected inheritance hierarchy before metadata canonicalization.
+        /// </summary>
+        /// <param name="parameter">The parameter whose actual type argument is required.</param>
+        /// <returns>The bound type argument, or <see langword="null"/> if the parameter is not found in the hierarchy.</returns>
+        internal IType? FindTypeArgument(ITypeParameter parameter)
+        {
+            for (var type = Reflection; type is not null; type = type.BaseType)
+            {
+                if (FindInDeclaringTypes(type) is IType argument)
+                    return argument;
+            }
+
+            foreach (var interfaceType in Reflection.GetInterfaces())
+            {
+                if (FindInDeclaringTypes(interfaceType) is IType argument)
+                    return argument;
+            }
+
+            return null;
+
+            IType? FindInDeclaringTypes(Type type)
+            {
+                for (var current = type; current is not null; current = current.DeclaringType)
+                {
+                    if (!current.IsGenericType || parameter.DeclaringMember is not IType parameterOwner)
+                        continue;
+
+                    var definition = current.IsGenericTypeDefinition ? current : current.GetGenericTypeDefinition();
+                    if (!parameterOwner.Represents(definition))
+                        continue;
+
+                    var arguments = current.GetGenericArguments();
+                    if (parameter.Position < arguments.Length)
+                        return arguments[parameter.Position].GetMetadata();
+                }
+
+                return null;
+            }
+        }
+
         /// <inheritdoc/>
         public virtual bool IsAssignableFrom(IType source)
         {

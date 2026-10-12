@@ -19,6 +19,11 @@ namespace Kampute.DocToolkit.Metadata
         /// <value>
         /// The field's type metadata.
         /// </value>
+        /// <remarks>
+        /// For a fixed-size buffer, the type is a single-dimensional array of the element type of the buffer, as the buffer is
+        /// declared in C#; for example, <c>byte[]</c> for <c>fixed byte buffer[16]</c>. Use <see cref="TryGetFixedSizeBufferInfo"/>
+        /// to get the element type and length of the buffer.
+        /// </remarks>
         IType Type { get; }
 
         /// <summary>

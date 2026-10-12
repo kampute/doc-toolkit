@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
 {
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Metadata.Adapters;
+    using Kampute.DocToolkit.Metadata.Reflection;
     using Moq;
     using NUnit.Framework;
     using System;
@@ -28,16 +29,18 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
             assemblyMock.Setup(a => a.Represents(It.IsAny<Assembly>())).Returns(true);
             assemblyMock.Setup(a => a.Equals(It.IsAny<object>())).Returns((object obj) => ReferenceEquals(obj, assemblyMock.Object));
 
+            // The factory creates a new adapter on every call, so a repeated lookup returns the same instance only if the repository caches it.
             factoryMock = new Mock<IMemberAdapterFactory>();
-            factoryMock.Setup(f => f.CreateTypeMetadata(It.IsAny<IAssembly>(), It.IsAny<Type>())).Returns(new Mock<IType>().Object);
-            factoryMock.Setup(f => f.CreateTypeMetadata(It.IsAny<IType>(), It.IsAny<Type>())).Returns(new Mock<IType>().Object);
-            factoryMock.Setup(f => f.CreateConstructorMetadata(It.IsAny<IType>(), It.IsAny<ConstructorInfo>())).Returns(new Mock<IConstructor>().Object);
-            factoryMock.Setup(f => f.CreateMethodMetadata(It.IsAny<IType>(), It.IsAny<MethodInfo>())).Returns(new Mock<IMethodBase>().Object);
-            factoryMock.Setup(f => f.CreatePropertyMetadata(It.IsAny<IType>(), It.IsAny<PropertyInfo>())).Returns(new Mock<IProperty>().Object);
-            factoryMock.Setup(f => f.CreateEventMetadata(It.IsAny<IType>(), It.IsAny<EventInfo>())).Returns(new Mock<IEvent>().Object);
-            factoryMock.Setup(f => f.CreateFieldMetadata(It.IsAny<IType>(), It.IsAny<FieldInfo>())).Returns(new Mock<IField>().Object);
-            factoryMock.Setup(f => f.CreateParameterMetadata(It.IsAny<IMember>(), It.IsAny<ParameterInfo>())).Returns(new Mock<IParameter>().Object);
-            factoryMock.Setup(f => f.CreateCustomAttributeMetadata(It.IsAny<CustomAttributeData>(), It.IsAny<AttributeTarget>())).Returns(new Mock<ICustomAttribute>().Object);
+            factoryMock.Setup(f => f.CreateTypeMetadata(It.IsAny<IAssembly>(), It.IsAny<Type>())).Returns(() => new Mock<IType>().Object);
+            factoryMock.Setup(f => f.CreateTypeMetadata(It.IsAny<IType>(), It.IsAny<Type>())).Returns(() => new Mock<IType>().Object);
+            factoryMock.Setup(f => f.CreateConstructorMetadata(It.IsAny<IType>(), It.IsAny<ConstructorInfo>())).Returns(() => new Mock<IConstructor>().Object);
+            factoryMock.Setup(f => f.CreateMethodMetadata(It.IsAny<IType>(), It.IsAny<MethodInfo>())).Returns(() => new Mock<IMethodBase>().Object);
+            factoryMock.Setup(f => f.CreatePropertyMetadata(It.IsAny<IType>(), It.IsAny<PropertyInfo>())).Returns(() => new Mock<IProperty>().Object);
+            factoryMock.Setup(f => f.CreateEventMetadata(It.IsAny<IType>(), It.IsAny<EventInfo>())).Returns(() => new Mock<IEvent>().Object);
+            factoryMock.Setup(f => f.CreateFieldMetadata(It.IsAny<IType>(), It.IsAny<FieldInfo>())).Returns(() => new Mock<IField>().Object);
+            factoryMock.Setup(f => f.CreateParameterMetadata(It.IsAny<IMember>(), It.IsAny<ParameterInfo>())).Returns(() => new Mock<IParameter>().Object);
+            factoryMock.Setup(f => f.CreateCustomAttributeMetadata(It.IsAny<CustomAttributeData>(), It.IsAny<AttributeTarget>())).Returns(() => new Mock<ICustomAttribute>().Object);
+            factoryMock.Setup(f => f.CreateExtensionBlockMetadata(It.IsAny<IType>(), It.IsAny<ExtensionBlockInfo>())).Returns(() => new Mock<IExtensionBlock>().Object);
 
             repository = new MemberAdapterRepository(assemblyMock.Object, factoryMock.Object);
         }
@@ -90,8 +93,9 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         [Test]
         public void ResolveCanonicalType_WithGenericImplementedInterfacesType_ReturnsDirectInstance()
         {
-            var direct = typeof(IEnumerable<string>);
-            var viaReflection = typeof(Acme.SampleDerivedConstructedGenericClass).GetInterfaces()
+            var genericType = typeof(Acme.SampleDerivedGenericClass<,,>);
+            var direct = typeof(IEnumerable<>).MakeGenericType(genericType.GetGenericArguments()[2]);
+            var viaReflection = genericType.GetInterfaces()
                 .First(static i => i.Name == "IEnumerable`1");
 
             Assert.That(repository.ResolveCanonicalType(viaReflection), Is.SameAs(direct));
@@ -127,13 +131,34 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetTypeMetadata_WithValidType_ReturnsTypeMetadata()
+        public void GetTypeMetadata_WithTopLevelType_CreatesMetadataOnceForAssembly()
         {
             var type = typeof(string);
 
-            var result = repository.GetTypeMetadata(type);
+            var first = repository.GetTypeMetadata(type);
+            var second = repository.GetTypeMetadata(type);
 
-            Assert.That(result, Is.InstanceOf<IType>());
+            Assert.That(second, Is.SameAs(first));
+            factoryMock.Verify(f => f.CreateTypeMetadata(assemblyMock.Object, type), Times.Once);
+        }
+
+        [Test]
+        public void GetTypeMetadata_WithNestedType_CreatesMetadataForDeclaringTypeMetadata()
+        {
+            var type = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>);
+
+            repository.GetTypeMetadata(type);
+
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleGenericClass<>));
+            factoryMock.Verify(f => f.CreateTypeMetadata(declaringType, type), Times.Once);
+        }
+
+        [Test]
+        public void GetTypeMetadata_WithTypeOfAnotherAssembly_ThrowsArgumentException()
+        {
+            var repositoryOfAnotherAssembly = new MemberAdapterRepository(typeof(string).Assembly.GetMetadata());
+
+            Assert.That(() => repositoryOfAnotherAssembly.GetTypeMetadata(typeof(Acme.SampleMethods)), Throws.ArgumentException);
         }
 
         [Test]
@@ -144,13 +169,16 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetConstructorMetadata_WithValidConstructor_ReturnsConstructorMetadata()
+        public void GetConstructorMetadata_WithValidConstructor_CreatesMetadataOnceForDeclaringType()
         {
             var constructorInfo = typeof(Acme.SampleConstructors).GetConstructor(Acme.Bindings.AllDeclared, Type.EmptyTypes)!;
 
-            var result = repository.GetConstructorMetadata(constructorInfo);
+            var first = repository.GetConstructorMetadata(constructorInfo);
+            var second = repository.GetConstructorMetadata(constructorInfo);
 
-            Assert.That(result, Is.InstanceOf<IConstructor>());
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleConstructors));
+            factoryMock.Verify(f => f.CreateConstructorMetadata(declaringType, constructorInfo), Times.Once);
         }
 
         [Test]
@@ -161,23 +189,36 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetMethodMetadata_WithValidMethod_ReturnsMethodBaseMetadata()
+        public void GetMethodMetadata_WithValidMethod_CreatesMetadataOnceForDeclaringType()
         {
             var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RegularMethod), Acme.Bindings.AllDeclared)!;
 
-            var result = repository.GetMethodMetadata(methodInfo);
+            var first = repository.GetMethodMetadata(methodInfo);
+            var second = repository.GetMethodMetadata(methodInfo);
 
-            Assert.That(result, Is.InstanceOf<IMethodBase>());
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleMethods));
+            factoryMock.Verify(f => f.CreateMethodMetadata(declaringType, methodInfo), Times.Once);
         }
 
         [Test]
-        public void GetMethodMetadata_WithValidOperatorMethod_ReturnsMethodBaseMetadata()
+        public void GetMethodMetadata_WithExtensionBlockMethod_CreatesMetadataForNormalizedMethod()
         {
-            var methodInfo = typeof(Acme.SampleOperators).GetMethod("op_UnaryPlus", Acme.Bindings.AllDeclared)!;
+            var methodInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.InstanceExtensionMethod), Acme.Bindings.AllDeclared)!;
 
-            var result = repository.GetMethodMetadata(methodInfo);
+            repository.GetMethodMetadata(methodInfo);
 
-            Assert.That(result, Is.InstanceOf<IMethodBase>());
+            factoryMock.Verify(f => f.CreateMethodMetadata(It.IsAny<IType>(), It.Is<MethodInfo>(m => m is IExtensionBlockMethodInfo && ((IExtensionBlockMethodInfo)m).DeclaredMethod == methodInfo)), Times.Once);
+        }
+
+        [Test]
+        public void GetMethodMetadata_WithExtensionBlockMethodAsDeclared_CreatesMetadataForDeclaredMethod()
+        {
+            var methodInfo = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.InstanceExtensionMethod), Acme.Bindings.AllDeclared)!;
+
+            repository.GetMethodMetadata(methodInfo, asDeclared: true);
+
+            factoryMock.Verify(f => f.CreateMethodMetadata(It.IsAny<IType>(), methodInfo), Times.Once);
         }
 
         [Test]
@@ -188,13 +229,16 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetPropertyMetadata_WithValidProperty_ReturnsPropertyMetadata()
+        public void GetPropertyMetadata_WithValidProperty_CreatesMetadataOnceForDeclaringType()
         {
             var propertyInfo = typeof(Acme.SampleProperties).GetProperty(nameof(Acme.SampleProperties.RegularProperty), Acme.Bindings.AllDeclared)!;
 
-            var result = repository.GetPropertyMetadata(propertyInfo);
+            var first = repository.GetPropertyMetadata(propertyInfo);
+            var second = repository.GetPropertyMetadata(propertyInfo);
 
-            Assert.That(result, Is.InstanceOf<IProperty>());
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleProperties));
+            factoryMock.Verify(f => f.CreatePropertyMetadata(declaringType, propertyInfo), Times.Once);
         }
 
         [Test]
@@ -205,13 +249,16 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetEventMetadata_WithValidEvent_ReturnsEventMetadata()
+        public void GetEventMetadata_WithValidEvent_CreatesMetadataOnceForDeclaringType()
         {
             var eventInfo = typeof(Acme.SampleEvents).GetEvent(nameof(Acme.SampleEvents.RegularEvent), Acme.Bindings.AllDeclared)!;
 
-            var result = repository.GetEventMetadata(eventInfo);
+            var first = repository.GetEventMetadata(eventInfo);
+            var second = repository.GetEventMetadata(eventInfo);
 
-            Assert.That(result, Is.InstanceOf<IEvent>());
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleEvents));
+            factoryMock.Verify(f => f.CreateEventMetadata(declaringType, eventInfo), Times.Once);
         }
 
         [Test]
@@ -222,13 +269,16 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetFieldMetadata_WithValidField_ReturnsFieldMetadata()
+        public void GetFieldMetadata_WithValidField_CreatesMetadataOnceForDeclaringType()
         {
             var fieldInfo = typeof(Acme.SampleFields).GetField(nameof(Acme.SampleFields.VolatileField), Acme.Bindings.AllDeclared)!;
 
-            var result = repository.GetFieldMetadata(fieldInfo);
+            var first = repository.GetFieldMetadata(fieldInfo);
+            var second = repository.GetFieldMetadata(fieldInfo);
 
-            Assert.That(result, Is.InstanceOf<IField>());
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleFields));
+            factoryMock.Verify(f => f.CreateFieldMetadata(declaringType, fieldInfo), Times.Once);
         }
 
         [Test]
@@ -236,6 +286,36 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         {
             Assert.That(() => repository.GetFieldMetadata(null!), Throws.ArgumentNullException
                 .With.Property("ParamName").EqualTo("fieldInfo"));
+        }
+
+        [Test]
+        public void GetExtensionBlockMetadata_WithValidBlock_CreatesMetadataOnceForContainerType()
+        {
+            var block = repository.ExtensionReflection.GetDeclaredExtensionBlocks(typeof(Acme.SampleExtensions))[0];
+
+            var first = repository.GetExtensionBlockMetadata(block);
+            var second = repository.GetExtensionBlockMetadata(block);
+
+            Assert.That(second, Is.SameAs(first));
+            var declaringType = repository.GetTypeMetadata(typeof(Acme.SampleExtensions));
+            factoryMock.Verify(f => f.CreateExtensionBlockMetadata(declaringType, block), Times.Once);
+        }
+
+        [Test]
+        public void GetExtensionBlockMetadata_WithBlockOfAnotherAssembly_ThrowsArgumentException()
+        {
+            var block = new ExtensionContainerInfo(typeof(Acme.SampleExtensions)).ExtensionBlocks[0];
+            assemblyMock.Setup(a => a.Represents(It.IsAny<Assembly>())).Returns(false);
+
+            Assert.That(() => repository.GetExtensionBlockMetadata(block), Throws.ArgumentException
+                .With.Property("ParamName").EqualTo("extensionBlock"));
+        }
+
+        [Test]
+        public void GetExtensionBlockMetadata_WithNullBlock_ThrowsArgumentNullException()
+        {
+            Assert.That(() => repository.GetExtensionBlockMetadata(null!), Throws.ArgumentNullException
+                .With.Property("ParamName").EqualTo("extensionBlock"));
         }
 
         [Test]
@@ -262,16 +342,6 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         public void GetMemberMetadata_WithMethod_ReturnsMethodBaseMetadata()
         {
             var memberInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RegularMethod), Acme.Bindings.AllDeclared)!;
-
-            var result = ((IMemberAdapterRepository)repository).GetMemberMetadata(memberInfo);
-
-            Assert.That(result, Is.InstanceOf<IMethodBase>());
-        }
-
-        [Test]
-        public void GetMemberMetadata_WithOperatorMethod_ReturnsMethodBaseMetadata()
-        {
-            var memberInfo = typeof(Acme.SampleOperators).GetMethod("op_UnaryPlus", Acme.Bindings.AllDeclared)!;
 
             var result = ((IMemberAdapterRepository)repository).GetMemberMetadata(memberInfo);
 
@@ -309,6 +379,25 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
+        public void GetMemberMetadata_WithExtensionBlockPropertyAccessor_ReturnsPropertyMetadata()
+        {
+            var accessor = typeof(Acme.SampleExtensions).GetMethod(nameof(Acme.SampleExtensions.get_InstanceExtensionProperty), Acme.Bindings.AllDeclared)!;
+
+            var result = ((IMemberAdapterRepository)repository).GetMemberMetadata(accessor);
+
+            Assert.That(result, Is.InstanceOf<IProperty>());
+            factoryMock.Verify(f => f.CreatePropertyMetadata(It.IsAny<IType>(), It.Is<PropertyInfo>(p => p is IExtensionBlockPropertyInfo && p.Name == "InstanceExtensionProperty")), Times.Once);
+        }
+
+        [Test]
+        public void GetMemberMetadata_WithUnsupportedMember_ThrowsNotSupportedException()
+        {
+            var memberInfo = new Mock<MemberInfo>().Object;
+
+            Assert.That(() => ((IMemberAdapterRepository)repository).GetMemberMetadata(memberInfo), Throws.TypeOf<NotSupportedException>());
+        }
+
+        [Test]
         public void GetMemberMetadata_WithNullMember_ThrowsArgumentNullException()
         {
             Assert.That(() => ((IMemberAdapterRepository)repository).GetMemberMetadata(null!), Throws.ArgumentNullException
@@ -316,14 +405,15 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetParameterMetadata_WithValidParameter_ReturnsParameterMetadata()
+        public void GetParameterMetadata_WithValidParameter_CreatesMetadataForDeclaringMember()
         {
             var methodInfo = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RefParamsMethod), Acme.Bindings.AllDeclared)!;
             var parameterInfo = methodInfo.GetParameters()[0];
 
-            var result = repository.GetParameterMetadata(parameterInfo);
+            repository.GetParameterMetadata(parameterInfo);
 
-            Assert.That(result, Is.InstanceOf<IParameter>());
+            var member = repository.GetMethodMetadata(methodInfo);
+            factoryMock.Verify(f => f.CreateParameterMetadata(member, parameterInfo), Times.Once);
         }
 
         [Test]
@@ -334,13 +424,13 @@ namespace Kampute.DocToolkit.Test.Metadata.Adapters
         }
 
         [Test]
-        public void GetCustomAttributeMetadata_WithValidAttribute_ReturnsCustomAttributeMetadata()
+        public void GetCustomAttributeMetadata_WithValidAttribute_CreatesMetadataForTarget()
         {
             var attributeData = typeof(Acme.SampleAttribute).GetCustomAttributesData()[0];
 
-            var result = repository.GetCustomAttributeMetadata(attributeData, AttributeTarget.Type);
+            repository.GetCustomAttributeMetadata(attributeData, AttributeTarget.Type);
 
-            Assert.That(result, Is.InstanceOf<ICustomAttribute>());
+            factoryMock.Verify(f => f.CreateCustomAttributeMetadata(attributeData, AttributeTarget.Type), Times.Once);
         }
 
         [Test]

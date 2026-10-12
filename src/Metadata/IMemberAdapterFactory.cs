@@ -108,7 +108,6 @@ namespace Kampute.DocToolkit.Metadata
         /// <param name="parameterInfo">The reflection parameter to get metadata for.</param>
         /// <returns>A metadata representation of the specified parameter.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> or <paramref name="parameterInfo"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="parameterInfo"/> does not belong to <paramref name="member"/>.</exception>
         IParameter CreateParameterMetadata(IMember member, ParameterInfo parameterInfo);
 
         /// <summary>

@@ -169,7 +169,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
                 throw new ArgumentException("A type parameter can only be declared by an assembly.", nameof(declaringEntity));
             }
 
-            if (type.IsArray || type.IsPointer || type.IsByRef || Nullable.GetUnderlyingType(type) is not null)
+            if (type.IsArray || type.IsPointer || type.IsByRef || TypeDecoratorAdapter.GetNullableUnderlyingType(type) is not null)
                 return new TypeDecoratorAdapter(declaringEntity, type);
 
             if (type.IsEnum)

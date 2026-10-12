@@ -68,27 +68,13 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// <inheritdoc/>
         public virtual bool TryGetFixedSizeBufferInfo([NotNullWhen(true)] out IType? elementType, out int length)
         {
-            var args = GetCustomAttributes()
-                .FirstOrDefault(static a => a.AttributeType.FullName == AttributeNames.FixedBuffer)?
-                .ConstructorArguments;
-
-            if
-            (
-                args is not null &&
-                args.Count == 2 &&
-                args[0].ArgumentType.FullName == "System.Type" &&
-                args[0].Value is Type bufferType &&
-                args[1].ArgumentType.FullName == "System.Int32" &&
-                args[1].Value is int bufferSize
-            )
+            if (TryGetFixedSizeBufferAttributeArguments(out var bufferType, out length))
             {
                 elementType = MetadataProvider.GetMetadata(bufferType);
-                length = bufferSize;
                 return true;
             }
 
             elementType = null;
-            length = 0;
             return false;
         }
 
@@ -138,6 +124,47 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// Retrieves the type of the field.
         /// </summary>
         /// <returns>An <see cref="IType"/> representing the type of the field.</returns>
-        protected virtual IType GetFieldType() => (IsFixedSizeBuffer ? typeof(int[]) : Reflection.FieldType).GetMetadata();
+        /// <remarks>
+        /// The type of a fixed-size buffer is an array of its element type, as the buffer is declared in C#, rather than the
+        /// compiler-generated structure that holds the buffer.
+        /// </remarks>
+        protected virtual IType GetFieldType()
+        {
+            return TryGetFixedSizeBufferAttributeArguments(out var bufferType, out _)
+                ? bufferType.MakeArrayType().GetMetadata()
+                : Reflection.FieldType.GetMetadata();
+        }
+
+        /// <summary>
+        /// Attempts to get the element type and length of the fixed-size buffer from its <c>FixedBuffer</c> attribute.
+        /// </summary>
+        /// <param name="elementType">When this method returns, contains the element type of the buffer if the field is a fixed-size buffer; otherwise, <see langword="null"/>.</param>
+        /// <param name="length">When this method returns, contains the length of the buffer if the field is a fixed-size buffer; otherwise, 0.</param>
+        /// <returns><see langword="true"/> if the field is a fixed-size buffer; otherwise, <see langword="false"/>.</returns>
+        private bool TryGetFixedSizeBufferAttributeArguments([NotNullWhen(true)] out Type? elementType, out int length)
+        {
+            var args = GetCustomAttributes()
+                .FirstOrDefault(static a => a.AttributeType.FullName == AttributeNames.FixedBuffer)?
+                .ConstructorArguments;
+
+            if
+            (
+                args is not null &&
+                args.Count == 2 &&
+                args[0].ArgumentType.FullName == "System.Type" &&
+                args[0].Value is Type bufferType &&
+                args[1].ArgumentType.FullName == "System.Int32" &&
+                args[1].Value is int bufferSize
+            )
+            {
+                elementType = bufferType;
+                length = bufferSize;
+                return true;
+            }
+
+            elementType = null;
+            length = 0;
+            return false;
+        }
     }
 }

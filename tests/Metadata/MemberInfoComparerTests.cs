@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
+    using System;
     using System.Linq;
 
     [TestFixture]
@@ -147,6 +148,28 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 Assert.That(Comparer.Equals(first, second), Is.False);
                 Assert.That(Comparer.GetHashCode(first), Is.Not.EqualTo(Comparer.GetHashCode(second)));
+            }
+        }
+
+        [TestCase(typeof(int[]), typeof(int[,]))]
+        [TestCase(typeof(int[]), typeof(long[]))]
+        [TestCase(typeof(int[]), typeof(int*))]
+        public static void Equals_TypesWithDifferentElementShapes_ReturnsFalse(Type first, Type second)
+        {
+            Assert.That(Comparer.Equals(first, second), Is.False);
+        }
+
+        [Test]
+        public static void Equals_InheritedMethodReflectedThroughDifferentTypes_ReturnsTrue()
+        {
+            var first = typeof(object).GetMethod(nameof(GetHashCode))!;
+            var second = typeof(Acme.SampleConstructors).GetMethod(nameof(GetHashCode))!;
+            Assert.That(second, Is.Not.SameAs(first), "Precondition: reflection returns distinct instances for each reflected type.");
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(Comparer.Equals(first, second), Is.True);
+                Assert.That(Comparer.GetHashCode(first), Is.EqualTo(Comparer.GetHashCode(second)));
             }
         }
 

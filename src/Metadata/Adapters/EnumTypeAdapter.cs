@@ -8,7 +8,6 @@ namespace Kampute.DocToolkit.Metadata.Adapters
     using Kampute.DocToolkit.Metadata;
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.Linq;
     using System.Reflection;
 
@@ -75,7 +74,7 @@ namespace Kampute.DocToolkit.Metadata.Adapters
             {
                 try
                 {
-                    return Convert.ToUInt64(val, CultureInfo.InvariantCulture);
+                    return EnumBits.ToBits(val!);
                 }
                 catch (Exception)
                 {

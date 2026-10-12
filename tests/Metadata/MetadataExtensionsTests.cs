@@ -8,7 +8,10 @@ namespace Kampute.DocToolkit.Test.Metadata
     using Kampute.DocToolkit.Metadata;
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
+    using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
 
     [TestFixture]
     public class MetadataExtensionsTests
@@ -350,6 +353,88 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
+        public void GetMemberDefinition_WithNullMember_ThrowsArgumentNullException()
+        {
+            Assert.That(static () => default(IMember)!.GetMemberDefinition(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("member"));
+        }
+
+        [Test]
+        public void GetMemberDefinition_WithConstructedGenericType_ReturnsGenericTypeDefinition()
+        {
+            var type = typeof(System.Collections.Generic.List<int>).GetMetadata();
+
+            Assert.That(type.GetMemberDefinition(), Is.SameAs(typeof(System.Collections.Generic.List<>).GetMetadata()));
+        }
+
+        [Test]
+        public void GetMemberDefinition_WithArrayType_ReturnsElementType()
+        {
+            var type = typeof(int[]).GetMetadata();
+
+            Assert.That(type.GetMemberDefinition(), Is.SameAs(typeof(int).GetMetadata()));
+        }
+
+        [Test]
+        public void GetMemberDefinition_WithMemberOfNonGenericType_ReturnsSameMember()
+        {
+            var method = typeof(Acme.SampleMethods).GetMethod(nameof(Acme.SampleMethods.RegularMethod))!.GetMetadata();
+
+            Assert.That(method.GetMemberDefinition(), Is.SameAs(method));
+        }
+
+        [TestCase("Property")]
+        [TestCase("Event")]
+        [TestCase("Method")]
+        [TestCase("GenericMethod")]
+        [TestCase("Implicit")]
+        [TestCase("Acme.ISampleInterface.InterfaceProperty")]
+        [TestCase("Acme.ISampleInterface.InterfaceEvent")]
+        [TestCase("Acme.ISampleInterface.InterfaceMethod")]
+        public void GetMemberDefinition_WithMemberOfConstructedGenericType_ReturnsMemberOfGenericTypeDefinition(string memberName)
+        {
+            var constructedType = typeof(Acme.SampleGenericClass<object>.InnerGenericClass<int, string>.DeepInnerGenericClass).GetMetadata();
+            var definitionType = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetMetadata();
+            var member = constructedType.GetMembers().Single(m => m.Name == memberName);
+            var expected = definitionType.GetMembers().Single(m => m.Name == memberName);
+
+            Assert.That(member.GetMemberDefinition(), Is.SameAs(expected));
+        }
+
+        private static IEnumerable<TestCaseData> MembersWithSignatureBuiltFromTypeParameters()
+        {
+            yield return new TestCaseData(typeof(List<int>).GetMethod(nameof(List<int>.AddRange))!, typeof(List<>).GetMethod(nameof(List<int>.AddRange))!)
+                .SetArgDisplayNames("Method with IEnumerable<T> parameter");
+            yield return new TestCaseData(typeof(ArraySegment<int>).GetMethod("op_Equality")!, typeof(ArraySegment<>).GetMethod("op_Equality")!)
+                .SetArgDisplayNames("Operator with declaring type parameters");
+            yield return new TestCaseData(typeof(Dictionary<int, string>).GetProperty(nameof(Dictionary<int, string>.Keys))!, typeof(Dictionary<,>).GetProperty(nameof(Dictionary<int, string>.Keys))!)
+                .SetArgDisplayNames("Property of nested generic type");
+            yield return new TestCaseData(typeof(Progress<int>).GetEvent(nameof(Progress<int>.ProgressChanged))!, typeof(Progress<>).GetEvent(nameof(Progress<int>.ProgressChanged))!)
+                .SetArgDisplayNames("Event with EventHandler<T> type");
+        }
+
+        [TestCaseSource(nameof(MembersWithSignatureBuiltFromTypeParameters))]
+        public void GetMemberDefinition_WithMemberWhoseSignatureUsesConstructedTypes_ReturnsMemberOfGenericTypeDefinition(MemberInfo constructedMember, MemberInfo definitionMember)
+        {
+            var member = constructedMember.GetMetadata();
+
+            Assert.That(member.GetMemberDefinition(), Is.SameAs(definitionMember.GetMetadata()));
+        }
+
+        [Test]
+        public void GetMemberDefinition_WithMemberOfConstructedGenericTypeFromMetadataLoadContext_ReturnsMemberOfGenericTypeDefinition()
+        {
+            var assemblyPath = typeof(Acme.SampleDirectDerivedConstructedGenericClass).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath]);
+            var derivedType = universe.LoadFromPath(assemblyPath).GetType(typeof(Acme.SampleDirectDerivedConstructedGenericClass).FullName!)!;
+            var constructedType = derivedType.BaseType!.GetMetadata(); // DeepInnerGenericClass<object, int, string>
+            var definitionType = derivedType.BaseType!.GetGenericTypeDefinition().GetMetadata();
+            var member = constructedType.GetMembers().Single(static m => m.Name == "Implicit");
+            var expected = definitionType.GetMembers().Single(static m => m.Name == "Implicit");
+
+            Assert.That(member.GetMemberDefinition(), Is.SameAs(expected));
+        }
+
+        [Test]
         public void GetMembers_WithNullType_ThrowsArgumentNullException()
         {
             Assert.That(static () => default(IType)!.GetMembers(), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("type"));
@@ -443,7 +528,8 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             var membersDeep = type.GetMembersIncludingNested().ToList();
 
-            Assert.That(membersDeep.OfType<ITypeMember>().Any(m => !ReferenceEquals(m.DeclaringType, type)), Is.True);
+            var deepNestedType = typeof(Acme.SampleGenericClass<>.InnerGenericClass<,>.DeepInnerGenericClass).GetMetadata();
+            Assert.That(membersDeep.OfType<ITypeMember>().Where(static m => m.Name == "Method").Select(static m => m.DeclaringType), Does.Contain(deepNestedType));
         }
 
         [Test]

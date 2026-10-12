@@ -6,6 +6,7 @@
 namespace Kampute.DocToolkit.Test.Metadata
 {
     using Kampute.DocToolkit.Metadata;
+    using Kampute.DocToolkit.Metadata.Adapters;
     using Moq;
     using NUnit.Framework;
     using System;
@@ -32,6 +33,37 @@ namespace Kampute.DocToolkit.Test.Metadata
 
             Assert.That(second, Is.Not.Null);
             Assert.That(second, Is.SameAs(first));
+        }
+
+        [Test]
+        public void UseAssemblyFactory_WithNullFactory_ThrowsArgumentNullException()
+        {
+            Assert.That(static () => MetadataProvider.UseAssemblyFactory(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("factory"));
+        }
+
+        [Test]
+        public void UseAssemblyFactory_AppliesOnlyToAssembliesWithoutCachedMetadata()
+        {
+            var cachedAssembly = typeof(Acme.ISampleInterface).Assembly;
+            var uncachedAssembly = typeof(MetadataProvider).Assembly;
+            var cachedMetadata = cachedAssembly.GetMetadata();
+            var customMetadata = Mock.Of<IAssembly>();
+
+            try
+            {
+                MetadataProvider.UseAssemblyFactory(_ => customMetadata);
+
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(uncachedAssembly.GetMetadata(), Is.SameAs(customMetadata));
+                    Assert.That(cachedAssembly.GetMetadata(), Is.SameAs(cachedMetadata));
+                }
+            }
+            finally
+            {
+                MetadataProvider.UseAssemblyFactory(static assembly => new AssemblyAdapter(assembly));
+                MetadataProvider.ClearCache();
+            }
         }
 
         [Test]
@@ -320,7 +352,7 @@ namespace Kampute.DocToolkit.Test.Metadata
             {
                 var mockAssembly = new Mock<Assembly>();
                 mockAssembly.Setup(static a => a.GetName()).Returns(new AssemblyName("TestAssembly"));
-                mockAssembly.Setup(static a => a.Location).Returns(Path.GetTempFileName());
+                mockAssembly.Setup(static a => a.Location).Returns(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()));
                 mockAssembly.Setup(static a => a.Modules).Returns([]);
                 mockAssembly.Setup(static a => a.CustomAttributes).Returns([]);
                 mockAssembly.Setup(static a => a.GetExportedTypes()).Returns([]);

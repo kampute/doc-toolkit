@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Test.Metadata
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
 
     [TestFixture]
     public class MetadataUniverseTests
@@ -84,16 +85,6 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Constructor_WithValidAssemblyPaths_CreatesInstance()
-        {
-            var assemblyPaths = new[] { testAssemblyPath };
-
-            using var universe = new MetadataUniverse(assemblyPaths);
-
-            Assert.That(universe, Is.Not.Null);
-        }
-
-        [Test]
         public void Constructor_WithEmptyAssemblyPaths_CreatesInstance()
         {
             var assemblyPaths = Array.Empty<string>();
@@ -132,13 +123,24 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void Constructor_WithIncludeTrustedPlatformAssembliesFalse_DoesNotIncludeTrustedAssemblies()
+        public void Constructor_WithIncludeTrustedPlatformAssembliesFalse_CannotResolveReferencedPlatformAssemblies()
         {
-            var assemblyPaths = new[] { testAssemblyPath };
+            // The test assembly references System.Runtime, which is a trusted platform assembly but not the core assembly.
+            var assemblyPath = typeof(MetadataUniverseTests).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath], includeTrustedPlatformAssemblies: false);
+            var type = universe.LoadFromPath(assemblyPath).GetType(typeof(MetadataUniverseTests).FullName!)!;
 
-            using var universe = new MetadataUniverse(assemblyPaths, includeTrustedPlatformAssemblies: false);
+            Assert.That(() => type.BaseType, Throws.TypeOf<FileNotFoundException>());
+        }
 
-            Assert.That(universe, Is.Not.Null);
+        [Test]
+        public void Constructor_WithIncludeTrustedPlatformAssembliesTrue_ResolvesReferencedPlatformAssemblies()
+        {
+            var assemblyPath = typeof(MetadataUniverseTests).Assembly.Location;
+            using var universe = new MetadataUniverse([assemblyPath], includeTrustedPlatformAssemblies: true);
+            var type = universe.LoadFromPath(assemblyPath).GetType(typeof(MetadataUniverseTests).FullName!)!;
+
+            Assert.That(type.BaseType?.FullName, Is.EqualTo(typeof(object).FullName));
         }
 
         [Test]
@@ -162,14 +164,13 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void LoadFromPath_WithValidPath_LoadsAssembly()
+        public void LoadFromPath_WithValidPath_LoadsAssemblyFromThatFile()
         {
             using var universe = new MetadataUniverse([testAssemblyPath]);
 
             var assembly = universe.LoadFromPath(testAssemblyPath);
 
-            Assert.That(assembly, Is.Not.Null);
-            Assert.That(assembly.GetName().Name, Is.Not.Null.And.Not.Empty);
+            Assert.That(assembly.Location, Is.EqualTo(Path.GetFullPath(testAssemblyPath)).IgnoreCase);
         }
 
         [Test]
@@ -227,6 +228,18 @@ namespace Kampute.DocToolkit.Test.Metadata
             universe.Dispose();
 
             Assert.That(universe.Dispose, Throws.Nothing);
+        }
+
+        [Test]
+        public void Dispose_RemovesMetadataOfLoadedAssembliesFromAvailableAssemblies()
+        {
+            var universe = new MetadataUniverse([testAssemblyPath]);
+            var assemblyMetadata = universe.LoadFromPath(testAssemblyPath).GetMetadata();
+            Assert.That(MetadataProvider.AvailableAssemblies, Does.Contain(assemblyMetadata), "Precondition: metadata is cached while the universe is alive.");
+
+            universe.Dispose();
+
+            Assert.That(MetadataProvider.AvailableAssemblies, Does.Not.Contain(assemblyMetadata));
         }
 
         [Test]
@@ -298,41 +311,39 @@ namespace Kampute.DocToolkit.Test.Metadata
         }
 
         [Test]
-        public void FromProbeFolders_WithIncludeTrustedPlatformAssembliesFalse_DoesNotIncludeTrustedAssemblies()
+        public void FromProbeFolders_WithIncludeTrustedPlatformAssembliesFalse_CreatesInstance()
         {
+            // Whether platform assemblies stay unresolvable cannot be observed here: the probe folders include the local NuGet
+            // cache, and the resolver falls back to the assemblies loaded in the application domain.
             var probeFolders = new[] { testDirectory };
 
             using var universe = MetadataUniverse.FromProbeFolders(probeFolders, includeTrustedPlatformAssemblies: false);
 
-            Assert.That(universe, Is.Not.Null);
+            Assert.That(universe.LoadFromPath(testAssemblyPath).Location, Is.EqualTo(Path.GetFullPath(testAssemblyPath)).IgnoreCase);
         }
 
         [Test]
-        public void MetadataUniverse_LoadsAssemblyMetadata_NotExecutable()
+        public void MetadataUniverse_LoadsAssemblyMetadataOnly()
         {
             using var universe = new MetadataUniverse([testAssemblyPath]);
+
             var assembly = universe.LoadFromPath(testAssemblyPath);
 
-            // Verify it's metadata-only by checking that types cannot be instantiated
-            var type = assembly.GetTypes().FirstOrDefault(t => !t.IsAbstract && !t.IsInterface);
-            if (type != null)
-            {
-                Assert.That(() => Activator.CreateInstance(type), Throws.ArgumentException
-                    .With.Message.Contain("Type must be a type provided by the runtime"));
-            }
+            Assert.That(assembly.ReflectionOnly, Is.True);
         }
 
         [Test]
-        public void MetadataUniverse_LoadedAssembly_HasExpectedProperties()
+        public void MetadataUniverse_LoadedAssembly_HasIdentityOfFile()
         {
             using var universe = new MetadataUniverse([testAssemblyPath]);
-            var assembly = universe.LoadFromPath(testAssemblyPath);
+            var expected = AssemblyName.GetAssemblyName(testAssemblyPath);
+
+            var actual = universe.LoadFromPath(testAssemblyPath).GetName();
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(assembly.GetName().Name, Is.Not.Null.And.Not.Empty);
-                Assert.That(assembly.GetName().Version, Is.Not.Null);
-                Assert.That(assembly.Modules, Is.Not.Empty);
+                Assert.That(actual.Name, Is.EqualTo(expected.Name));
+                Assert.That(actual.Version, Is.EqualTo(expected.Version));
             }
         }
 
@@ -367,10 +378,8 @@ namespace Kampute.DocToolkit.Test.Metadata
             using var universe = new MetadataUniverse([testAssemblyPath]);
             var assembly = universe.LoadFromPath(testAssemblyPath);
 
-            // Try to get a type - this may require resolving dependencies
-            var types = assembly.GetTypes();
-
-            Assert.That(types, Is.Not.Null);
+            // Resolving base types requires loading the assemblies the loaded assembly references.
+            Assert.That(() => assembly.GetTypes().Select(static t => t.BaseType).ToList(), Throws.Nothing);
         }
     }
 }

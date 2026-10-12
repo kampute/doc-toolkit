@@ -79,5 +79,21 @@ namespace Kampute.DocToolkit.Metadata.Adapters
         /// </summary>
         /// <returns>The generic member definition if found; otherwise, <see langword="null"/>.</returns>
         protected abstract IVirtualTypeMember? FindGenericDefinition();
+
+        /// <summary>
+        /// Determines whether the specified member shares its metadata definition with this member.
+        /// </summary>
+        /// <param name="candidate">The member to compare, typically a member of the generic type definition of this member's declaring type.</param>
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="candidate"/> has the same metadata definition as this member; <see langword="false"/> if it does not;
+        /// or <see langword="null"/> if <paramref name="candidate"/> does not expose the reflection information needed to decide.
+        /// </returns>
+        /// <remarks>
+        /// A member of a constructed generic type and the corresponding member of its generic type definition share the same metadata definition.
+        /// Their signatures cannot be compared directly, because the type arguments of the constructed type replace the type parameters wherever
+        /// they appear in the signature, including within other constructed types such as <c>IEnumerable&lt;T&gt;</c>.
+        /// </remarks>
+        protected bool? SharesMetadataDefinitionWith(IVirtualTypeMember candidate)
+            => candidate is VirtualTypeMemberAdapter<T> adapter ? adapter.Reflection.HasSameMetadataDefinitionAs(Reflection) : null;
     }
 }
