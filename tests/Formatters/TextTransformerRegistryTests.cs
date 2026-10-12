@@ -28,14 +28,21 @@ namespace Kampute.DocToolkit.Test.Formatters
         }
 
         [Test]
-        public void CanTransform_WithSupportedFileExtension_ReturnsTrue()
+        public void Constructor_WithNullTargetFileExtension_ThrowsArgumentNullException()
+        {
+            Assert.That(() => new TextTransformerRegistry(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("targetFileExtension"));
+        }
+
+        [Test]
+        public void Register_WithNullArgument_ThrowsArgumentNullException()
         {
             var registry = new TextTransformerRegistry(".html");
-            registry.Register(new TestTransformer(), ".md");
 
-            var result = registry.CanTransform(".md");
-
-            Assert.That(result, Is.True);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(() => registry.Register(null!, ".md"), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("transformer"));
+                Assert.That(() => registry.Register(new TestTransformer(), (string[])null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fileExtensions"));
+            }
         }
 
         [Test]
@@ -99,6 +106,65 @@ namespace Kampute.DocToolkit.Test.Formatters
             {
                 Assert.That(result, Is.False);
                 Assert.That(transformer, Is.Null);
+            }
+        }
+
+        [Test]
+        public void Register_WithExistingExtension_ReplacesTransformer()
+        {
+            var registry = new TextTransformerRegistry(".html");
+            var original = new TestTransformer();
+            var replacement = new TestTransformer();
+            registry.Register(original, ".md");
+
+            registry.Register(replacement, ".md");
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(registry.TryGet(".md", out var transformer), Is.True);
+                Assert.That(transformer, Is.SameAs(replacement));
+                Assert.That(registry.SupportedFileExtensions, Is.EquivalentTo([".html", ".md"]));
+            }
+        }
+
+        [Test]
+        public void Register_WithTargetExtension_OverridesIdentityAndCannotBeRemoved()
+        {
+            var registry = new TextTransformerRegistry(".html");
+            var custom = new TestTransformer();
+            registry.Register(custom, ".HTML", ".md");
+
+            Assert.That(registry.Remove(".HTML"), Is.False);
+            registry.Remove<TestTransformer>();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(registry.TryGet(".html", out var transformer), Is.True);
+                Assert.That(transformer, Is.SameAs(custom));
+                Assert.That(registry.CanTransform(".md"), Is.False);
+                Assert.That(registry.SupportedFileExtensions, Is.EqualTo([".html"]));
+            }
+        }
+
+        [Test]
+        public void RegisteredExtensions_AreCaseInsensitiveForLookupAndRemoval()
+        {
+            var registry = new TextTransformerRegistry(".html");
+            var custom = new TestTransformer();
+            registry.Register(custom, ".MD");
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(registry.CanTransform(".md"), Is.True);
+                Assert.That(registry.TryGet(".md", out var transformer), Is.True);
+                Assert.That(transformer, Is.SameAs(custom));
+                Assert.That(registry.IsTargetFileExtension(".HTML"), Is.True);
+            }
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(registry.Remove(".md"), Is.True);
+                Assert.That(registry.CanTransform(".MD"), Is.False);
             }
         }
 
@@ -198,21 +264,6 @@ namespace Kampute.DocToolkit.Test.Formatters
         }
 
         [Test]
-        public void Remove_NonGeneric_DoesNotRemoveTargetFileExtension()
-        {
-            var registry = new TextTransformerRegistry(".html");
-
-            var result = registry.Remove(".html");
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(result, Is.False);
-                Assert.That(registry.CanTransform(".html"), Is.True);
-                Assert.That(registry.SupportedFileExtensions, Does.Contain(".html"));
-            }
-        }
-
-        [Test]
         public void Remove_Generic_RemovesAllTransformersOfSpecifiedType()
         {
             var registry = new TextTransformerRegistry(".html");
@@ -231,33 +282,6 @@ namespace Kampute.DocToolkit.Test.Formatters
                 Assert.That(registry.CanTransform(".rst"), Is.True);
                 Assert.That(registry.SupportedFileExtensions, Is.EquivalentTo([".html", ".rst"]));
             }
-        }
-
-        [Test]
-        public void Remove_Generic_DoesNotRemoveTargetFileExtension()
-        {
-            var registry = new TextTransformerRegistry(".html");
-
-            registry.Register<TestTransformer>(".html", ".xhtml");
-
-            registry.Remove<TestTransformer>();
-
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(registry.CanTransform(".html"), Is.True);
-                Assert.That(registry.CanTransform(".xhtml"), Is.False);
-                Assert.That(registry.SupportedFileExtensions, Is.EquivalentTo([".html"]));
-            }
-        }
-
-        [Test]
-        public void IsTargetFileExtension_WithTargetFileExtension_ReturnsTrue()
-        {
-            var registry = new TextTransformerRegistry(".html");
-
-            var result = registry.IsTargetFileExtension(".html");
-
-            Assert.That(result, Is.True);
         }
 
         [Test]

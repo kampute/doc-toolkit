@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.IO.Minifiers
     using System;
     using System.IO;
     using System.Runtime.CompilerServices;
+    using System.Text;
 
     /// <summary>
     /// A <see cref="TextWriter"/> that wraps another <see cref="TextWriter"/> to output well-formed Markdown content, minifying it by
@@ -18,6 +19,12 @@ namespace Kampute.DocToolkit.IO.Minifiers
     /// The <see cref="MarkdownMinifier"/> processes Markdown content by optimizing whitespace usage while ensuring that the formatting
     /// remains intact, particularly within code blocks. This helps improve readability and reduces unnecessary space without altering
     /// the Markdown's intended structure.
+    /// <para>
+    /// Whitespace is kept as written within fenced code blocks and within indented code blocks. An indented code block starts with a
+    /// line that is indented by four or more columns, where a tab counts as four columns, and follows a blank line. Indented lines
+    /// within a list are treated as continuations of the list items rather than as code, so code blocks nested inside list items are
+    /// minified like other content.
+    /// </para>
     /// <note type="caution" title="Important">
     /// This writer assumes well-formed Markdown input. Malformed Markdown may result in unexpected minification behavior and potentially
     /// corrupt output.
@@ -38,6 +45,14 @@ namespace Kampute.DocToolkit.IO.Minifiers
         private bool insideCodeBlock = false;
         private uint countedBackTick = 0;
         private uint usedBackTick = 0;
+
+        private readonly StringBuilder lineIndentation = new();
+        private bool lineHasContent = false;
+        private bool previousLineBlank = true;
+        private bool insideIndentedCodeLine = false;
+        private bool insideIndentedCodeBlock = false;
+        private bool insideList = false;
+        private ListMarkerState listMarkerState = ListMarkerState.None;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MarkdownMinifier"/> class.
@@ -66,6 +81,14 @@ namespace Kampute.DocToolkit.IO.Minifiers
                 insideCodeBlock = false;
             }
 
+            if (insideIndentedCodeLine)
+            {
+                WriteIndentedCode(value);
+                return;
+            }
+
+            UpdateListMarkerState(value);
+
             if (char.IsWhiteSpace(value))
             {
                 UpdateWhitespaceState(value);
@@ -81,6 +104,14 @@ namespace Kampute.DocToolkit.IO.Minifiers
 
             if (newLineInitiated)
             {
+                if (StartsIndentedCodeLine())
+                {
+                    BeginIndentedCodeLine(value);
+                    return;
+                }
+
+                StartLine(value);
+
                 newLineInitiated = false;
                 if (value is '#')
                     pendingSpaces = 0; // Reset to zero for headings
@@ -91,6 +122,135 @@ namespace Kampute.DocToolkit.IO.Minifiers
             WriteNonWhitespace(value);
             if (IsCodeBlockStarted(value))
                 insideCodeBlock = true;
+        }
+
+        /// <summary>
+        /// Determines whether the line that is starting belongs to an indented code block.
+        /// </summary>
+        /// <returns><see langword="true"/> if the line is part of an indented code block; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// A line indented by four or more columns starts an indented code block when it follows a blank line and does not continue
+        /// a list item, and continues an indented code block that is already open.
+        /// </remarks>
+        private bool StartsIndentedCodeLine()
+        {
+            const int CodeIndentation = 4;
+
+            return GetIndentationColumns() >= CodeIndentation && (insideIndentedCodeBlock || (previousLineBlank && !insideList));
+        }
+
+        /// <summary>
+        /// Gets the indentation of the current line in columns, where a tab advances to the next multiple of four columns.
+        /// </summary>
+        /// <returns>The number of columns of the leading spaces and tabs of the current line.</returns>
+        private int GetIndentationColumns()
+        {
+            const int TabSize = 4;
+
+            var columns = 0;
+            for (var i = 0; i < lineIndentation.Length; i++)
+            {
+                var c = lineIndentation[i];
+                if (c is ' ')
+                    columns++;
+                else if (c is '\t')
+                    columns += TabSize - (columns % TabSize);
+                else
+                    break;
+            }
+
+            return columns;
+        }
+
+        /// <summary>
+        /// Writes the first non-whitespace character of a line of an indented code block, preceded by the pending line breaks and
+        /// the original indentation of the line.
+        /// </summary>
+        /// <param name="value">The first non-whitespace character of the line.</param>
+        private void BeginIndentedCodeLine(char value)
+        {
+            while (pendingNewLines > 0)
+            {
+                UnderlyingWriter.Write('\n');
+                pendingNewLines--;
+            }
+
+            UnderlyingWriter.Write(lineIndentation.ToString());
+            UnderlyingWriter.Write(value);
+
+            pendingSpaces = 0;
+            newLineInitiated = false;
+            lineHasContent = true;
+            insideIndentedCodeLine = true;
+            insideIndentedCodeBlock = true;
+        }
+
+        /// <summary>
+        /// Writes a character of a line of an indented code block as is, and ends the line at a line break.
+        /// </summary>
+        /// <param name="value">The character to write.</param>
+        private void WriteIndentedCode(char value)
+        {
+            if (value is '\n')
+            {
+                insideIndentedCodeLine = false;
+                UpdateWhitespaceState(value);
+            }
+            else if (value is not '\r')
+            {
+                UnderlyingWriter.Write(value);
+            }
+        }
+
+        /// <summary>
+        /// Updates the block state when a line that is not part of an indented code block starts.
+        /// </summary>
+        /// <param name="value">The first non-whitespace character of the line.</param>
+        private void StartLine(char value)
+        {
+            if (insideIndentedCodeBlock)
+            {
+                insideIndentedCodeBlock = false;
+                if (pendingNewLines > 2)
+                    pendingNewLines = 2;
+            }
+
+            // A line at the margin after a blank line ends a list, unless it starts another list item.
+            if (previousLineBlank && GetIndentationColumns() < 2)
+                insideList = false;
+
+            listMarkerState = value switch
+            {
+                '-' or '*' or '+' => ListMarkerState.Bullet,
+                >= '0' and <= '9' => ListMarkerState.Digits,
+                _ => ListMarkerState.None
+            };
+
+            lineHasContent = true;
+        }
+
+        /// <summary>
+        /// Tracks the characters that follow the first character of a line to detect a list item marker.
+        /// </summary>
+        /// <param name="value">The character being written.</param>
+        private void UpdateListMarkerState(char value)
+        {
+            if (listMarkerState is ListMarkerState.None || newLineInitiated)
+                return;
+
+            switch (listMarkerState)
+            {
+                case ListMarkerState.Digits when value is >= '0' and <= '9':
+                    return;
+                case ListMarkerState.Digits when value is '.' or ')':
+                    listMarkerState = ListMarkerState.OrderedDelimiter;
+                    return;
+                case ListMarkerState.Bullet or ListMarkerState.OrderedDelimiter when value is ' ' or '\t' or '\n':
+                    insideList = true;
+                    break;
+            }
+
+            listMarkerState = ListMarkerState.None;
         }
 
         /// <summary>
@@ -144,10 +304,19 @@ namespace Kampute.DocToolkit.IO.Minifiers
             {
                 newLineInitiated = true;
                 pendingSpaces = 0;
-                if (pendingNewLines < 2)
-                    pendingNewLines++;
+                if (pendingNewLines < 2 || insideIndentedCodeBlock)
+                    pendingNewLines++; // Blank lines within an indented code block are kept until the block ends
+
+                previousLineBlank = !lineHasContent;
+                lineHasContent = false;
+                lineIndentation.Clear();
+                return;
             }
-            else if (whitespace is '\t')
+
+            if (newLineInitiated)
+                lineIndentation.Append(whitespace);
+
+            if (whitespace is '\t')
             {
                 if (newLineInitiated)
                     pendingSpaces += 2; // Two spaces for each tab at the beginning of a line
@@ -183,6 +352,32 @@ namespace Kampute.DocToolkit.IO.Minifiers
             }
 
             UnderlyingWriter.Write(nonWhitespace);
+        }
+
+        /// <summary>
+        /// Represents the progress of detecting a list item marker at the start of a line.
+        /// </summary>
+        private enum ListMarkerState
+        {
+            /// <summary>
+            /// The line does not start with a list item marker, or the marker has been detected.
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// The line starts with a bullet list marker character.
+            /// </summary>
+            Bullet,
+
+            /// <summary>
+            /// The line starts with the digits of an ordered list marker.
+            /// </summary>
+            Digits,
+
+            /// <summary>
+            /// The digits at the start of the line are followed by the delimiter of an ordered list marker.
+            /// </summary>
+            OrderedDelimiter
         }
     }
 }

@@ -47,6 +47,7 @@ namespace Kampute.DocToolkit.Test.Support
         [TestCase("\t This\t is\t a\t test.\n", true, ExpectedResult = "This is a test.")]
         [TestCase("This\r\nis\n\ra\rtest.", false, ExpectedResult = "This is a test.")]
         [TestCase("This\r\nis\n\ra\rtest.", true, ExpectedResult = "This is a test.")]
+        [TestCase("a\tb\nc", true, ExpectedResult = "a b c")]
         public string NormalizeWhitespace_ReturnExpectedText(string text, bool trim)
         {
             return TextUtility.NormalizeWhitespace(text, trim);
@@ -100,6 +101,18 @@ namespace Kampute.DocToolkit.Test.Support
         public string SplitLines_ReturnsCorrectLines(string text, int maxLineWidth, bool preserveLineBreaks)
         {
             return string.Join('\n', TextUtility.SplitLines(text, maxLineWidth, preserveLineBreaks));
+        }
+
+        [Test]
+        public void SplitLines_WithZeroMaxLineWidth_ThrowsArgumentOutOfRangeExceptionWhenCalled()
+        {
+            Assert.That(() => TextUtility.SplitLines("text", 0), Throws.TypeOf<System.ArgumentOutOfRangeException>().With.Property("ParamName").EqualTo("maxLineWidth"));
+        }
+
+        [Test]
+        public void NormalizeIndentation_WithNullLines_ThrowsArgumentNullException()
+        {
+            Assert.That(() => TextUtility.NormalizeIndentation(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("lines"));
         }
 
         [Test]

@@ -11,6 +11,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
     using Kampute.DocToolkit.Metadata;
     using NUnit.Framework;
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -19,7 +20,9 @@ namespace Kampute.DocToolkit.Test.IO.Writers
     public class MarkdownWriterTests
     {
         [TestCase("Hello *world*", ExpectedResult = "Hello \\*world\\*")]
-        [TestCase("1 > 2 & 3 < 4", ExpectedResult = "\\1 > 2 & 3 \\< 4")]
+        [TestCase("1 > 2 & 3 < 4", ExpectedResult = "1 > 2 & 3 \\< 4")]
+        [TestCase("1. item\n 2) item", ExpectedResult = "1\\. item\n 2\\) item")]
+        [TestCase("2024 was a year.", ExpectedResult = "2024 was a year.")]
         [TestCase("", ExpectedResult = "")]
         public string WriteUnsafe_WritesExpectedContent(string text)
         {
@@ -122,6 +125,7 @@ namespace Kampute.DocToolkit.Test.IO.Writers
         [TestCase("Hello World!", ExpectedResult = "```\nHello World!\n```\n\n")]
         [TestCase("Hello World!\n", ExpectedResult = "```\nHello World!\n```\n\n")]
         [TestCase("SELECT * FROM table;", "sql", ExpectedResult = "```sql\nSELECT * FROM table;\n```\n\n")]
+        [TestCase("```\nnested\n```", "md", ExpectedResult = "````md\n```\nnested\n```\n````\n\n")]
         public string WriteCodeBlock_WritesExpectedMarkdown(string code, string? language = null)
         {
             using var writer = new MarkdownWriter(new StringWriter() { NewLine = "\n" });
@@ -131,8 +135,13 @@ namespace Kampute.DocToolkit.Test.IO.Writers
             return writer.ToString();
         }
 
+        // Backslash escapes are not recognized inside code spans (CommonMark 6.1), so the text is written verbatim
+        // between fences longer than any run of backticks in it, padded with a space when it starts or ends with one.
         [TestCase("code", ExpectedResult = "`code`")]
-        [TestCase("`code`", ExpectedResult = "`\\`code\\``")]
+        [TestCase("List<T>[0] * _x", ExpectedResult = "`List<T>[0] * _x`")]
+        [TestCase("`code`", ExpectedResult = "`` `code` ``")]
+        [TestCase("a``b", ExpectedResult = "```a``b```")]
+        [TestCase(" a ", ExpectedResult = "`  a  `")]
         public string WriteInlineCode_WritesExpectedMarkdown(string text)
         {
             using var writer = new MarkdownWriter(new StringWriter());
@@ -239,6 +248,71 @@ namespace Kampute.DocToolkit.Test.IO.Writers
                 "| Row 2 Col 1 | Row 2 Col 2 |\n\n";
 
             Assert.That(writer.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void WriteTable_WithPipeInCellText_EscapesPipe()
+        {
+            using var writer = new MarkdownWriter(new StringWriter() { NewLine = "\n" });
+
+            writer.WriteTable(["Flags | Mask"], 1, static (w, _, _) =>
+            {
+                w.Write("Read | Write");
+                w.WriteInlineCode("a|b");
+            });
+
+            var expected =
+                "| Flags \\| Mask |\n" +
+                "| --- |\n" +
+                "| Read \\| Write`a\\|b` |\n\n";
+
+            Assert.That(writer.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Write_WithPipeOutsideTable_DoesNotEscapePipe()
+        {
+            using var writer = new MarkdownWriter(new StringWriter() { NewLine = "\n" });
+
+            writer.WriteTable(["A"], 0, static (_, _, _) => { });
+            writer.Write("x | y");
+
+            Assert.That(writer.ToString(), Is.EqualTo("| A |\n| --- |\n\nx | y"));
+        }
+
+        [TestCase(0)]
+        [TestCase(7)]
+        public void WriteHeading_WithLevelOutOfRange_ThrowsArgumentOutOfRangeException(int level)
+        {
+            using var writer = new MarkdownWriter(new StringWriter());
+
+            Assert.That(() => writer.WriteHeading(level, "Heading"), Throws.TypeOf<ArgumentOutOfRangeException>().With.Property("ParamName").EqualTo("level"));
+        }
+
+        private static IEnumerable<TestCaseData> InvalidArgumentCalls()
+        {
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteLink(null!, "text")), typeof(ArgumentNullException), "url").SetName("WriteLink_NullUrl");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteImage(null!)), typeof(ArgumentNullException), "imageUrl").SetName("WriteImage_NullUrl");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteCodeBlock(null!)), typeof(ArgumentNullException), "code").SetName("WriteCodeBlock_NullCode");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteInlineCode(null!)), typeof(ArgumentNullException), "text").SetName("WriteInlineCode_NullText");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteStrong((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteStrong_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteEmphasis((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteEmphasis_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteHeading(1, (Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteHeading_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteParagraph((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteParagraph_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteBlockquote((Action<MarkupWriter>)null!)), typeof(ArgumentNullException), "contentHandler").SetName("WriteBlockquote_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteList(1, null!)), typeof(ArgumentNullException), "itemContentHandler").SetName("WriteList_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteList(-1, (_, _) => { })), typeof(ArgumentOutOfRangeException), "count").SetName("WriteList_NegativeCount");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteTable(null!, 1, (_, _, _) => { })), typeof(ArgumentNullException), "columns").SetName("WriteTable_NullColumns");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteTable(["A"], 1, null!)), typeof(ArgumentNullException), "cellContentHandler").SetName("WriteTable_NullHandler");
+            yield return new TestCaseData((Action<MarkdownWriter>)(w => w.WriteTable(["A"], -1, (_, _, _) => { })), typeof(ArgumentOutOfRangeException), "rowCount").SetName("WriteTable_NegativeRowCount");
+        }
+
+        [TestCaseSource(nameof(InvalidArgumentCalls))]
+        public void WriteMethod_WithInvalidArgument_ThrowsDocumentedException(Action<MarkdownWriter> call, Type exceptionType, string paramName)
+        {
+            using var writer = new MarkdownWriter(new StringWriter());
+
+            Assert.That(() => call(writer), Throws.TypeOf(exceptionType).With.Property("ParamName").EqualTo(paramName));
         }
 
         [Test]

@@ -6,8 +6,10 @@
 namespace Kampute.DocToolkit.Test.Formatters
 {
     using Kampute.DocToolkit.Formatters;
+    using Kampute.DocToolkit.IO.Minifiers;
     using Kampute.DocToolkit.IO.Writers;
     using NUnit.Framework;
+    using System;
     using System.IO;
     using System.Xml.Linq;
 
@@ -49,6 +51,22 @@ namespace Kampute.DocToolkit.Test.Formatters
         }
 
         [Test]
+        public void Constructor_WithNullFileExtension_ThrowsArgumentNullException()
+        {
+            Assert.That(() => new MarkdownFormat(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fileExtension"));
+        }
+
+        [TestCase(".md")]
+        [TestCase(".markdown")]
+        [TestCase(".mdx")]
+        public void TextTransformers_ForMarkdownExtensionsAndTargetExtension_UseMarkdownLinkTransformer(string extension)
+        {
+            var customFormat = new MarkdownFormat(".mdx");
+
+            Assert.That(customFormat.TextTransformers.TryGet(extension, out var transformer) ? transformer : null, Is.InstanceOf<MarkdownLinkTransformer>());
+        }
+
+        [Test]
         public void CreateMarkupWriter_ReturnsMarkdownWriterInstance()
         {
             using var writer = new StringWriter();
@@ -56,6 +74,40 @@ namespace Kampute.DocToolkit.Test.Formatters
             using var markdownWriter = format.CreateMarkupWriter(writer);
 
             Assert.That(markdownWriter, Is.InstanceOf<MarkdownWriter>());
+        }
+
+        [TestCase(true, ExpectedResult = true)]
+        [TestCase(false, ExpectedResult = false)]
+        public bool CreateMarkupWriter_DisposesWrappedWriterOnlyWhenRequested(bool disposeWriter)
+        {
+            var writer = new StringWriter();
+
+            format.CreateMarkupWriter(writer, disposeWriter).Dispose();
+
+            try
+            {
+                writer.Write('x');
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
+            }
+        }
+
+        [Test]
+        public void CreateMinifier_ReturnsMarkdownMinifierThatOwnsWrappedWriter()
+        {
+            var writer = new StringWriter();
+
+            var minifier = format.CreateMinifier(writer);
+            minifier.Dispose();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(minifier, Is.InstanceOf<MarkdownMinifier>());
+                Assert.That(() => writer.Write('x'), Throws.TypeOf<ObjectDisposedException>());
+            }
         }
     }
 }

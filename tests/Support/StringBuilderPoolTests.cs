@@ -5,8 +5,10 @@
 
 namespace Kampute.DocToolkit.Test.Support
 {
+    using Kampute.DocToolkit.IO.Writers;
     using Kampute.DocToolkit.Support;
     using NUnit.Framework;
+    using System;
     using System.Globalization;
     using System.IO;
 
@@ -29,31 +31,15 @@ namespace Kampute.DocToolkit.Test.Support
         }
 
         [Test]
-        public void GetWriter_ReturnsStringWriter_AndRecycles()
-        {
-            var pool = new StringBuilderPool(2);
-
-            var writer = pool.GetWriter();
-            Assert.That(writer, Is.Not.Null);
-
-            writer.Write("test");
-            Assert.That(writer.ToString(), Is.EqualTo("test"));
-
-            writer.Dispose();
-            Assert.That(pool.Count, Is.EqualTo(1));
-        }
-
-        [Test]
         public void GetWriter_WithFormatProvider_ReturnsStringWriter_AndRecycles()
         {
             var pool = new StringBuilderPool(2);
 
-            var formatProvider = CultureInfo.InvariantCulture;
+            var formatProvider = CultureInfo.GetCultureInfo("fr-FR");
             var writer = pool.GetWriter(formatProvider);
-            Assert.That(writer, Is.Not.Null);
 
-            writer.Write("test");
-            Assert.That(writer.ToString(), Is.EqualTo("test"));
+            writer.Write("{0:F1}", 1.5);
+            Assert.That(writer.ToString(), Is.EqualTo("1,5"));
 
             writer.Dispose();
             Assert.That(pool.Count, Is.EqualTo(1));
@@ -65,12 +51,75 @@ namespace Kampute.DocToolkit.Test.Support
             var pool = new StringBuilderPool(1);
 
             var rsb1 = pool.GetBuilder();
-            rsb1.Dispose();
-
             var rsb2 = pool.GetBuilder();
+
+            Assert.That(rsb2.Builder, Is.Not.SameAs(rsb1.Builder));
+
+            rsb1.Dispose();
             rsb2.Dispose();
 
             Assert.That(pool.Count, Is.EqualTo(1));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void Constructor_WithNonPositiveCapacity_ThrowsArgumentOutOfRangeException(int capacity)
+        {
+            Assert.That(() => new StringBuilderPool(capacity), Throws.TypeOf<ArgumentOutOfRangeException>()
+                .With.Property("ParamName").EqualTo("capacity"));
+        }
+
+        [Test]
+        public void GetBuilder_ReusesReturnedBuilderWithEmptyContent()
+        {
+            var pool = new StringBuilderPool(1);
+            var original = pool.GetBuilder();
+            var builder = original.Builder;
+            builder.Append("previous content");
+            original.Dispose();
+
+            using var reused = pool.GetBuilder();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(reused.Builder, Is.SameAs(builder));
+                Assert.That(reused.ToString(), Is.Empty);
+                Assert.That(pool.Count, Is.Zero);
+            }
+        }
+
+        [Test]
+        public void GetWriter_ReusesBuilderReturnedByWriterWithEmptyContent()
+        {
+            var pool = new StringBuilderPool(1);
+            var original = pool.GetWriter();
+            var builder = original.GetStringBuilder();
+            original.Write("previous content");
+            original.Dispose();
+
+            using var reused = pool.GetWriter();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(reused.GetStringBuilder(), Is.SameAs(builder));
+                Assert.That(reused.ToString(), Is.Empty);
+                Assert.That(pool.Count, Is.Zero);
+            }
+        }
+
+        [Test]
+        public void GetWriter_DisposedByWrapperAndOwner_RecyclesBuilderOnce()
+        {
+            var pool = new StringBuilderPool(2);
+
+            using (var writer = pool.GetWriter())
+            using (var wrapper = new MarkdownWriter(writer))
+                wrapper.Write("content");
+
+            using var first = pool.GetWriter();
+            using var second = pool.GetWriter();
+
+            Assert.That(second.GetStringBuilder(), Is.Not.SameAs(first.GetStringBuilder()));
         }
 
         [Test]

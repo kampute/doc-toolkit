@@ -60,12 +60,15 @@ namespace Kampute.DocToolkit.Formatters
             var content = reader.ReadToEnd();
             content = LinkPattern.InAttributes.Replace(content, match =>
             {
-                var urlString = match.Groups[2].Success
-                    ? match.Groups[2].Value.Trim()
-                    : match.Groups[3].Value;
-                return urlTransformer.TryTransformUrl(urlString, out var replacementUrl)
-                    ? match.Value.Replace(urlString, replacementUrl.ToString())
-                    : match.Value;
+                var urlGroup = match.Groups[2].Success ? match.Groups[2] : match.Groups[3];
+                var urlString = urlGroup.Value.Trim();
+                if (!urlTransformer.TryTransformUrl(urlString, out var replacementUrl))
+                    return match.Value;
+
+                // Replace only the attribute value, leaving the attribute name unchanged even if it contains the URL.
+                var valueStart = urlGroup.Index - match.Index;
+                var value = urlGroup.Value.Replace(urlString, replacementUrl.ToString());
+                return match.Value[..valueStart] + value + match.Value[(valueStart + urlGroup.Length)..];
             });
             writer.Write(content);
         }

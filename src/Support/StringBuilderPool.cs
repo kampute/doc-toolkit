@@ -178,6 +178,8 @@ namespace Kampute.DocToolkit.Support
         {
             private readonly StringBuilderPool pool;
 
+            private bool recycled;
+
             /// <summary>
             /// Initializes a new instance of the <see cref="ReusableStringWriter"/> class.
             /// </summary>
@@ -205,14 +207,21 @@ namespace Kampute.DocToolkit.Support
             /// Releases the <see cref="StringBuilder"/> back to the pool.
             /// </summary>
             /// <param name="disposing"><see langword="true"/> if called from <see cref="IDisposable.Dispose"/>; <see langword="false"/> if called from a finalizer.</param>
+            /// <remarks>
+            /// The builder is returned to the pool only on the first disposal, so a writer disposed more than once, such as by
+            /// both its owner and a wrapping writer, cannot hand the same builder to two callers.
+            /// </remarks>
             protected override void Dispose(bool disposing)
             {
                 var pooledBuilder = GetStringBuilder();
 
                 base.Dispose(disposing);
 
-                if (disposing)
+                if (disposing && !recycled)
+                {
+                    recycled = true;
                     pool.Recycle(pooledBuilder);
+                }
             }
         }
     }

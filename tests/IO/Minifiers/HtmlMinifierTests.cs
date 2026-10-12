@@ -41,6 +41,7 @@ namespace Kampute.DocToolkit.Test.IO.Minifiers
         [TestCase("<div>Hello</div> <!--trailing comment--> ", ExpectedResult = "<div>Hello</div>")]
         [TestCase("<!-- comment -->Text", ExpectedResult = "Text")]
         [TestCase("Text<!-- comment -->", ExpectedResult = "Text")]
+        [TestCase("Hello<!-- a > b -- c -->World", ExpectedResult = "HelloWorld")]
 
         // Inline Element Whitespace Normalization
         [TestCase("   <span>   Hello  </span>   ", ExpectedResult = "<span>Hello</span>")]

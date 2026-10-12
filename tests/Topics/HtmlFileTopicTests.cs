@@ -50,6 +50,15 @@ namespace Kampute.DocToolkit.Test.Topics
             Assert.That(GetHtmlContent(html), Is.EqualTo("Body content"));
         }
 
+        [TestCase("<!-- <body> --><p>Content</p>")]
+        [TestCase("<!-- </body> --><p>Content</p>")]
+        public void Render_WithTagTextInComment_RendersOnlyBodyContent(string body)
+        {
+            var html = "<html><head><title>Guide</title></head><body>" + body + "</body></html>";
+
+            Assert.That(GetHtmlContent(html), Is.EqualTo(body));
+        }
+
         [Test]
         public void Render_WithComplexHtmlBody_RendersBodyContent()
         {

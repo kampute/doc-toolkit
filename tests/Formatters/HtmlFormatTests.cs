@@ -6,8 +6,10 @@
 namespace Kampute.DocToolkit.Test.Formatters
 {
     using Kampute.DocToolkit.Formatters;
+    using Kampute.DocToolkit.IO.Minifiers;
     using Kampute.DocToolkit.IO.Writers;
     using NUnit.Framework;
+    using System;
     using System.IO;
     using System.Xml.Linq;
 
@@ -48,6 +50,29 @@ namespace Kampute.DocToolkit.Test.Formatters
         }
 
         [Test]
+        public void Constructor_WithNullFileExtension_ThrowsArgumentNullException()
+        {
+            Assert.That(() => new HtmlFormat(null!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("fileExtension"));
+        }
+
+        [Test]
+        public void Constructor_WithEmptyFileExtension_ThrowsArgumentException()
+        {
+            Assert.That(() => new HtmlFormat(string.Empty), Throws.ArgumentException.With.Property("ParamName").EqualTo("fileExtension"));
+        }
+
+        [TestCase(".html")]
+        [TestCase(".htm")]
+        [TestCase(".xhtml")]
+        [TestCase(".aspx")]
+        public void TextTransformers_ForHtmlExtensionsAndTargetExtension_UseHtmlLinkTransformer(string extension)
+        {
+            var customFormat = new HtmlFormat(".aspx");
+
+            Assert.That(customFormat.TextTransformers.TryGet(extension, out var transformer) ? transformer : null, Is.InstanceOf<HtmlLinkTransformer>());
+        }
+
+        [Test]
         public void CreateMarkupWriter_ReturnsHtmlWriterInstance()
         {
             using var writer = new StringWriter();
@@ -55,6 +80,40 @@ namespace Kampute.DocToolkit.Test.Formatters
             using var markdownWriter = format.CreateMarkupWriter(writer);
 
             Assert.That(markdownWriter, Is.InstanceOf<HtmlWriter>());
+        }
+
+        [TestCase(true, ExpectedResult = true)]
+        [TestCase(false, ExpectedResult = false)]
+        public bool CreateMarkupWriter_DisposesWrappedWriterOnlyWhenRequested(bool disposeWriter)
+        {
+            var writer = new StringWriter();
+
+            format.CreateMarkupWriter(writer, disposeWriter).Dispose();
+
+            try
+            {
+                writer.Write('x');
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
+            }
+        }
+
+        [Test]
+        public void CreateMinifier_ReturnsHtmlMinifierThatOwnsWrappedWriter()
+        {
+            var writer = new StringWriter();
+
+            var minifier = format.CreateMinifier(writer);
+            minifier.Dispose();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(minifier, Is.InstanceOf<HtmlMinifier>());
+                Assert.That(() => writer.Write('x'), Throws.TypeOf<ObjectDisposedException>());
+            }
         }
     }
 }
