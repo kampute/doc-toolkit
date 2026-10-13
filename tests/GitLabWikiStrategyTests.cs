@@ -95,12 +95,12 @@ namespace Kampute.DocToolkit.Test
         }
 
         [Test]
-        public void MainTopicIdAndApiTopicId_PlacePagesUnderEncodedTopicPages()
+        public void MainTopicIdAndApiTopicId_PlaceMainTopicAtHomePathAndPagesUnderIt()
         {
-            var strategy = new GitLabWikiStrategy(new GitLabWikiOptions { MainTopicId = "home", ApiTopicId = "api", OmitExtensionInUrls = true });
+            var strategy = new GitLabWikiStrategy(new GitLabWikiOptions { MainTopicId = "welcome", ApiTopicId = "api", OmitExtensionInUrls = true });
             using var context = MockHelper.CreateDocumentationContext<MarkdownFormat>(
             [
-                MockTopicBuilder.Topic("home", "Home").Build(),
+                MockTopicBuilder.Topic("welcome", "Welcome").Build(),
                 MockTopicBuilder.Topic("api", "API Reference").Build(),
                 MockTopicBuilder.Topic("guide", "User Guide").Build(),
             ]);
@@ -108,11 +108,28 @@ namespace Kampute.DocToolkit.Test
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "home").Source, out var main) ? main.RelativeUrl : null, Is.EqualTo("Home"));
-                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "guide").Source, out var guide) ? guide.RelativeUrl : null, Is.EqualTo("Home/User-Guide"));
-                Assert.That(strategy.TryResolveAddressByCodeReference("N:System", out var ns) ? ns.RelativeUrl : null, Is.EqualTo("Home/API-Reference/System"));
-                Assert.That(strategy.TryResolveAddressByCodeReference("T:System.DateTime", out var type) ? type.RelativeUrl : null, Is.EqualTo("Home/API-Reference/System/DateTime"));
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "welcome").Source, out var main) ? main.RelativeUrl : null, Is.EqualTo("home"));
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "api").Source, out var api) ? api.RelativeUrl : null, Is.EqualTo("home/API-Reference"));
+                Assert.That(strategy.TryResolveTopicAddress(context.Topics.First(static t => t.Id == "guide").Source, out var guide) ? guide.RelativeUrl : null, Is.EqualTo("home/User-Guide"));
+                Assert.That(strategy.TryResolveAddressByCodeReference("N:System", out var ns) ? ns.RelativeUrl : null, Is.EqualTo("home/API-Reference/System"));
+                Assert.That(strategy.TryResolveAddressByCodeReference("T:System.DateTime", out var type) ? type.RelativeUrl : null, Is.EqualTo("home/API-Reference/System/DateTime"));
             }
+        }
+
+        [Test]
+        public void MainTopicId_TopicNamedLikeHomePage_IsNestedUnderHomePage()
+        {
+            var strategy = new GitLabWikiStrategy(new GitLabWikiOptions { MainTopicId = "welcome", OmitExtensionInUrls = true });
+            using var context = MockHelper.CreateDocumentationContext<MarkdownFormat>(
+            [
+                MockTopicBuilder.Topic("welcome", "Welcome").Build(),
+                MockTopicBuilder.Topic("other", "home").Build(),
+            ]);
+            ((IContextualAddressingStrategy)strategy).InitializeWithContext(context);
+
+            var other = context.Topics.First(static t => t.Id == "other").Source;
+
+            Assert.That(strategy.TryResolveTopicAddress(other, out var address) ? address.RelativeUrl : null, Is.EqualTo("home/home"));
         }
     }
 }

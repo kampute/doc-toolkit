@@ -52,6 +52,8 @@ namespace Kampute.DocToolkit.Routing
     public abstract class MarkdownAddressingStrategy : AddressingStrategy, ILanguageSpecific, IContextualAddressingStrategy
     {
         private IDocumentationContext? context;
+        private readonly string mainTopicId;
+        private readonly string apiTopicId;
         private readonly Lazy<string?> mainPath;
         private readonly Lazy<string?> apiPath;
 
@@ -65,11 +67,11 @@ namespace Kampute.DocToolkit.Routing
         {
             Language = options.Language;
 
-            var mainTopicId = options.MainTopicId;
-            mainPath = new Lazy<string?>(() => ResolveMainPath(mainTopicId));
+            mainTopicId = options.MainTopicId;
+            mainPath = new(ResolveMainPath);
 
-            var apiTopicId = options.ApiTopicId;
-            apiPath = new Lazy<string?>(() => ResolveApiPath(apiTopicId));
+            apiTopicId = options.ApiTopicId;
+            apiPath = new(ResolveApiPath);
         }
 
         /// <inheritdoc/>
@@ -208,7 +210,7 @@ namespace Kampute.DocToolkit.Routing
 
             if (topic.ParentTopic is not null)
                 path = GetTopicPath(topic.ParentTopic) + '/' + path;
-            else if (!string.IsNullOrEmpty(MainPath) && path != MainPath)
+            else if (!IsMainTopic(topic) && !string.IsNullOrEmpty(MainPath))
                 path = MainPath + '/' + path;
 
             return path;
@@ -236,13 +238,32 @@ namespace Kampute.DocToolkit.Routing
         protected virtual string EncodeFragmentIdentifier(string heading) => Markdown.ToHeadingAnchor(heading);
 
         /// <summary>
+        /// Determines whether the specified topic is the main topic of the documentation.
+        /// </summary>
+        /// <param name="topic">The topic to check.</param>
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="topic"/> is a top-level topic whose identifier matches <see cref="MarkdownAddressingOptions.MainTopicId"/>;
+        /// otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="topic"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// Topic identifiers are compared case-insensitively, as the topic collection of a documentation context compares them.
+        /// </remarks>
+        protected bool IsMainTopic(ITopic topic)
+        {
+            if (topic is null)
+                throw new ArgumentNullException(nameof(topic));
+
+            return topic.ParentTopic is null && !string.IsNullOrEmpty(mainTopicId) && string.Equals(topic.Id, mainTopicId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Resolves the main topic path.
         /// </summary>
-        /// <param name="mainTopicId">The identifier of the main topic.</param>
-        /// <returns>The resolved main path or <see langword="null"/> if not found.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="mainTopicId"/> does not exist in the documentation context.</exception>
+        /// <returns>The resolved main path, or <see langword="null"/> if <see cref="MarkdownAddressingOptions.MainTopicId"/> is not set.</returns>
+        /// <exception cref="ArgumentException">Thrown when the main topic does not exist in the documentation context.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the addressing strategy is not bound to a documentation context.</exception>
-        private string? ResolveMainPath(string mainTopicId)
+        private string? ResolveMainPath()
         {
             if (string.IsNullOrEmpty(mainTopicId))
                 return null;
@@ -253,17 +274,17 @@ namespace Kampute.DocToolkit.Routing
             if (!context.Topics.TryGetById(mainTopicId, out var mainTopic))
                 throw new ArgumentException($"Could not find main topic '{mainTopicId}' in the documentation context.", nameof(mainTopicId));
 
-            return EncodePageName(mainTopic.Name);
+            // A nested main topic is named after its title alone, because its path would depend on the main path itself.
+            return mainTopic.Source.ParentTopic is null ? GetTopicPath(mainTopic.Source) : EncodePageName(mainTopic.Name);
         }
 
         /// <summary>
         /// Resolves the API topic path.
         /// </summary>
-        /// <param name="apiTopicId">The identifier of the API topic.</param>
         /// <returns>The resolved API path or <see langword="null"/> if not resolvable.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="apiTopicId"/> does not exist in the documentation context.</exception>
+        /// <exception cref="ArgumentException">Thrown when the API topic does not exist in the documentation context.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the addressing strategy is not bound to a documentation context.</exception>
-        private string? ResolveApiPath(string apiTopicId)
+        private string? ResolveApiPath()
         {
             if (string.IsNullOrEmpty(apiTopicId))
                 return MainPath;
