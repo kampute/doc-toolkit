@@ -7,6 +7,7 @@ namespace Kampute.DocToolkit
 {
     using Kampute.DocToolkit.Routing;
     using Kampute.DocToolkit.Support;
+    using Kampute.DocToolkit.Topics;
     using System;
 
     /// <summary>
@@ -24,6 +25,11 @@ namespace Kampute.DocToolkit
     /// <para>
     /// Content organization for topics follows a simple hierarchical structure based on parent-child relationships. Topic
     /// pages are named after their titles, with child topics nested under their parents.
+    /// </para>
+    /// <para>
+    /// GitLab serves the page at the path <c>home</c> as the front page of a wiki. When <see cref="MarkdownAddressingOptions.MainTopicId"/>
+    /// is set, the page of the main topic is therefore placed at that path regardless of the topic's title, and all other pages are
+    /// nested under it.
     /// </para>
     /// <note type="tip" title="Tip">
     /// GitLab displays the file name of a page as its title, showing hyphens as spaces. Because page names cannot contain every
@@ -44,6 +50,11 @@ namespace Kampute.DocToolkit
     /// <seealso href="https://docs.gitlab.com/user/project/wiki/">GitLab Wiki</seealso>
     public class GitLabWikiStrategy : MarkdownAddressingStrategy
     {
+        /// <summary>
+        /// The path of the page that GitLab serves as the front page of a wiki.
+        /// </summary>
+        private const string HomePagePath = "home";
+
         /// <overloads>
         /// <summary>
         /// Initializes a new instance of the <see cref="GitLabWikiStrategy"/> class.
@@ -73,6 +84,13 @@ namespace Kampute.DocToolkit
         /// The page name is encoded by <see cref="EncodeWikiPath(ReadOnlySpan{char})"/>.
         /// </remarks>
         protected override string EncodePageName(string title) => EncodeWikiPath(title);
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// The page of the main topic is placed at the path <c>home</c>, which GitLab serves as the front page of a wiki, regardless
+        /// of the topic's title.
+        /// </remarks>
+        protected override string GetTopicPath(ITopic topic) => IsMainTopic(topic) ? HomePagePath : base.GetTopicPath(topic);
 
         /// <summary>
         /// Converts the given title to a GitLab Wiki page name that is valid as a file name and as a URL path segment.
