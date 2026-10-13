@@ -115,8 +115,8 @@ public void HelloWorld()
 </code></pre><h2 id="notes-and-admonitions">Notes and Admonitions</h2><h3 id="simple-note">Simple Note</h3><p>Notes (<code>note</code> elements) are wrapped in a <code>&lt;blockquote&gt;</code> element with the class <code>note</code>. The content is enclosed in a nested <code>&lt;div&gt;</code> element with the class <code>note-content</code>.</p><h6 id="xml-input-15">XML Input:</h6><pre><code class="language-xml">&lt;note&gt;This is an important detail to remember.&lt;/note&gt;
 </code></pre><h6 id="html-output-15">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot;&gt;
   &lt;div class=&quot;note-content&quot;&gt;This is an important detail to remember.&lt;/div&gt;
-&lt;/div&gt;
-</code></pre><h3 id="note-with-type">Note with Type</h3><p>Notes can have different types (info, tip, security, etc.) specified via the <code>type</code> attribute. The type is added as a data attribute to the <code>&lt;div&gt;</code> element.</p><h6 id="xml-input-16">XML Input:</h6><pre><code class="language-xml">&lt;note type=&quot;important&quot;&gt;This operation cannot be undone.&lt;/note&gt;
+&lt;/blockquote&gt;
+</code></pre><h3 id="note-with-type">Note with Type</h3><p>Notes can have different types (info, tip, security, etc.) specified via the <code>type</code> attribute. The type is added as a data attribute to the <code>&lt;blockquote&gt;</code> element.</p><h6 id="xml-input-16">XML Input:</h6><pre><code class="language-xml">&lt;note type=&quot;important&quot;&gt;This operation cannot be undone.&lt;/note&gt;
 </code></pre><h6 id="html-output-16">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot; data-type=&quot;important&quot;&gt;
   &lt;div class=&quot;note-content&quot;&gt;This operation cannot be undone.&lt;/div&gt;
 &lt;/blockquote&gt;
@@ -135,7 +135,7 @@ public void HelloWorld()
 </code></pre><h6 id="html-output-18">HTML Output:</h6><pre><code class="language-html">&lt;blockquote class=&quot;note&quot; role=&quot;note&quot; data-type=&quot;tip&quot; aria-label=&quot;Tip&quot;&gt;
   &lt;div class=&quot;note-title&quot; aria-hidden=&quot;true&quot;&gt;Tip&lt;/div&gt;
   &lt;div class=&quot;note-content&quot;&gt;
-    You can optimize performance by:
+    &lt;p&gt;You can optimize performance by:&lt;/p&gt;
     &lt;ul class=&quot;list-items&quot;&gt;
       &lt;li&gt;Using indexes&lt;/li&gt;
       &lt;li&gt;Caching results&lt;/li&gt;
