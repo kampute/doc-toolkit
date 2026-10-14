@@ -444,6 +444,37 @@ namespace Kampute.DocToolkit.Test.XmlDoc
             }
         }
 
+        [Test]
+        public void InspectDocumentation_CompilerGeneratedMember_ReportsNoIssues()
+        {
+            var synthesizedMethod = typeof(Acme.SampleRecord).GetMethod(nameof(ToString), Type.EmptyTypes)!.GetMetadata();
+
+            var issues = xmlDocProvider.InspectDocumentation(synthesizedMethod, XmlDocInspectionOptions.All).ToList();
+
+            Assert.That(issues, Is.Empty);
+        }
+
+        [Test]
+        public void InspectDocumentation_ImplicitConstructorWithCompilerGeneratedOverload_WithOmitFlag_ReportsNoIssues()
+        {
+            var type = typeof(Acme.SampleNominalRecord).GetMetadata<IClassType>();
+            var implicitConstructor = type.Constructors.First(static c => c.IsDefaultConstructor);
+
+            var issues = xmlDocProvider.InspectDocumentation(implicitConstructor, XmlDocInspectionOptions.Summary | XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors).ToList();
+
+            Assert.That(issues, Is.Empty);
+        }
+
+        [Test]
+        public void InspectDocumentation_MemberWithOnlyCompilerGeneratedOverloads_DoesNotReportMissingOverloads()
+        {
+            var method = typeof(Acme.SampleNominalRecord).GetMethod(nameof(Equals), [typeof(Acme.SampleNominalRecord)])!.GetMetadata();
+
+            var issues = xmlDocProvider.InspectDocumentation(method, XmlDocInspectionOptions.Overloads).ToList();
+
+            Assert.That(issues, Is.Empty);
+        }
+
         private static class TestSample
         {
             public static T Member<T>(T x) => throw new NotImplementedException();

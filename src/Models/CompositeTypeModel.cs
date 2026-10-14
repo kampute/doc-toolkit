@@ -18,6 +18,12 @@ namespace Kampute.DocToolkit.Models
     /// <remarks>
     /// The <see cref="CompositeTypeModel"/> class is an abstract base class for class and struct types that can contain
     /// fields, constructors, properties, methods, events, operators, and nested types.
+    /// <para>
+    /// Members that the compiler synthesizes, such as the equality members, <c>ToString</c>, <c>Deconstruct</c>, and copy
+    /// constructor of a record, are excluded from the member collections because they have no source declaration to document.
+    /// A member that overrides or replaces a synthesized member in source code is included. The metadata of the excluded members
+    /// remains available through the <see cref="Metadata"/> property.
+    /// </para>
     /// </remarks>
     public abstract class CompositeTypeModel : TypeModel<ICompositeType>
     {
@@ -46,7 +52,7 @@ namespace Kampute.DocToolkit.Models
                     return [];
 
                 var all = new List<ConstructorModel>(Metadata.Constructors.Count);
-                all.AddRange(Metadata.Constructors.Select(c => new ConstructorModel(this, c)));
+                all.AddRange(Metadata.Constructors.Where(IsUserAuthored).Select(c => new ConstructorModel(this, c)));
 
                 // Omit the default constructor if it's the only one and has no documentation.
                 if (all.Count == 1 && all[0].Metadata.IsDefaultConstructor && all[0].Doc.IsEmpty)
@@ -55,21 +61,23 @@ namespace Kampute.DocToolkit.Models
                 return all;
             });
 
-            fields = new(() => [.. Metadata.Fields.Select(f => new FieldModel(this, f))]);
-            properties = new(() => [.. Metadata.Properties.Select(p => new PropertyModel(this, p))]);
-            methods = new(() => [.. Metadata.Methods.Select(m => new MethodModel(this, m))]);
-            events = new(() => [.. Metadata.Events.Select(e => new EventModel(this, e))]);
-            operators = new(() => [.. Metadata.Operators.Select(o => new OperatorModel(this, o))]);
+            fields = new(() => [.. Metadata.Fields.Where(IsUserAuthored).Select(f => new FieldModel(this, f))]);
+            properties = new(() => [.. Metadata.Properties.Where(IsUserAuthored).Select(p => new PropertyModel(this, p))]);
+            methods = new(() => [.. Metadata.Methods.Where(IsUserAuthored).Select(m => new MethodModel(this, m))]);
+            events = new(() => [.. Metadata.Events.Where(IsUserAuthored).Select(e => new EventModel(this, e))]);
+            operators = new(() => [.. Metadata.Operators.Where(IsUserAuthored).Select(o => new OperatorModel(this, o))]);
 
             explicitInterfaceMembers = new(() => [
-                .. Metadata.ExplicitInterfaceProperties.Select(p => new PropertyModel(this, p)),
-                .. Metadata.ExplicitInterfaceMethods.Select(m => new MethodModel(this, m)),
-                .. Metadata.ExplicitInterfaceEvents.Select(e => new EventModel(this, e))
+                .. Metadata.ExplicitInterfaceProperties.Where(IsUserAuthored).Select(p => new PropertyModel(this, p)),
+                .. Metadata.ExplicitInterfaceMethods.Where(IsUserAuthored).Select(m => new MethodModel(this, m)),
+                .. Metadata.ExplicitInterfaceEvents.Where(IsUserAuthored).Select(e => new EventModel(this, e))
             ]);
 
             nestedTypes = new(() => type.HasNestedTypes
                 ? new(Metadata.NestedTypes.Select(Assembly.FindMember).OfType<TypeModel>())
                 : TypeCollection.Empty);
+
+            static bool IsUserAuthored(IMember member) => !member.IsCompilerGenerated;
         }
 
         /// <summary>
@@ -98,9 +106,9 @@ namespace Kampute.DocToolkit.Models
         /// The constructors in the collection are ordered by their number of parameters.
         /// </value>
         /// <remarks>
-        /// If a type defines only a default constructor and that constructor has no documentation, it is treated as
-        /// compiler-generated and omitted from the collection. This reduces clutter in the generated documentation by
-        /// hiding trivial constructors that add no useful information.
+        /// If a type defines only a default constructor, apart from compiler-generated constructors, and that constructor has
+        /// no documentation, it is treated as compiler-generated and omitted from the collection. This reduces clutter in the
+        /// generated documentation by hiding trivial constructors that add no useful information.
         /// <note type="hint" title="Hint">
         /// The <see cref="Metadata"/> property can still be used to access the default constructor’s metadata if needed.
         /// </note>

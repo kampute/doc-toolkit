@@ -9,6 +9,7 @@ namespace Kampute.DocToolkit.XmlDoc
     using Kampute.DocToolkit.Metadata.Capabilities;
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Runtime.CompilerServices;
 
     /// <summary>
@@ -130,6 +131,12 @@ namespace Kampute.DocToolkit.XmlDoc
         /// Enum value fields are only checked for the <c>&lt;summary&gt;</c> tag if the <see cref="XmlDocInspectionOptions.Summary"/> option is specified;
         /// other tags are not applicable and thus not inspected.
         /// </note>
+        /// <note type="note">
+        /// Compiler-generated members, such as the synthesized members of a record, have no source declaration to document, so no issues
+        /// are reported for them. For the same reason, compiler-generated overloads are disregarded when determining whether a member has
+        /// overloads, both for the <see cref="XmlDocInspectionOptions.Overloads"/> check and for the
+        /// <see cref="XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors"/> option.
+        /// </note>
         /// </remarks>
         public static IEnumerable<XmlDocInspectionIssue> Inspect
         (
@@ -144,13 +151,13 @@ namespace Kampute.DocToolkit.XmlDoc
             if (member is null)
                 throw new ArgumentNullException(nameof(member));
 
-            return options.HasAnyChecks() ? EnumerateInspectionIssues() : [];
+            return options.HasAnyChecks() && !member.IsCompilerGenerated ? EnumerateInspectionIssues() : [];
 
             IEnumerable<XmlDocInspectionIssue> EnumerateInspectionIssues()
             {
                 if (options.HasFlag(XmlDocInspectionOptions.Summary) && doc.Summary.IsEmpty)
                 {
-                    if (options.HasFlag(XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors) && member is IConstructor { IsDefaultConstructor: true, HasOverloads: false })
+                    if (options.HasFlag(XmlDocInspectionOptions.OmitImplicitlyCreatedConstructors) && member is IConstructor { IsDefaultConstructor: true } constructor && !HasUserAuthoredOverloads(constructor))
                         yield break;
 
                     yield return XmlDocInspectionIssue.MissingRequiredTag(member, XmlDocTag.Summary);
@@ -232,11 +239,11 @@ namespace Kampute.DocToolkit.XmlDoc
                     }
                 }
 
-                if (options.HasFlag(XmlDocInspectionOptions.Overloads) && member is IWithOverloads { HasOverloads: true } memberWithOverloads && doc.Overloads.IsEmpty)
+                if (options.HasFlag(XmlDocInspectionOptions.Overloads) && member is IWithOverloads memberWithOverloads && HasUserAuthoredOverloads(memberWithOverloads) && doc.Overloads.IsEmpty)
                 {
                     if (overloadDocProvider is not null)
                     {
-                        foreach (var overloadMember in memberWithOverloads.Overloads)
+                        foreach (var overloadMember in memberWithOverloads.Overloads.Where(static m => !m.IsCompilerGenerated))
                         {
                             var overloadDoc = overloadDocProvider(overloadMember);
                             if (overloadDoc is not null && !overloadDoc.Overloads.IsEmpty)
@@ -247,6 +254,8 @@ namespace Kampute.DocToolkit.XmlDoc
                     yield return XmlDocInspectionIssue.MissingOptionalTag(member, XmlDocTag.Overloads);
                 }
             }
+
+            static bool HasUserAuthoredOverloads(IWithOverloads member) => member.Overloads.Any(static m => !m.IsCompilerGenerated);
         }
     }
 }
