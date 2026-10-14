@@ -37,8 +37,11 @@ namespace Kampute.DocToolkit.Languages
                         writer.Write("sealed ");
                     else if (classType.IsAbstract)
                         writer.Write("abstract ");
-                    writer.Write("class ");
+                    var isClassRecord = classType.IsRecord;
+                    writer.Write(isClassRecord ? "record " : "class ");
                     WriteTypeSignature(writer, classType, NameQualifier.DeclaringType, linker, declarative: true);
+                    if (isClassRecord)
+                        WriteRecordParameters(writer, classType, linker);
                     WriteTypeInheritance(writer, classType, linker);
                     if (classType.IsGenericTypeDefinition)
                         WriteGenericConstraints(writer, classType.TypeParameters, linker);
@@ -48,8 +51,11 @@ namespace Kampute.DocToolkit.Languages
                         writer.Write("readonly ");
                     if (structType.IsRefLike)
                         writer.Write("ref ");
-                    writer.Write("struct ");
+                    var isStructRecord = structType.IsRecord;
+                    writer.Write(isStructRecord ? "record struct " : "struct ");
                     WriteTypeSignature(writer, structType, NameQualifier.DeclaringType, linker, declarative: true);
+                    if (isStructRecord)
+                        WriteRecordParameters(writer, structType, linker);
                     WriteTypeInheritance(writer, structType, linker);
                     if (structType.IsGenericTypeDefinition)
                         WriteGenericConstraints(writer, structType.TypeParameters, linker);
@@ -78,6 +84,25 @@ namespace Kampute.DocToolkit.Languages
                     WriteTypeSignature(writer, type, NameQualifier.DeclaringType, linker, declarative: true);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Writes the parameter list of the specified record's declaration to the <see cref="TextWriter"/>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
+        /// <param name="recordType">The record type whose parameter list is to be written.</param>
+        /// <param name="linker">A delegate for linking to the documentation of a type or type's member.</param>
+        /// <remarks>
+        /// Nothing is written when the record has no identifiable primary constructor.
+        /// </remarks>
+        private void WriteRecordParameters(TextWriter writer, ICompositeType recordType, MemberDocLinker linker)
+        {
+            if (recordType.PrimaryConstructor is not IConstructor primaryConstructor)
+                return;
+
+            writer.Write('(');
+            WriteParameters(writer, primaryConstructor.Parameters, linker, declarative: true);
+            writer.Write(')');
         }
 
         /// <summary>
@@ -376,8 +401,13 @@ namespace Kampute.DocToolkit.Languages
             if (type is not IInterfaceCapableType interfaceCapableType)
                 return;
 
+            var isRecord = type is ICompositeType { IsRecord: true };
             foreach (var implementedInterface in interfaceCapableType.ImplementedInterfaces)
             {
+                // A record declaration implies the implementation of IEquatable<T> for its own type.
+                if (isRecord && implementedInterface.FullName == "System.IEquatable`1" && implementedInterface.TypeArguments[0].Equals(type))
+                    continue;
+
                 writer.Write(needsCommaSeparation ? ", " : " : ");
                 WriteTypeSignature(writer, implementedInterface, Options.GlobalNameQualifier, linker);
                 needsCommaSeparation = true;
