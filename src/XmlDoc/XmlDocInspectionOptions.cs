@@ -88,7 +88,7 @@ namespace Kampute.DocToolkit.XmlDoc
         Overloads = 0x1000,
 
         /// <summary>
-        /// Omit reporting missing <c>summary</c> tags for default constructors that have no overloads.
+        /// Omit reporting missing <c>summary</c> tags for default constructors that have no overloads other than compiler-generated ones.
         /// </summary>
         OmitImplicitlyCreatedConstructors = 0x2000,
 

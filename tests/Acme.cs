@@ -1444,6 +1444,86 @@ namespace Acme
     }
 
     /// <summary>
+    /// A sample positional record class.
+    /// </summary>
+    /// <param name="X">The first value.</param>
+    /// <param name="Y">The second value.</param>
+    public record SampleRecord(int X, int Y = 0)
+    {
+        /// <summary>
+        /// Gets the sum of the values.
+        /// </summary>
+        /// <value>The sum of <see cref="X"/> and <see cref="Y"/>.</value>
+        public int Sum => X + Y;
+    }
+
+    /// <summary>
+    /// A sample positional record class derived from another record.
+    /// </summary>
+    /// <param name="X">The first value.</param>
+    /// <param name="Y">The second value.</param>
+    /// <param name="Z">The third value.</param>
+    public sealed record SampleDerivedRecord(int X, int Y, int Z) : SampleRecord(X, Y);
+
+    /// <summary>
+    /// A sample generic positional record class.
+    /// </summary>
+    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <param name="Value">The value.</param>
+    public record SampleGenericRecord<T>(T Value);
+
+    /// <summary>
+    /// A sample nominal record class with a user-authored override of a synthesized member.
+    /// </summary>
+    public record SampleNominalRecord
+    {
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public string Name { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Returns the name.
+        /// </summary>
+        /// <returns>The value of <see cref="Name"/>.</returns>
+        public override string ToString() => Name;
+
+        /// <summary>
+        /// Determines whether the specified record has the same name.
+        /// </summary>
+        /// <param name="other">The record to compare with.</param>
+        /// <returns><see langword="true"/> if <paramref name="other"/> has the same name; otherwise, <see langword="false"/>.</returns>
+        public virtual bool Equals(SampleNominalRecord? other) => other is not null && Name == other.Name;
+
+        /// <summary>
+        /// Returns the hash code of the name.
+        /// </summary>
+        /// <returns>The hash code of <see cref="Name"/>.</returns>
+        public override int GetHashCode() => Name.GetHashCode();
+    }
+
+    /// <summary>
+    /// A sample positional read-only record struct.
+    /// </summary>
+    /// <param name="A">The first value.</param>
+    /// <param name="B">The second value.</param>
+    public readonly record struct SampleRecordStruct(int A, string B);
+
+    /// <summary>
+    /// A sample positional record class whose deconstruction is user-authored.
+    /// </summary>
+    /// <param name="A">The value.</param>
+    public record SampleRecordWithCustomDeconstruct(int A)
+    {
+        /// <summary>
+        /// Deconstructs the record.
+        /// </summary>
+        /// <param name="a">The value.</param>
+        public void Deconstruct(out int a) => a = A;
+    }
+
+    /// <summary>
     /// A sample enum with a negative member.
     /// </summary>
     public enum SampleSignedEnum
