@@ -397,6 +397,12 @@ namespace Kampute.DocToolkit.Test.Languages
         [TestCase(typeof(BindingFlags), ExpectedResult = "[Flags]\npublic enum BindingFlags")]
         [TestCase(typeof(Predicate<>), ExpectedResult = "public delegate bool Predicate<in T>(T obj)")]
         [TestCase(typeof(Dictionary<,>.KeyCollection.Enumerator), ExpectedResult = "public struct Dictionary<TKey, TValue>.KeyCollection.Enumerator : IEnumerator<TKey>")]
+        [TestCase(typeof(Acme.SampleRecord), ExpectedResult = "public record SampleRecord(int X, int Y = 0)")]
+        [TestCase(typeof(Acme.SampleDerivedRecord), ExpectedResult = "public sealed record SampleDerivedRecord(int X, int Y, int Z) : SampleRecord")]
+        [TestCase(typeof(Acme.SampleGenericRecord<>), ExpectedResult = "public record SampleGenericRecord<T>(T Value)")]
+        [TestCase(typeof(Acme.SampleNominalRecord), ExpectedResult = "public record SampleNominalRecord")]
+        [TestCase(typeof(Acme.SampleRecordStruct), ExpectedResult = "public readonly record struct SampleRecordStruct(int A, string B)")]
+        [TestCase(typeof(Acme.SampleRecordWithCustomDeconstruct), ExpectedResult = "public record SampleRecordWithCustomDeconstruct")]
         public string FormatDefinition_ForTypes_ReturnsExpectedString(Type type)
         {
             return cs.FormatDefinition(type.GetMetadata()).Replace("\r", string.Empty);
